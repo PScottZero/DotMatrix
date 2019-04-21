@@ -3,4 +3,4 @@ project(GBEmu)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(GBEmu gb.cpp)
+add_executable(GBEmu gb.cpp main.cpp)

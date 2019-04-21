@@ -1,9 +1,10 @@
 file(REMOVE_RECURSE
   "CMakeFiles/GBEmu.dir/gb.cpp.obj"
+  "CMakeFiles/GBEmu.dir/main.cpp.obj"
   "GBEmu.pdb"
   "GBEmu.exe"
   "GBEmu.exe.manifest"
-  "GBEmu.lib"
+  "libGBEmu.dll.a"
 )
 
 # Per-language clean rules from dependency scanning.

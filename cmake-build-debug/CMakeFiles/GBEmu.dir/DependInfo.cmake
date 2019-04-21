@@ -5,8 +5,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
   "C:/Users/8psco/CLionProjects/GBEmu/gb.cpp" "C:/Users/8psco/CLionProjects/GBEmu/cmake-build-debug/CMakeFiles/GBEmu.dir/gb.cpp.obj"
+  "C:/Users/8psco/CLionProjects/GBEmu/main.cpp" "C:/Users/8psco/CLionProjects/GBEmu/cmake-build-debug/CMakeFiles/GBEmu.dir/main.cpp.obj"
   )
-set(CMAKE_CXX_COMPILER_ID "MSVC")
+set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH

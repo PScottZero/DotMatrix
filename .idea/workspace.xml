@@ -19,14 +19,31 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/gb.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="462">
-              <caret line="1984" column="22" lean-forward="true" selection-start-line="1984" selection-start-column="22" selection-end-line="1984" selection-end-column="22" />
+            <state relative-caret-position="616">
+              <caret line="554" column="22" selection-start-line="554" selection-start-column="22" selection-end-line="554" selection-end-column="22" />
             </state>
           </provider>
         </entry>
@@ -40,6 +57,14 @@
       <find>Right</find>
       <find>set(</find>
       <find>xF</find>
+      <find>C3</find>
+      <find>unsigned short</find>
+      <find>00</find>
+      <find>0x32</find>
+      <find>0x20</find>
+      <find>sub16</find>
+      <find>0x05</find>
+      <find>0x2F</find>
     </findStrings>
     <replaceStrings>
       <replace>sub</replace>
@@ -47,6 +72,7 @@
       <replace>RightCarry</replace>
       <replace>reset(</replace>
       <replace>xB</replace>
+      <replace>uint16_t</replace>
     </replaceStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -55,6 +81,9 @@
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/mmu.cpp" />
         <option value="$PROJECT_DIR$/cpu.cpp" />
+        <option value="$PROJECT_DIR$/GameBoy.h" />
+        <option value="$PROJECT_DIR$/GameBoy.cpp" />
+        <option value="$PROJECT_DIR$/main.cpp" />
         <option value="$PROJECT_DIR$/gb.cpp" />
       </list>
     </option>
@@ -68,26 +97,19 @@
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes>
-      <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="GBEmu" type="b2602c69:ProjectViewProjectNode" />
-              <item name="GBEmu" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-    </panes>
+    <panes />
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/gb.cpp" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="CPPToolchains" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\8psco\CLionProjects\GBEmu\rom" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -101,12 +123,19 @@
       </list>
     </option>
   </component>
-  <component name="RunManager">
-    <configuration name="GBEmu" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="GBEmu" TARGET_NAME="GBEmu" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="GBEmu" RUN_TARGET_NAME="GBEmu">
+  <component name="RunManager" selected="CMake Application.Unnamed">
+    <configuration name="Debug" type="CLion_Remote" remoteCommand="" symbolFile="" sysroot="">
+      <method v="2" />
+    </configuration>
+    <configuration name="Unnamed" type="CMakeRunConfiguration" factoryName="Application" nameIsGenerated="true" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="GBEmu" RUN_TARGET_NAME="GBEmu" EXPLICIT_BUILD_TARGET_NAME="all">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="CMake Application.Unnamed" />
+      <item itemvalue="GDB Remote Debug.Debug" />
+    </list>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -131,50 +160,111 @@
       <workItem from="1550876327674" duration="362000" />
       <workItem from="1550876719920" duration="2376000" />
       <workItem from="1552760674043" duration="8722000" />
+      <workItem from="1552776595945" duration="24000" />
+      <workItem from="1553296738500" duration="143000" />
+      <workItem from="1553458574932" duration="223000" />
+      <workItem from="1555378513968" duration="399000" />
+      <workItem from="1555428179497" duration="368000" />
+      <workItem from="1555428592017" duration="2011000" />
+      <workItem from="1555430631057" duration="2561000" />
+      <workItem from="1555433867153" duration="1896000" />
+      <workItem from="1555435791466" duration="1398000" />
+      <workItem from="1555450023581" duration="5117000" />
+      <workItem from="1555459109139" duration="5023000" />
+      <workItem from="1555608465549" duration="1816000" />
+      <workItem from="1555644171115" duration="398000" />
+      <workItem from="1555644617640" duration="799000" />
+      <workItem from="1555645541303" duration="152000" />
+      <workItem from="1555649354725" duration="3438000" />
+      <workItem from="1555806483882" duration="3420000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="41495000" />
+    <option name="totallyTimeSpent" value="70681000" />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
   </component>
   <component name="ToolWindowManager">
     <frame x="-5" y="0" width="864" height="925" extended-state="0" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" weight="0.25123763" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.5210396" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.92652553" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.501868" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32873276" />
+      <window_info anchor="bottom" id="Database Changes" order="7" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.32873276" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Version Control" order="10" />
+      <window_info anchor="bottom" id="CMake" order="11" weight="0.32503113" />
+      <window_info anchor="bottom" id="Messages" order="12" weight="0.7982565" />
+      <window_info anchor="bottom" id="Inspection Results" order="13" weight="0.32914573" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Database" order="3" weight="0.03547805" />
+    </layout>
+    <layout-to-restore>
+      <window_info content_ui="combo" id="Project" order="0" weight="0.5210396" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.33001244" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.32873276" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="8" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.32873276" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="10" />
-      <window_info anchor="bottom" id="CMake" order="11" weight="0.3275218" />
+      <window_info anchor="bottom" id="CMake" order="11" weight="0.32503113" />
+      <window_info anchor="bottom" id="Messages" order="12" weight="0.32503113" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="right" id="Database" order="3" />
-    </layout>
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/main.cpp" />
     <entry file="file://$PROJECT_DIR$/MMU.h" />
     <entry file="file://$PROJECT_DIR$/mmu.cpp" />
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
+    <entry file="file://C:/Program Files (x86)/Microsoft Visual Studio/2019/Preview/VC/Tools/MSVC/14.20.27404/include/xstring">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="38500">
+          <caret line="4166" column="6" selection-start-line="4166" selection-start-column="6" selection-end-line="4166" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/GameBoy.h" />
+    <entry file="file://$PROJECT_DIR$/GameBoy.cpp" />
+    <entry file="file://$PROJECT_DIR$/main.cpp">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/gb.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="1984" column="22" lean-forward="true" selection-start-line="1984" selection-start-column="22" selection-end-line="1984" selection-end-column="22" />
+        <state relative-caret-position="616">
+          <caret line="554" column="22" selection-start-line="554" selection-start-column="22" selection-end-line="554" selection-end-column="22" />
         </state>
       </provider>
     </entry>
