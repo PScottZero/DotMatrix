@@ -42,8 +42,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/gb.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="616">
-              <caret line="554" column="22" selection-start-line="554" selection-start-column="22" selection-end-line="554" selection-end-column="22" />
+            <state relative-caret-position="528">
+              <caret line="1720" column="23" lean-forward="true" selection-start-line="1720" selection-start-column="23" selection-end-line="1720" selection-end-column="23" />
             </state>
           </provider>
         </entry>
@@ -65,6 +65,7 @@
       <find>sub16</find>
       <find>0x05</find>
       <find>0x2F</find>
+      <find>A</find>
     </findStrings>
     <replaceStrings>
       <replace>sub</replace>
@@ -73,6 +74,7 @@
       <replace>reset(</replace>
       <replace>xB</replace>
       <replace>uint16_t</replace>
+      <replace>L</replace>
     </replaceStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -104,6 +106,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$/gb.cpp" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="nodejs_package_manager_path" value="npm" />
     <property name="settings.editor.selected.configurable" value="CPPToolchains" />
   </component>
   <component name="RecentsManager">
@@ -177,11 +180,14 @@
       <workItem from="1555645541303" duration="152000" />
       <workItem from="1555649354725" duration="3438000" />
       <workItem from="1555806483882" duration="3420000" />
+      <workItem from="1555870946085" duration="3382000" />
+      <workItem from="1555978920219" duration="4294000" />
+      <workItem from="1557527313918" duration="5583000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="70681000" />
+    <option name="totallyTimeSpent" value="83940000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -258,13 +264,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/GameBoy.h" />
     <entry file="file://$PROJECT_DIR$/GameBoy.cpp" />
-    <entry file="file://$PROJECT_DIR$/main.cpp">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
+    <entry file="file://$PROJECT_DIR$/main.cpp" />
     <entry file="file://$PROJECT_DIR$/gb.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="616">
-          <caret line="554" column="22" selection-start-line="554" selection-start-column="22" selection-end-line="554" selection-end-column="22" />
+        <state relative-caret-position="528">
+          <caret line="1720" column="23" lean-forward="true" selection-start-line="1720" selection-start-column="23" selection-end-line="1720" selection-end-column="23" />
         </state>
       </provider>
     </entry>
