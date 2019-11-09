@@ -1,4 +1,0 @@
-C:\Users\8psco\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\191.6183.77\bin\cmake\win\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" C:\Users\8psco\CLionProjects\GBEmu
--- Configuring done
--- Generating done
--- Build files have been written to: C:/Users/8psco/CLionProjects/GBEmu/cmake-build-debug
