@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GtaTestDurations xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Executable>C:\Users\8psco\Documents\GitHub\DotMatrix\x64\Debug\Testing.exe</Executable>
+  <TestDurations>
+    <TestDuration Test="TestCPU.TestAdd" Duration="1" />
+    <TestDuration Test="TestCPU.TestAdd16" Duration="1" />
+    <TestDuration Test="TestReg16.TestReg16" Duration="1" />
+    <TestDuration Test="TestRegs.TestReg16" Duration="1" />
+    <TestDuration Test="TestDecode.TestStack" Duration="1" />
+    <TestDuration Test="TestReg.TestRegF" Duration="1" />
+    <TestDuration Test="TestReg.TestReg16" Duration="1" />
+  </TestDurations>
+</GtaTestDurations>

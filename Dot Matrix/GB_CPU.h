@@ -8,75 +8,48 @@ using namespace std;
 class GB_CPU
 {
 public:
-	short AF, BC, DE, HL, PC, SP;
-	char* mem;
-	char* cart;
-	bool IME;
+	unsigned char A, B, C, D, E, H, L;
+	unsigned short PC, SP;
+	bool zero, halfCarry, subtract, carry, IME;
+	unsigned char* mem;
+	unsigned char* cart;
 
 	GB_CPU();
 
 	// emulator functions
-	void decode();
+	void decode(unsigned char opcode);
 	void loadBootstrap();
 	void loadCartridge(string dir);
 	void run();
 	
 	// opcode functions
-	char add(char a, char b);
-	short add16(short a, short b);
-	char bitAnd(char a, char b);
-	char bitOr(char a, char b);
-	char bitXor(char a, char b);
-	void compBitToZero(char value, int bit);
-	char dec(char value);
-	char inc(char value);
-	char resetBit(char value, int bit);
-	char rotateLeft(char value);
-	char rotateLeftCarry(char value);
-	char rotateRight(char value);
-	char rotateRightCarry(char value);
-	char shiftLeft(char value);
-	char shiftRightArithmetic(char value);
-	char shiftRightLogical(char value);
-	char sub(char a, char b);
-	char swap(char value);
-	char setBit(char value, int bit);
-	
-	// 8-bit register functions
-	char getA();
-	char getB();
-	char getC();
-	char getD();
-	char getE();
-	char getF();
-	char getH();
-	char getL();
-	void setA(char value);
-	void setB(char value);
-	void setC(char value);
-	void setD(char value);
-	void setE(char value);
-	void setF(char value);
-	void setH(char value);
-	void setL(char value);
+	unsigned char add(unsigned char a, unsigned char b);
+	unsigned short add16(unsigned short a, unsigned short b);
+	unsigned char bitAnd(unsigned char a, unsigned char b);
+	unsigned char bitOr(unsigned char a, unsigned char b);
+	unsigned char bitXor(unsigned char a, unsigned char b);
+	void compBitToZero(unsigned char value, unsigned int bit);
+	unsigned char dec(unsigned char value);
+	unsigned char inc(unsigned char value);
+	unsigned char resetBit(unsigned char value, unsigned int bit);
+	unsigned char rotateLeft(unsigned char value);
+	unsigned char rotateLeftCarry(unsigned char value);
+	unsigned char rotateRight(unsigned char value);
+	unsigned char rotateRightCarry(unsigned char value);
+	unsigned char shiftLeft(unsigned char value);
+	unsigned char shiftRightArithmetic(unsigned char value);
+	unsigned char shiftRightLogical(unsigned char value);
+	unsigned char sub(unsigned char a, unsigned char b);
+	unsigned char swap(unsigned char value);
+	unsigned char setBit(unsigned char value, unsigned int bit);
 
-	// 16-bit register functions
-	short getAF();
-	short getBC();
-	short getDE();
-	short getHL();
-	void setAF(short value);
-	void setBC(short value);
-	void setDE(short value);
-	void setHL(short value);
-
-	// flag functions
-	char getCarry();
-	char getHalfCarry();
-	char getSubtract();
-	char getZero();
-	void setCarry(char value);
-	void setHalfCarry(char value);
-	void setSubtract(char value);
-	void setZero(char value);
+	// register functions
+	unsigned char getF();
+	unsigned short getBC();
+	unsigned short getDE();
+	unsigned short getHL();
+	void setF(unsigned char value);
+	void setBC(unsigned short value);
+	void setDE(unsigned short value);
+	void setHL(unsigned short value);
 };
