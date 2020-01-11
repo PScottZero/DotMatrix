@@ -1,3 +1,0 @@
-C:\Users\8psco\VS Projects\DotMatrix\DotMatrix\obj\Debug\netcoreapp3.0\DotMatrix.csprojAssemblyReference.cache
-C:\Users\8psco\VS Projects\DotMatrix\DotMatrix\obj\Debug\netcoreapp3.0\DotMatrix.AssemblyInfoInputs.cache
-C:\Users\8psco\VS Projects\DotMatrix\DotMatrix\obj\Debug\netcoreapp3.0\DotMatrix.AssemblyInfo.cs
