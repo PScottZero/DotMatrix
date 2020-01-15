@@ -21,7 +21,7 @@ void GB_CPU::loadCartridge(string dir) {
 		file.read(buf, size);
 		file.close();
 		for (long long i = 0; i < size; i++) {
-			cart[i] = buf[i];
+			cart[i] = (unsigned char)buf[i];
 		}
 	}
 }
@@ -37,7 +37,7 @@ void GB_CPU::loadBootstrap() {
 		file.read(buf, size);
 		file.close();
 		for (long long i = 0; i < size; i++) {
-			mem[i] = buf[i];
+			mem[i] = (unsigned char)buf[i];
 		}
 	}
 }
@@ -530,38 +530,38 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADC A, r
 		// Add A, register r, and carry flag together and store result in A
 		case 0x8F:
-			A = add(A, A + carry);
+			A = addCarry(A, A);
 			break;
 		case 0x88:
-			A = add(A, B + carry);
+			A = addCarry(A, B);
 			break;
 		case 0x89:
-			A = add(A, C + carry);
+			A = addCarry(A, C);
 			break;
 		case 0x8A:
-			A = add(A, D + carry);
+			A = addCarry(A, D);
 			break;
 		case 0x8B:
-			A = add(A, E + carry);
+			A = addCarry(A, E);
 			break;
 		case 0x8C:
-			A = add(A, H + carry);
+			A = addCarry(A, H);
 			break;
 		case 0x8D:
-			A = add(A, L + carry);
+			A = addCarry(A, L);
 			break;
 
 		// ADC A, n
 		// Add A, 8-bit immediate n, and carry flag together and store result in A
 		case 0xCE:
-			A = add(A, mem[PC + 1] + carry);
+			A = addCarry(A, mem[PC + 1]);
 			PC++;
 			break;
 
 		// ADC A, (HL)
 		// Add A, memory at address HL, and carry flag together and store result in A
 		case 0x8E:
-			A = add(A, mem[getHL()] + carry);
+			A = addCarry(A, mem[getHL()]);
 			break;
 
 		// SUB r
@@ -2120,7 +2120,20 @@ unsigned char GB_CPU::add(unsigned char a, unsigned char b) {
 	halfCarry = half > 0xF;
 	subtract = false;
 	carry = sum > 0xFF;
-	return sum;
+	return (unsigned char)sum;
+}
+
+// Add opertaion for 8-bit numbers
+// Input: a (uint8_t), b (uint8_t)
+// Output: a + b (uint8_t)
+unsigned char GB_CPU::addCarry(unsigned char a, unsigned char b) {
+	unsigned short sum = a + b + carry;
+	unsigned char half = (a & 0xF) + (b & 0xF) + carry;
+	zero = (sum & 0xFF) == 0;
+	halfCarry = half > 0xF;
+	subtract = false;
+	carry = sum > 0xFF;
+	return (unsigned char)sum;
 }
 
 // Add opertaion for 16-bit numbers
@@ -2133,7 +2146,7 @@ unsigned short GB_CPU::add16(unsigned short a, unsigned short b) {
 	halfCarry = half > 0xFF;
 	subtract = false;
 	carry = sum > 0xFFFF;
-	return sum;
+	return (unsigned short)sum;
 }
 
 // Subtract opertaion for 8-bit numbers
@@ -2145,7 +2158,7 @@ unsigned char GB_CPU::sub(unsigned char a, unsigned char b) {
 	halfCarry = (a & 0xF) < (b & 0xF);
 	subtract = true;
 	carry = a < b;
-	return diff;
+	return (unsigned char)diff;
 }
 
 // ANDs two 8-bit numbers together
@@ -2214,7 +2227,7 @@ unsigned char GB_CPU::rotateLeft(unsigned char value) {
 // Input: value (uint8_t)
 // Output: rotated value
 unsigned char GB_CPU::rotateLeftCarry(unsigned char value) {
-	unsigned char result = (value << 1) | carry;
+	unsigned char result = (value << 1) | (unsigned char)carry;
 	zero = (result == 0);
 	halfCarry = false;
 	subtract = false;
@@ -2345,15 +2358,15 @@ void GB_CPU::setF(unsigned char value) {
 
 void GB_CPU::setBC(unsigned short value) {
 	B = value >> 8;
-	C = value;
+	C = (unsigned char)value;
 }
 
 void GB_CPU::setDE(unsigned short value) {
 	D = value >> 8; 
-	E = value;
+	E = (unsigned char)value;
 }
 
 void GB_CPU::setHL(unsigned short value) {
 	H = value >> 8;
-	L = value;
+	L = (unsigned char)value;
 }

@@ -9,5 +9,8 @@
     <TestDuration Test="TestDecode.TestStack" Duration="1" />
     <TestDuration Test="TestReg.TestRegF" Duration="1" />
     <TestDuration Test="TestReg.TestReg16" Duration="1" />
+    <TestDuration Test="TestDecode.TestLD" Duration="1" />
+    <TestDuration Test="TestHelper.TestAdd" Duration="1" />
+    <TestDuration Test="TestHelper.TestAddCarry" Duration="1" />
   </TestDurations>
 </GtaTestDurations>

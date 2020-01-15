@@ -24,6 +24,7 @@ public:
 	
 	// opcode functions
 	unsigned char add(unsigned char a, unsigned char b);
+	unsigned char addCarry(unsigned char a, unsigned char b);
 	unsigned short add16(unsigned short a, unsigned short b);
 	unsigned char bitAnd(unsigned char a, unsigned char b);
 	unsigned char bitOr(unsigned char a, unsigned char b);
