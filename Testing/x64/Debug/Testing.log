@@ -1,4 +1,1 @@
-﻿  test.cpp
-C:\Users\8psco\Documents\GitHub\DotMatrix\Dot Matrix\GB_CPU.cpp(5,33): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
-C:\Users\8psco\Documents\GitHub\DotMatrix\Dot Matrix\GB_CPU.cpp(485,44): warning C4244: '=': conversion from 'unsigned short' to 'unsigned char', possible loss of data
-  Testing.vcxproj -> C:\Users\8psco\Documents\GitHub\DotMatrix\x64\Debug\Testing.exe
+﻿
