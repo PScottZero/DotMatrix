@@ -316,7 +316,7 @@ void GB_CPU::decode(unsigned char opcode) {
 			A = mem[getDE()];
 			break;
 
-		// LD a, (C)
+		// LD A, (C)
 		// Load memory at address 0xFF00 + [register C] into register A
 		case 0xF2:
 			A = mem[0xFF00 + C];
@@ -2111,62 +2111,70 @@ void GB_CPU::decode(unsigned char opcode) {
 }
 
 // Add opertaion for 8-bit numbers
-// Input: a (uint8_t), b (uint8_t)
-// Output: a + b (uint8_t)
+// Input: a (unsigned char), b (unsigned char)
+// Output: a + b (unsigned char)
 unsigned char GB_CPU::add(unsigned char a, unsigned char b) {
-	unsigned short sum = a + b;
-	unsigned char half = (a & 0xF) + (b & 0xF);
-	zero = (sum & 0xFF) == 0;
-	halfCarry = half > 0xF;
+	unsigned short result = a + b;
+	zero = (result & 0xFF) == 0;
+	halfCarry = (a & 0xF) + (b & 0xF) > 0xF;
 	subtract = false;
-	carry = sum > 0xFF;
-	return (unsigned char)sum;
+	carry = result > 0xFF;
+	return (unsigned char)result;
 }
 
-// Add opertaion for 8-bit numbers
-// Input: a (uint8_t), b (uint8_t)
-// Output: a + b (uint8_t)
+// Add carry opertaion for 8-bit numbers
+// Input: a (unsigned char), b (unsigned char)
+// Output: a + b + carry (unsigned char)
 unsigned char GB_CPU::addCarry(unsigned char a, unsigned char b) {
-	unsigned short sum = a + b + carry;
-	unsigned char half = (a & 0xF) + (b & 0xF) + carry;
-	zero = (sum & 0xFF) == 0;
-	halfCarry = half > 0xF;
+	unsigned short result = a + b + carry;
+	zero = (result & 0xFF) == 0;
+	halfCarry = (a & 0xF) + (b & 0xF) + carry > 0xF;
 	subtract = false;
-	carry = sum > 0xFF;
-	return (unsigned char)sum;
+	carry = result > 0xFF;
+	return (unsigned char)result;
 }
 
 // Add opertaion for 16-bit numbers
-// Input: a (uint16_t), b (uint16_t)
-// Output: a + b (uint16_t)
+// Input: a (unsigned short), b (unsigned short)
+// Output: a + b (unsigned short)
 unsigned short GB_CPU::add16(unsigned short a, unsigned short b) {
-	unsigned int sum = a + b;
-	unsigned short half = (a & 0xFF) + (b & 0xFF);
-	zero = (sum & 0xFFFF) == 0;
-	halfCarry = half > 0xFF;
+	unsigned int result = a + b;
+	halfCarry = (a & 0xFFF) + (b & 0xFFF) > 0xFFF;
 	subtract = false;
-	carry = sum > 0xFFFF;
-	return (unsigned short)sum;
+	carry = result > 0xFFFF;
+	return (unsigned short)result;
 }
 
 // Subtract opertaion for 8-bit numbers
-// Input: a (uint8_t), b (uint8_t)
-// Output: a - b (uint8_t)
+// Input: a (unsigned char), b (unsigned char)
+// Output: a - b (unsigned char)
 unsigned char GB_CPU::sub(unsigned char a, unsigned char b) {
-	unsigned short diff = a - b;
-	zero = (diff == 0);
-	halfCarry = (a & 0xF) < (b & 0xF);
+	short result = a - b;
+	zero = result == 0;
+	halfCarry = (a & 0xF) - (b & 0xF) < 0;
 	subtract = true;
-	carry = a < b;
-	return (unsigned char)diff;
+	carry = result < 0;
+	return (unsigned char)result;
+}
+
+// Subtract carry opertaion for 8-bit numbers
+// Input: a (unsigned char), b (unsigned char)
+// Output: a - b - carry (unsigned char)
+unsigned char GB_CPU::subCarry(unsigned char a, unsigned char b) {
+	short result = a - b - (unsigned char)carry;
+	zero = result == 0;
+	halfCarry = (a & 0xF) - (b & 0xF) - carry < 0;
+	subtract = true;
+	carry = result < 0;
+	return (unsigned char)result;
 }
 
 // ANDs two 8-bit numbers together
-// Input: a (uint8_t), b (uint8_t)
+// Input: a (unsigned char), b (unsigned char)
 // Output: a & b
 unsigned char GB_CPU::bitAnd(unsigned char a, unsigned char b) {
 	unsigned char result = a & b;
-	zero = (result == 0);
+	zero = result == 0;
 	halfCarry = true;
 	subtract = false;
 	carry = false;
@@ -2174,57 +2182,60 @@ unsigned char GB_CPU::bitAnd(unsigned char a, unsigned char b) {
 }
 
 // ORs two 8-bit numbers together
-// Input: a (uint8_t), b (uint8_t)
+// Input: a (unsigned char), b (unsigned char)
 // Output: a | b
 unsigned char GB_CPU::bitOr(unsigned char a, unsigned char b) {
 	unsigned char result = a | b;
-	zero = (result == 0);
+	zero = result == 0;
 	return result;
 }
 
 // XORs two 8-bit numbers together
-// Input: a (uint8_t), b (uint8_t)
+// Input: a (unsigned char), b (unsigned char)
 // Output: a ^ b
 unsigned char GB_CPU::bitXor(unsigned char a, unsigned char b) {
 	unsigned char result = a ^ b;
-	zero = (result == 0);
+	zero = result == 0;
 	return result;
 }
 
 // Increments value by one
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: value + 1
 unsigned char GB_CPU::inc(unsigned char value) {
-	bool oldCarry = carry;
-	unsigned char sum = add(value, 1);
-	carry = oldCarry;
-	return sum;
+	unsigned char result = value + 1;
+	zero = result == 0;
+	halfCarry = (value & 0xF) + 1 > 0xF;
+	subtract = false;
+	return result;
 }
 
 // Decrements value by one
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: value - 1
 unsigned char GB_CPU::dec(unsigned char value) {
-	bool oldCarry = carry;
-	unsigned char diff = sub(value, 1);
-	carry = oldCarry;
-	return diff;
+	unsigned char result = value - 1;
+	zero = result == 0;
+	halfCarry = (value & 0xF) - 1 < 0;
+	subtract = true;
+	return result;
 }
 
 // Rotates value to the left
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: rotated value
 unsigned char GB_CPU::rotateLeft(unsigned char value) {
-	unsigned char result = (value << 1) | ((value & 0x80) >> 7);
+	unsigned char bit7 = (value & 0x80) >> 7;
+	unsigned char result = (value << 1) | bit7;
 	zero = (result == 0);
 	halfCarry = false;
 	subtract = false;
-	carry = (value & 0x80) >> 7;
+	carry = bit7;
 	return result;
 }
 
 // Rotates value to the left through carry flag
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: rotated value
 unsigned char GB_CPU::rotateLeftCarry(unsigned char value) {
 	unsigned char result = (value << 1) | (unsigned char)carry;
@@ -2236,7 +2247,7 @@ unsigned char GB_CPU::rotateLeftCarry(unsigned char value) {
 }
 
 // Rotates value to the right
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: rotated value
 unsigned char GB_CPU::rotateRight(unsigned char value) {
 	unsigned char result = (value >> 1) | ((value & 0x1) << 7);
@@ -2248,7 +2259,7 @@ unsigned char GB_CPU::rotateRight(unsigned char value) {
 }
 
 // Rotates value to the right through carry flag
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: rotated value
 unsigned char GB_CPU::rotateRightCarry(unsigned char value) {
 	unsigned char result = (value >> 1) | (carry << 7);
@@ -2260,7 +2271,7 @@ unsigned char GB_CPU::rotateRightCarry(unsigned char value) {
 }
 
 // Shifts value to the left by one
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: value << 1
 unsigned char GB_CPU::shiftLeft(unsigned char value) {
 	unsigned char result = value << 1;
@@ -2272,7 +2283,7 @@ unsigned char GB_CPU::shiftLeft(unsigned char value) {
 }
 
 // Arithmetically shifts value to the right by one
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: value >> 1
 unsigned char GB_CPU::shiftRightArithmetic(unsigned char value) {
 	unsigned char msb = value & 0x80;
@@ -2285,7 +2296,7 @@ unsigned char GB_CPU::shiftRightArithmetic(unsigned char value) {
 }
 
 // Logically shifts value to the right by one
-// Input: value (uint8_t)
+// Input: value (unsigned char)
 // Output: value >> 1
 unsigned char GB_CPU::shiftRightLogical(unsigned char value) {
 	unsigned char result = (value >> 1) & 0x7F;
@@ -2297,12 +2308,10 @@ unsigned char GB_CPU::shiftRightLogical(unsigned char value) {
 }
 
 // Swaps lower and upper nibbles of specified value
-// Input: value (uint8_t)
-// Output: swapped value (uint8_t)
+// Input: value (unsigned char)
+// Output: swapped value (unsigned char)
 unsigned char GB_CPU::swap(unsigned char value) {
-	unsigned char hi = (value >> 4) & 0xF;
-	unsigned char lo = (value << 4) & 0xF0;
-	unsigned char result = lo | hi;
+	unsigned char result = ((value << 4) & 0xF0) | ((value >> 4) & 0xF);
 	zero = (result == 0);
 	halfCarry = false;
 	subtract = false;
@@ -2311,22 +2320,24 @@ unsigned char GB_CPU::swap(unsigned char value) {
 }
 
 // Copies complement of bit in value into zero flag
-// Input: value (uint8_t), bit (int)
+// Input: value (unsigned char), bit (int)
 // Output: none
 void GB_CPU::compBitToZero(unsigned char value, unsigned int bit) {
-	zero = ~(value >> bit) & 0x1;
+	zero = !(bool)((value >> bit) & 0x1);
+	halfCarry = true;
+	subtract = false;
 }
 
 // Sets specified bit to 1
-// Input: value (uint8_t), bit (int)
-// Output: value with specified bit set to 1 (uint8_t)
+// Input: value (unsigned char), bit (int)
+// Output: value with specified bit set to 1 (unsigned char)
 unsigned char GB_CPU::setBit(unsigned char value, unsigned int bit) {
 	return value | (1 << bit);
 }
 
 // Sets specified bit to 0
-// Input: value (uint8_t), bit (int)
-// Output: value with specified bit set to 0 (uint8_t)
+// Input: value (unsigned char), bit (int)
+// Output: value with specified bit set to 0 (unsigned char)
 unsigned char GB_CPU::resetBit(unsigned char value, unsigned int bit) {
 	return value & ~(1 << bit);
 }

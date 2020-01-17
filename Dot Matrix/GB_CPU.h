@@ -41,6 +41,7 @@ public:
 	unsigned char shiftRightArithmetic(unsigned char value);
 	unsigned char shiftRightLogical(unsigned char value);
 	unsigned char sub(unsigned char a, unsigned char b);
+	unsigned char subCarry(unsigned char a, unsigned char b);
 	unsigned char swap(unsigned char value);
 	unsigned char setBit(unsigned char value, unsigned int bit);
 

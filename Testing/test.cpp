@@ -5,90 +5,151 @@
 constexpr auto REG_COUNT = 7;
 GB_CPU gb;
 
-TEST(TestDecode, TestLD) {
-	unsigned char values[REG_COUNT] = { 0, 1, 2, 3, 4, 5, 6 };
-	unsigned char* regs[REG_COUNT] = { &gb.A, &gb.B, &gb.C, &gb.D, &gb.E, &gb.H, &gb.L };
-	for (int index = 0; index < REG_COUNT; index++) {
-		*regs[index] = values[index];
-	}
+TEST(TestArithmetic, TestAdd) {
 
-	// LD A, reg
-	unsigned char opcodesA[REG_COUNT] = { 0x7F, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesA[index]);
-		ASSERT_EQ(gb.A, values[index]);
-		gb.A = values[0];
-	}
+	// 0x3A + 0xC6
+	ASSERT_EQ(gb.add(0x3A, 0xC6), 0x0);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
 
-	// LD B, reg
-	unsigned char opcodesB[REG_COUNT] = { 0x47, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45 };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesB[index]);
-		ASSERT_EQ(gb.B, values[index]);
-		gb.B = values[1];
-	}
+	// 0x3C + 0xFF
+	ASSERT_EQ(gb.add(0x3C, 0xFF), 0x3B);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
 
-	// LD C, reg
-	unsigned char opcodesC[REG_COUNT] = { 0x4F, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesC[index]);
-		ASSERT_EQ(gb.C, values[index]);
-		gb.C = values[2];
-	}
+	// 0x3C + 0x12
+	ASSERT_EQ(gb.add(0x3C, 0x12), 0x4E);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+}
 
-	// LD D, reg
-	unsigned char opcodesD[REG_COUNT] = { 0x57, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55 };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesD[index]);
-		ASSERT_EQ(gb.D, values[index]);
-		gb.D = values[3];
-	}
+TEST(TestArithmetic, TestAdd16) {
 
-	// LD E, reg
-	unsigned char opcodesE[REG_COUNT] = { 0x5F, 0x58, 0x59, 0x5A, 0x5B, 0x5C, 0x5D };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesE[index]);
-		ASSERT_EQ(gb.E, values[index]);
-		gb.E = values[4];
-	}
+	// 0x8A23 + 0x0605
+	ASSERT_EQ(gb.add16(0x8A23, 0x0605), 0x9028);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
 
-	// LD H, reg
-	unsigned char opcodesH[REG_COUNT] = { 0x67, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65 };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesH[index]);
-		ASSERT_EQ(gb.H, values[index]);
-		gb.H = values[5];
-	}
+	// 0x8A23 + 0x1446
+	ASSERT_EQ(gb.add16(0x8A23, 0x8A23), 0x1446);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
+}
 
-	// LD L, reg
-	unsigned char opcodesL[REG_COUNT] = { 0x6F, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D };
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesL[index]);
-		ASSERT_EQ(gb.L, values[index]);
-		gb.L = values[6];
-	}
+TEST(TestArithmetic, TestAddCarry) {
 
-	// LD reg, n
-	unsigned char opcodesImm[REG_COUNT] = { 0x3E, 0x06, 0x0E, 0x16, 0x1E, 0x26, 0x2E };
-	gb.PC = 0;
-	gb.mem[gb.PC + 1] = 0x12;
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesImm[index]);
-		ASSERT_EQ(*regs[index], 0x12);
-		ASSERT_EQ(gb.PC, 2);
-		gb.PC -= 2;
-	}
+	// 0xE1 + 0x0F + 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.addCarry(0xE1, 0x0F), 0xF1);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
 
-	// LD reg, (HL)
-	unsigned char opcodesLoadHL[REG_COUNT] = { 0x7E, 0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E };
-	gb.setHL(0x1234);
-	gb.mem[gb.getHL()] = 0x34;
-	unsigned char yes = gb.mem[gb.getHL()];
-	for (int index = 0; index < REG_COUNT; index++) {
-		gb.decode(opcodesLoadHL[index]);
-		ASSERT_EQ(*regs[index], 0x34);
-		gb.setHL(0x1234);
-	}
+	// 0xE1 + 0x3B + 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.addCarry(0xE1, 0x3B), 0x1D);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
+
+	// 0xE1 + 0x1E;
+	gb.carry = 1;
+	ASSERT_EQ(gb.addCarry(0xE1, 0x1E), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
+}
+
+TEST(TestArithmetic, TestDecrement) {
+
+	// 0x01 - 1
+	ASSERT_EQ(gb.dec(0x01), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+
+	// 0x00 - 1
+	ASSERT_EQ(gb.dec(0x00), 0xFF);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+}
+
+TEST(TestArithmetic, TestIncrement) {
+
+	// 0xFF + 1
+	ASSERT_EQ(gb.inc(0xFF), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x50 + 1
+	ASSERT_EQ(gb.inc(0x50), 0x51);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestArithmetic, TestSub) {
+
+	// 0x3E - 0x3E
+	ASSERT_EQ(gb.sub(0x3E, 0x3E), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x3E - 0x0F
+	ASSERT_EQ(gb.sub(0x3E, 0x0F), 0x2F);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x3E - 0x40
+	ASSERT_EQ(gb.sub(0x3E, 0x40), 0xFE);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
+}
+
+TEST(TestArithmetic, TestSubCarry) {
+
+	// 0x3B - 0x2A - 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.subCarry(0x3B, 0x2A), 0x10);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x3B - 0x3A - 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.subCarry(0x3B, 0x3A), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x3B - 0x4F - 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.subCarry(0x3B, 0x4F), 0xEB);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_TRUE(gb.subtract);
+	ASSERT_TRUE(gb.carry);
 }
 
 TEST(TestDecode, TestStack) {
@@ -109,67 +170,223 @@ TEST(TestDecode, TestStack) {
 	ASSERT_EQ(gb.getDE(), 0x1234);
 }
 
-TEST(TestHelper, TestAdd) {
+TEST(TestLogical, TestBitAnd) {
 
-	// 0x3A + 0xC6
-	unsigned char result = gb.add(0x3A, 0xC6);
-	
-	ASSERT_EQ(result, 0x0);
+	// 0x5A & 0x3F
+	ASSERT_EQ(gb.bitAnd(0x5A, 0x3F), 0x1A);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x5A & 0x38
+	ASSERT_EQ(gb.bitAnd(0x5A, 0x38), 0x18);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// 0x5A & 0x00
+	ASSERT_EQ(gb.bitAnd(0x5A, 0x00), 0x00);
 	ASSERT_TRUE(gb.zero);
 	ASSERT_TRUE(gb.halfCarry);
-	ASSERT_FALSE(gb.subtract);
-	ASSERT_TRUE(gb.carry);
-
-	// 0x3C + 0xFF
-	result = gb.add(0x3C, 0xFF);
-	
-	ASSERT_EQ(result, 0x3B);
-	ASSERT_FALSE(gb.zero);
-	ASSERT_TRUE(gb.halfCarry);
-	ASSERT_FALSE(gb.subtract);
-	ASSERT_TRUE(gb.carry);
-
-	// 0x3C + 0x12
-	result = gb.add(0x3C, 0x12);
-	
-	ASSERT_EQ(result, 0x4E);
-	ASSERT_FALSE(gb.zero);
-	ASSERT_FALSE(gb.halfCarry);
 	ASSERT_FALSE(gb.subtract);
 	ASSERT_FALSE(gb.carry);
 }
 
-TEST(TestHelper, TestAddCarry) {
-	
-	// 0xE1 + 0x0F + 1
-	gb.carry = 1;
-	unsigned char result = gb.addCarry(0xE1, 0x0F);
+TEST(TestLogical, TestBitOr) {
 
-	ASSERT_EQ(result, 0xF1);
+	// 0x5A | 0x5A
+	ASSERT_EQ(gb.bitOr(0x5A, 0x5A), 0x5A);
 	ASSERT_FALSE(gb.zero);
-	ASSERT_TRUE(gb.halfCarry);
-	ASSERT_FALSE(gb.subtract);
-	ASSERT_FALSE(gb.carry);
 
-	// 0xE1 + 0x3B + 1
-	gb.carry = 1;
-	result = gb.addCarry(0xE1, 0x3B);
-
-	ASSERT_EQ(result, 0x1D);
+	// 0x5A | 0x5B
+	ASSERT_EQ(gb.bitOr(0x5A, 0x5B), 0x5B);
 	ASSERT_FALSE(gb.zero);
-	ASSERT_FALSE(gb.halfCarry);
-	ASSERT_FALSE(gb.subtract);
-	ASSERT_TRUE(gb.carry);
 
-	// 0xE1 + 0x1E;
-	gb.carry = 1;
-	result = gb.addCarry(0xE1, 0x1E);
+	// 0x5A | 0x0F
+	ASSERT_EQ(gb.bitOr(0x5A, 0x0F), 0x5F);
+	ASSERT_FALSE(gb.zero);
 
-	ASSERT_EQ(result, 0x00);
+	// 0x00 | 0x00
+	ASSERT_EQ(gb.bitOr(0x00, 0x00), 0x00);
+	ASSERT_TRUE(gb.zero);
+}
+
+TEST(TestLogical, TestBitXor) {
+
+	// 0xFF ^ 0xFF
+	ASSERT_EQ(gb.bitXor(0xFF, 0xFF), 0x00);
+	ASSERT_TRUE(gb.zero);
+
+	// 0xFF ^ 0x0F
+	ASSERT_EQ(gb.bitXor(0xFF, 0x0F), 0xF0);
+	ASSERT_FALSE(gb.zero);
+
+	// 0xFF ^ 0x8A
+	ASSERT_EQ(gb.bitXor(0xFF, 0x8A), 0x75);
+	ASSERT_FALSE(gb.zero);
+}
+
+TEST(TestLogical, TestCompBitToZero) {
+	gb.compBitToZero(0xFE, 0);
 	ASSERT_TRUE(gb.zero);
 	ASSERT_TRUE(gb.halfCarry);
 	ASSERT_FALSE(gb.subtract);
+
+	gb.compBitToZero(0xFE, 1);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_TRUE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestResetBit) {
+	ASSERT_EQ(gb.resetBit(0x80, 7), 0x00);
+	ASSERT_EQ(gb.resetBit(0x3B, 1), 0x39);
+}
+TEST(TestLogical, TestRotateLeft) {
+
+	// 0x85 rotate left 1
+	ASSERT_EQ(gb.rotateLeft(0x85), 0x0B);
 	ASSERT_TRUE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x70 rotate left 1
+	ASSERT_EQ(gb.rotateLeft(0x40), 0x80);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestRotateLeftCarry) {
+
+	// 0x95 rotate left 1 through carry = 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.rotateLeftCarry(0x95), 0x2B);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x95 rotate left 1 through carry = 0
+	gb.carry = 0;
+	ASSERT_EQ(gb.rotateLeftCarry(0x95), 0x2A);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestRotateRight) {
+
+	// 0x3B rotate right 1
+	ASSERT_EQ(gb.rotateRight(0x3B), 0x9D);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x80 rotate right 1
+	ASSERT_EQ(gb.rotateRight(0x80), 0x40);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestRotateRightCarry) {
+
+	// 0x81 rotate right 1 through carry = 0
+	gb.carry = 0;
+	ASSERT_EQ(gb.rotateRightCarry(0x81), 0x40);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x80 rotate right 1 through carry = 1
+	gb.carry = 1;
+	ASSERT_EQ(gb.rotateRightCarry(0x80), 0xC0);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestSetBit) {
+	ASSERT_EQ(gb.setBit(0x80, 3), 0x88);
+	ASSERT_EQ(gb.setBit(0x3B, 7), 0xBB);
+}
+
+TEST(TestLogical, TestShiftLeft) {
+
+	// 0x80 << 1
+	ASSERT_EQ(gb.shiftLeft(0x80), 0x00);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x7F << 1
+	ASSERT_EQ(gb.shiftLeft(0x7F), 0xFE);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestShiftRightArithmetic) {
+	
+	// 0x8A >> 1
+	ASSERT_EQ(gb.shiftRightArithmetic(0x8A), 0xC5);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x01 >> 1
+	ASSERT_EQ(gb.shiftRightArithmetic(0x01), 0x00);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestShiftRightLogical) {
+
+	// 0x01 >> 1
+	ASSERT_EQ(gb.shiftRightLogical(0x01), 0x00);
+	ASSERT_TRUE(gb.carry);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+
+	// 0x01 >> 1
+	ASSERT_EQ(gb.shiftRightLogical(0xFE), 0x7F);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+}
+
+TEST(TestLogical, TestSwap) {
+
+	// swap 0x00
+	ASSERT_EQ(gb.swap(0x00), 0x00);
+	ASSERT_TRUE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
+
+	// swap 0xF4
+	ASSERT_EQ(gb.swap(0xF4), 0x4F);
+	ASSERT_FALSE(gb.zero);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.subtract);
+	ASSERT_FALSE(gb.carry);
 }
 
 TEST(TestReg, TestRegF) {

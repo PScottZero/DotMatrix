@@ -12,5 +12,39 @@
     <TestDuration Test="TestDecode.TestLD" Duration="1" />
     <TestDuration Test="TestHelper.TestAdd" Duration="1" />
     <TestDuration Test="TestHelper.TestAddCarry" Duration="1" />
+    <TestDuration Test="TestHelper.TestSub" Duration="1" />
+    <TestDuration Test="TestHelper.TestSubCarry" Duration="1" />
+    <TestDuration Test="TestHelper.TestAdd16" Duration="1" />
+    <TestDuration Test="TestHelper.TestAnd" Duration="1" />
+    <TestDuration Test="TestHelper.TestBitAnd" Duration="1" />
+    <TestDuration Test="TestHelper.TestBitOr" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestAdd" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestAdd16" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestAddCarry" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestBitAnd" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestBitOr" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestSub" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestSubCarry" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestXor" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestBitXor" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestIncrement" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestDecrement" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestRotateLeft" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestRotateLeftCarry" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestRotateRight" Duration="1" />
+    <TestDuration Test="TestLogical.TestBitAnd" Duration="1" />
+    <TestDuration Test="TestLogical.TestBitOr" Duration="1" />
+    <TestDuration Test="TestLogical.TestRotateLeft" Duration="1" />
+    <TestDuration Test="TestLogical.TestRotateLeftCarry" Duration="1" />
+    <TestDuration Test="TestLogical.TestRotateRight" Duration="1" />
+    <TestDuration Test="TestLogical.TestBitXor" Duration="1" />
+    <TestDuration Test="TestLogical.TestRotateRightCarry" Duration="1" />
+    <TestDuration Test="TestLogical.TestShiftLeft" Duration="1" />
+    <TestDuration Test="TestLogical.TestShiftRightArithmetic" Duration="1" />
+    <TestDuration Test="TestLogical.TestShiftRightLogical" Duration="1" />
+    <TestDuration Test="TestLogical.TestSwap" Duration="1" />
+    <TestDuration Test="TestLogical.TestCompBitToZero" Duration="1" />
+    <TestDuration Test="TestLogical.TestResetBit" Duration="1" />
+    <TestDuration Test="TestLogical.TestSetBit" Duration="1" />
   </TestDurations>
 </GtaTestDurations>
