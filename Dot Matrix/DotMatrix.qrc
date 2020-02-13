@@ -1,4 +1,5 @@
 <RCC>
-    <qresource prefix="DotMatrix">
+    <qresource prefix="/DotMatrix">
+        <file>dotmatrix.ico</file>
     </qresource>
 </RCC>

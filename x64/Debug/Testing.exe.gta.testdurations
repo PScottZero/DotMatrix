@@ -46,5 +46,7 @@
     <TestDuration Test="TestLogical.TestCompBitToZero" Duration="1" />
     <TestDuration Test="TestLogical.TestResetBit" Duration="1" />
     <TestDuration Test="TestLogical.TestSetBit" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestDecimalAdjustAcc" Duration="1" />
+    <TestDuration Test="TestArithmetic.TestDecimalAdjust" Duration="1" />
   </TestDurations>
 </GtaTestDurations>

@@ -71,6 +71,24 @@ TEST(TestArithmetic, TestAddCarry) {
 	ASSERT_TRUE(gb.carry);
 }
 
+TEST(TestArithmetic, TestDecimalAdjust) {
+
+	// 0x45 + 0x38
+	gb.A = gb.add(0x45, 0x38);
+	gb.decimalAdjustAcc();
+	ASSERT_EQ(gb.A, 0x83);
+	ASSERT_FALSE(gb.carry);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.zero);
+
+	// 0x83 - 0x38
+	gb.A = gb.sub(gb.A, 0x38);
+	gb.decimalAdjustAcc();
+	ASSERT_EQ(gb.A, 0x45);
+	ASSERT_FALSE(gb.halfCarry);
+	ASSERT_FALSE(gb.zero);
+}
+
 TEST(TestArithmetic, TestDecrement) {
 
 	// 0x01 - 1

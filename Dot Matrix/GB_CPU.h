@@ -12,7 +12,6 @@ public:
 	unsigned short PC, SP;
 	bool zero, halfCarry, subtract, carry, IME;
 	unsigned char* mem;
-	unsigned char* cart;
 
 	GB_CPU();
 
@@ -31,6 +30,7 @@ public:
 	unsigned char bitXor(unsigned char a, unsigned char b);
 	void compBitToZero(unsigned char value, unsigned int bit);
 	unsigned char dec(unsigned char value);
+	void decimalAdjustAcc();
 	unsigned char inc(unsigned char value);
 	unsigned char resetBit(unsigned char value, unsigned int bit);
 	unsigned char rotateLeft(unsigned char value);
@@ -50,6 +50,8 @@ public:
 	unsigned short getBC();
 	unsigned short getDE();
 	unsigned short getHL();
+	unsigned char getImm8();
+	unsigned short getImm16();
 	void setF(unsigned char value);
 	void setBC(unsigned short value);
 	void setDE(unsigned short value);

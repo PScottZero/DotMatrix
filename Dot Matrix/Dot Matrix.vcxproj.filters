@@ -8,6 +8,9 @@
     <ClCompile Include="GB_CPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GB_PPU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource Files">
@@ -50,5 +53,14 @@
     <ClInclude Include="GB_CPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GB_PPU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="dotmatrix.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bootstrap.bin" />
   </ItemGroup>
 </Project>

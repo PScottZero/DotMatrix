@@ -82,6 +82,7 @@
   <ItemGroup>
     <ClCompile Include="DotMatrix.cpp" />
     <ClCompile Include="GB_CPU.cpp" />
+    <ClCompile Include="GB_PPU.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -95,6 +96,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GB_CPU.h" />
+    <ClInclude Include="GB_PPU.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="dotmatrix.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="bootstrap.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

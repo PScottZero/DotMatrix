@@ -7,45 +7,37 @@ GB_CPU::GB_CPU() {
 	IME = true;
 	SP = 0xFFFE;
 	mem = new unsigned char[0xFFFF];
-	cart = new unsigned char[0x200000];
 }
 
 // Loads cartidge data into memory
 void GB_CPU::loadCartridge(string dir) {
-	ifstream file(dir, ios::in | ios::binary | ios::ate);
-	char* buf;
-	if (file.is_open()) {
-		streampos size = file.tellg();
-		buf = new char[size];
-		file.seekg(0, ios::beg);
-		file.read(buf, size);
-		file.close();
-		for (long long i = 0; i < size; i++) {
-			cart[i] = (unsigned char)buf[i];
+	char* buffer = new char[0x8000];
+	ifstream cartridge (dir, ios::in | ios::binary);
+	cartridge.read(buffer, 0x8000);
+	if (buffer) {
+		for (unsigned short index = 0x100; index < 0x8000; index++) {
+			mem[index] = (unsigned char)buffer[index];
 		}
 	}
+	delete[] buffer;
 }
 
 // Loads gameboy bootstrap
 void GB_CPU::loadBootstrap() {
-	ifstream file("C:/Users/8psco/Documents/Roms/GB/bootstrap.bin", ios::in | ios::binary | ios::ate);
-	char* buf;
-	if (file.is_open()) {
-		streampos size = file.tellg();
-		buf = new char[size];
-		file.seekg(0, ios::beg);
-		file.read(buf, size);
-		file.close();
-		for (long long i = 0; i < size; i++) {
-			mem[i] = (unsigned char)buf[i];
-		}
+	char buffer[0x100];
+	ifstream bootstrap ("bootstrap.bin", ios::in | ios::binary);
+	bootstrap.read(buffer, 0x100);
+	unsigned short index = 0;
+	for (char byte : buffer) {
+		mem[index] = byte;
+		index++;
 	}
 }
 
 // Run emulator
 // TODO: fully implement run function
 void GB_CPU::run() {
-	decode(0x00);
+	decode(mem[PC]);
 }
 
 // Decode instruction
@@ -221,32 +213,25 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD r, n
 		// Load 8-bit immediate n into register r
 		case 0x3E:
-			A = mem[PC + 1];
-			PC++;
+			A = getImm8();
 			break;
 		case 0x06:
-			B = mem[PC + 1];
-			PC++;
+			B = getImm8();
 			break;
 		case 0x0E:
-			C = mem[PC + 1];
-			PC++;
+			C = getImm8();
 			break;
 		case 0x16:
-			D = mem[PC + 1];
-			PC++;
+			D = getImm8();
 			break;
 		case 0x1E:
-			E = mem[PC + 1];
-			PC++;
+			E = getImm8();
 			break;
 		case 0x26:
-			H = mem[PC + 1];
-			PC++;
+			H = getImm8();
 			break;
 		case 0x2E:
-			L = mem[PC + 1];
-			PC++;
+			L = getImm8();
 			break;
 
 		// LD r, (HL)
@@ -300,8 +285,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD (HL), n
 		// Load 8-bit immediate n into memory at address HL
 		case 0x36:
-			mem[getHL()] = mem[PC + 1];
-			PC++;
+			mem[getHL()] = getImm8();
 			break;
 
 		// LD A, (BC)
@@ -331,29 +315,25 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD A, (n)
 		// Load memory at address 0xFF00 + [8-bit immediate n] into register A
 		case 0xF0:
-			A = mem[0xFF00 + mem[PC + 1]];
-			PC++;
+			A = mem[0xFF00 + getImm8()];
 			break;
 
 		// LD (n), A
 		// Load register A into memory at address 0xFF00 + [8-bit immediate n]
 		case 0xE0:
-			mem[0xFF00 + mem[PC + 1]] = A;
-			PC++;
+			mem[0xFF00 + getImm8()] = A;
 			break;
 
 		// LD A, (nn)
 		// Load memory at address specified by 16-bit immediate nn into register A
 		case 0xFA:
-			A = mem[(mem[PC + 2] << 8) | mem[PC + 1]];
-			PC += 2;
+			A = mem[getImm16()];
 			break;
 
 		// LD (nn), A
 		// Load register A into memory at address specified by 16-bit immediate nn
 		case 0xEA:
-			mem[(mem[PC + 2] << 8) | mem[PC + 1]] = A;
-			PC += 2;
+			mem[getImm16()] = A;
 			break;
 
 		// LD A, (HLI)
@@ -403,20 +383,16 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD dd, nn
 		// Load 2 byte immediate nn into register pair dd
 		case 0x01:
-			setBC((mem[PC + 2] << 8) | mem[PC + 1]);
-			PC += 2;
+			setBC(getImm16());
 			break;
 		case 0x11:
-			setDE((mem[PC + 2] << 8) | mem[PC + 1]);
-			PC += 2;
+			setDE(getImm16());
 			break;
 		case 0x21:
-			setHL((mem[PC + 2] << 8) | mem[PC + 1]);
-			PC += 2;
+			setHL(getImm16());
 			break;
 		case 0x31:
-			SP = (mem[PC + 2] << 8) | mem[PC + 1];
-			PC += 2;
+			SP = getImm16();
 			break;
 
 		// LD SP, HL
@@ -428,62 +404,52 @@ void GB_CPU::decode(unsigned char opcode) {
 		// PUSH qq
 		// Push register qq onto stack
 		case 0xC5:
-			mem[SP] = B;
-			mem[SP + 1] = C;
-			SP -= 2;
+			mem[SP--] = B;
+			mem[SP--] = C;
 			break;
 		case 0xD5:
-			mem[SP] = D;
-			mem[SP + 1] = E;
-			SP -= 2;
+			mem[SP--] = D;
+			mem[SP--] = E;
 			break;
 		case 0xE5:
-			mem[SP] = H;
-			mem[SP + 1] = L;
-			SP -= 2;
+			mem[SP--] = H;
+			mem[SP--] = L;
 			break;
 		case 0xF5:
-			mem[SP] = A;
-			mem[SP + 1] = getF();
-			SP -= 2;
+			mem[SP--] = A;
+			mem[SP--] = getF();
 			break;
 
 		// POP qq
 		// Pop contents of stack into register pair qq
 		case 0xC1:
-			SP += 2;
-			B = mem[SP];
-			C = mem[SP + 1];
+			C = mem[++SP];
+			B = mem[++SP];
 			break;
 		case 0xD1:
-			SP += 2;
-			D = mem[SP];
-			E = mem[SP + 1];
+			E = mem[++SP];
+			D = mem[++SP];
 			break;
 		case 0xE1:
-			SP += 2;
-			H = mem[SP];
-			L = mem[SP + 1];
+			L = mem[++SP];
+			H = mem[++SP];
 			break;
 		case 0xF1:
-			SP += 2;
-			A = mem[SP];
-			setF(mem[SP + 1]);
+			setF(mem[++SP]);
+			A = mem[++SP];
 			break;
 
 		// LDHL SP, e
 		// Add 8-bit immediate e to SP and store result in HL
 		case 0xF8:
-			setHL(add16(SP, mem[PC + 1]));
+			setHL(add16(SP, getImm8()));
 			zero = false;
-			PC++;
 			break;
 
 		// LD (nn), SP
 		// Load stack pointer into memory at address specified by 16-bit immediate nn
 		case 0x08:
-			mem[(mem[PC + 2] << 8) | mem[PC + 1]] = SP;
-			PC += 2;
+			mem[getImm16()] = SP;
 			break;
 
 
@@ -517,8 +483,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADD A, n
 		// Add 8-bit immediate n with register A and store result in A
 		case 0xC6:
-			A = add(A, mem[PC + 1]);
-			PC++;
+			A = add(A, getImm8());
 			break;
 
 		// ADD A, (HL)
@@ -554,8 +519,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADC A, n
 		// Add A, 8-bit immediate n, and carry flag together and store result in A
 		case 0xCE:
-			A = addCarry(A, mem[PC + 1]);
-			PC++;
+			A = addCarry(A, getImm8());
 			break;
 
 		// ADC A, (HL)
@@ -591,8 +555,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// SUB n
 		// Subtract 8-bit immediate n from register A and store result in A
 		case 0xD6:
-			A = sub(A, mem[PC + 1]);
-			PC++;
+			A = sub(A, getImm8());
 			break;
 
 		// SUB (HL)
@@ -628,8 +591,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// SBC A, n
 		// Subtract 8-bit immediate n and carry flag from register A and store result in A
 		case 0xDE:
-			A = sub(A, mem[PC + 1] + carry);
-			PC++;
+			A = sub(A, getImm8() + carry);
 			break;
 
 		// SBC A, (HL)
@@ -665,8 +627,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// AND n
 		// And register A and 8-bit immediate n together and store result in A
 		case 0xE6:
-			A = bitAnd(A, mem[PC + 1]);
-			PC++;
+			A = bitAnd(A, getImm8());
 			break;
 
 		// AND (HL)
@@ -702,8 +663,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// OR n
 		// Or register A and 8-bit immediate n together and store result in A
 		case 0xF6:
-			A = bitOr(A, mem[PC + 1]);
-			PC++;
+			A = bitOr(A, getImm8());
 			break;
 
 		// OR (HL)
@@ -739,8 +699,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// XOR n
 		// Xor register A and 8-bit immediate n together and store result in A
 		case 0xEE:
-			A = bitXor(A, mem[PC + 1]);
-			PC++;
+			A = bitXor(A, getImm8());
 			break;
 
 		// XOR (HL)
@@ -776,8 +735,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// CP n
 		// Compare register A and 8-bit immediate n
 		case 0xFE:
-			sub(A, mem[PC + 1]);
-			PC++;
+			sub(A, getImm8());
 			break;
 
 		// CP (HL)
@@ -869,8 +827,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADD SP, e
 		// Add 8-bit immediate e to SP and store result in SP
 		case 0xE8:
-			SP = add16(SP, mem[PC + 1]);
-			PC++;
+			SP = add16(SP, getImm8());
 			break;
 
 		// INC ss
@@ -934,7 +891,7 @@ void GB_CPU::decode(unsigned char opcode) {
 
 		// -------------------- CB PREFIX OPCODES --------------------
 		case 0xCB:
-			switch (mem[PC + 1]) {
+			switch (getImm8()) {
 
 				// RLC r
 				// Rotate register r to the left
@@ -1812,14 +1769,12 @@ void GB_CPU::decode(unsigned char opcode) {
 					mem[getHL()] = resetBit(mem[getHL()], 7);
 					break;
 			}
-			PC++;
 			break;
 
 		// JP nn
 		// Jump to address specified by 16 bit immediate
 		case 0xC3:
-			PC = (mem[PC + 2] << 8) | mem[PC + 1];
-			PC--;
+			PC = getImm16() - 1;
 			break;
 
 		// JP cc, nn
@@ -1828,49 +1783,53 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 0
 		case 0xC2:
 			if (!zero) {
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
+				PC = getImm16() - 1;
+			} else {
+				PC += 2;
 			}
 			break;
 
 		// Z == 1
 		case 0xCA:
 			if (zero) {
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
+				PC = getImm16() - 1;
+			} else {
+				PC += 2;
 			}
 			break;
 
 		// C == 0
 		case 0xD2:
 			if (!carry) {
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
+				PC = getImm16() - 1;
+			} else {
+				PC += 2;
 			}
 			break;
 
 		// C == 1
 		case 0xDA:
 			if (carry) {
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
+				PC = getImm16() - 1;
+			} else {
+				PC += 2;
 			}
 			break;
 
 		// JR e
-		// Jump to PC + (e - 2)
+		// Jump to PC + (signed) e
 		case 0x18:
-			PC += mem[PC + 1];
-			PC++;
+			PC += (char)getImm8();
 			break;
 
 		// JR cc, e
-		// Jump to PC + (e - 2) if condition cc is met
+		// Jump to PC + (signed) e if condition cc is met
 
 		// Z == 0
 		case 0x20:
 			if (!zero) {
-				PC += mem[PC + 1];
+				PC += (char)getImm8();
+			} else {
 				PC++;
 			}
 			break;
@@ -1878,7 +1837,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 1
 		case 0x28:
 			if (zero) {
-				PC += mem[PC + 1];
+				PC += (char)getImm8();
+			} else {
 				PC++;
 			}
 			break;
@@ -1886,7 +1846,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 0
 		case 0x30:
 			if (!carry) {
-				PC += mem[PC + 1];
+				PC += (char)getImm8();
+			} else {
 				PC++;
 			}
 			break;
@@ -1894,7 +1855,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 1
 		case 0x38:
 			if (carry) {
-				PC += mem[PC + 1];
+				PC += (char)getImm8();
+			} else {
 				PC++;
 			}
 			break;
@@ -1902,18 +1864,15 @@ void GB_CPU::decode(unsigned char opcode) {
 		// JP (HL)
 		// Jump to address specified by register HL
 		case 0xE9:
-			PC = getHL();
-			PC--;
+			PC = getHL() - 1;
 			break;
 
 		// CALL nn
 		// Push current address onto stack and jump to address specified by 16 bit immediate
 		case 0xCD:
-			mem[SP - 1] = (PC >> 8) & 0xFF;
-			mem[SP - 2] = PC & 0xFF;
-			PC = (mem[PC + 2] << 8) | mem[PC + 1];
-			PC--;
-			SP -= 2;
+			mem[SP--] = (PC >> 8) & 0xFF;
+			mem[SP--] = PC & 0xFF;
+			PC = getImm16() - 1;
 			break;
 
 		// CALL cc, nn
@@ -1922,61 +1881,49 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 0
 		case 0xC4:
 			if (!zero) {
-				mem[SP - 1] = (PC >> 8) & 0xFF;
-				mem[SP - 2] = PC & 0xFF;
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
-				SP -= 2;
+				mem[SP--] = (PC >> 8) & 0xFF;
+				mem[SP--] = PC & 0xFF;
+				PC = getImm16() - 1;
 			}
 			break;
 
 		// Z == 1
 		case 0xCC:
 			if (zero) {
-				mem[SP - 1] = (PC >> 8) & 0xFF;
-				mem[SP - 2] = PC & 0xFF;
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
-				SP -= 2;
+				mem[SP--] = (PC >> 8) & 0xFF;
+				mem[SP--] = PC & 0xFF;
+				PC = getImm16() - 1;
 			}
 			break;
 
 		// C == 0
 		case 0xD4:
 			if (!carry) {
-				mem[SP - 1] = (PC >> 8) & 0xFF;
-				mem[SP - 2] = PC & 0xFF;
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
-				SP -= 2;
+				mem[SP--] = (PC >> 8) & 0xFF;
+				mem[SP--] = PC & 0xFF;
+				PC = getImm16() - 1;
 			}
 			break;
 
 		// C == 1
 		case 0xDC:
 			if (carry) {
-				mem[SP - 1] = (PC >> 8) & 0xFF;
-				mem[SP - 2] = PC & 0xFF;
-				PC = (mem[PC + 2] << 8) | mem[PC + 1];
-				PC--;
-				SP -= 2;
+				mem[SP--] = (PC >> 8) & 0xFF;
+				mem[SP--] = PC & 0xFF;
+				PC = getImm16() - 1;
 			}
 			break;
 
 		// RET
 		// Pop stack and return to popped address
 		case 0xC9:
-			PC = (mem[SP + 1] << 8) | mem[SP];
-			SP += 2;
-			PC--;
+			PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
 			break;
 
 		// RETI
 		// Return from interrupt routine
 		case 0xD9:
-			PC = (mem[SP + 1] << 8) | mem[SP];
-			SP += 2;
-			PC--;
+			PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
 			IME = true;
 			break;
 
@@ -1986,78 +1933,66 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 0
 		case 0xC0:
 			if (!zero) {
-				PC = (mem[SP + 1] << 8) | mem[SP];
-				SP += 2;
-				PC--;
+				PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
 			}
+			PC += 2;
 			break;
 
 		// Z == 1
 		case 0xC8:
 			if (zero) {
-				PC = (mem[SP + 1] << 8) | mem[SP];
-				SP += 2;
-				PC--;
+				PC = (mem[++SP] | (mem[++SP] << 8));
 			}
+			PC += 2;
 			break;
 
 		// C == 0
 		case 0xD0:
 			if (!carry) {
-				PC = (mem[SP + 1] << 8) | mem[SP];
-				SP += 2;
-				PC--;
+				PC = (mem[++SP] | (mem[++SP] << 8));
 			}
+			PC += 2;
 			break;
 
 		// C == 1
 		case 0xD8:
 			if (carry) {
-				PC = (mem[SP + 1] << 8) | mem[SP];
-				SP += 2;
-				PC--;
+				PC = (mem[++SP] | (mem[++SP] << 8));
 			}
+			PC += 2;
 			break;
 
 		// RST t
 		// Load zero page memory address specified by t into PC
 		case 0xC7:
-			PC = 0x00;
-			PC--;
+			PC = 0xFFFF;
 			break;
 		case 0xCF:
-			PC = 0x08;
-			PC--;
+			PC = 0x07;
 			break;
 		case 0xD7:
-			PC = 0x10;
-			PC--;
+			PC = 0x0F;
 			break;
 		case 0xDF:
-			PC = 0x18;
-			PC--;
+			PC = 0x17;
 			break;
 		case 0xE7:
-			PC = 0x20;
-			PC--;
+			PC = 0x1F;
 			break;
 		case 0xEF:
-			PC = 0x28;
-			PC--;
+			PC = 0x27;
 			break;
 		case 0xF7:
-			PC = 0x30;
-			PC--;
+			PC = 0x2F;
 			break;
 		case 0xFF:
-			PC = 0x38;
-			PC--;
+			PC = 0x37;
 			break;
 
 		// DAA
-		// Decimal adjust acc
-		// TODO: implement decimal adjust instruction
+		// Decimal adjust accumulator
 		case 0x27:
+			decimalAdjustAcc();
 			break;
 
 		// CPL
@@ -2342,6 +2277,27 @@ unsigned char GB_CPU::resetBit(unsigned char value, unsigned int bit) {
 	return value & ~(1 << bit);
 }
 
+void GB_CPU::decimalAdjustAcc() {
+	if (!subtract) {
+		if (halfCarry || (A & 0xF) > 0x9) {
+			A += 0x6;
+		}
+		if (carry || A > 0x99) {
+			A += 0x60;
+			carry = true;
+		}
+	} else {
+		if (carry) {
+			A -= 0x60;
+		}
+		if (halfCarry) {
+			A -= 0x6;
+		}
+	}
+	zero = A == 0;
+	halfCarry = 0;
+}
+
 
 // -------------------- REGISTER GETTERS / SETTERS --------------------
 unsigned char GB_CPU::getF() {
@@ -2358,6 +2314,16 @@ unsigned short GB_CPU::getDE() {
 
 unsigned short GB_CPU::getHL() {
 	return H << 8 | L;
+}
+
+unsigned char GB_CPU::getImm8() {
+	PC++;
+	return mem[PC];
+}
+
+unsigned short GB_CPU::getImm16() {
+	PC += 2;
+	return mem[PC] << 8 | mem[PC - 1];
 }
 
 void GB_CPU::setF(unsigned char value) {
