@@ -14,13 +14,10 @@ int main(int argc, char *argv[])
 	GB_PPU ppu(cpu.mem, w.scene);
 	cpu.loadBootstrap();
 	cpu.loadCartridge("C:/Users/8psco/Documents/Emulation/.roms/GB/Tetris.gb");
-	while (cpu.PC != 0x6b) {
+	while (cpu.PC <= 0x100) {
 		cpu.run();
+		ppu.render();
 	}
-	while (true) {
-		cpu.run();
-	}
-	ppu.drawTileMap();
 	return a.exec();
 	return 0;
 }

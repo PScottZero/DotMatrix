@@ -3,17 +3,29 @@
 GB_PPU::GB_PPU(unsigned char* cpuMem, QGraphicsScene* scene) {
 	mem = cpuMem;
 	display = scene;
+
+    // game boy pocket color palette
+    white = QBrush(QColor(255, 255, 255));
+    lightGray = QBrush(QColor(169, 169, 169));
+    darkGray = QBrush(QColor(84, 84, 84));
+    black = QBrush(QColor(0, 0, 0));
+
+    //// original game boy color palette
+    //white = QBrush(QColor(155, 188, 15));
+    //lightGray = QBrush(QColor(139, 172, 15));
+    //darkGray = QBrush(QColor(48, 98, 48));
+    //black = QBrush(QColor(15, 56, 15));
 	
 	// create vram
 	initVideo();
 }
 
 void GB_PPU::initVideo() {
-	vram = new pixel * [256];
-	for (int i = 0; i < 256; i++) {
-		vram[i] = new pixel[256];
-		for (int j = 0; j < 256; j++) {
-			vram[i][j] = {THREE, 0, BACKGROUND};
+	vram = new pixel * [BG_PX_DIM];
+	for (int i = 0; i < BG_PX_DIM; i++) {
+		vram[i] = new pixel[BG_PX_DIM];
+		for (int j = 0; j < BG_PX_DIM; j++) {
+			vram[i][j] = {THREE, 0, PixelType::Background};
 		}
 	}
 }
@@ -21,13 +33,9 @@ void GB_PPU::initVideo() {
 // Renders display
 // TODO: implement render function
 void GB_PPU::render() {
-	
-}
-
-// pixel first in first out
-// TODO: implement pixelFIFO
-void GB_PPU::pixelFIFO() {
-	
+	if (bgDisplayEnable() == 1) {
+		setBackgroundTiles();
+	}
 }
 
 // takes background map and copies
@@ -45,26 +53,63 @@ void GB_PPU::setBackgroundTiles() {
     }
 
     // iterate through tile map
-    for (int index = 0; index < TILE_COUNT; index++) {
-        unsigned short tileAddr = bgDataAddr + 16 * mem[bgMapAddr + index];
-        int offsetX = (index % 32) * 8;
-        int offsetY = (index / 32) * 8;
+    for (int index = 0; index < BG_TILE_COUNT; index++) {
+        unsigned short tileAddr = bgDataAddr + BYTES_PER_TILE * mem[bgMapAddr + index];
+		int rowOffset = (index / BG_TILE_DIM) * TILE_PX_DIM;
+        int colOffset = (index % BG_TILE_DIM) * TILE_PX_DIM;
 
         // write tile to VRAM
-        for (int row = 0; row < 8; row++) {
+        for (int row = 0; row < TILE_PX_DIM; row++) {
+
+			// get row data
             unsigned char byte0 = mem[tileAddr + 2 * row];
             unsigned char byte1 = mem[tileAddr + 2 * row + 1];
-            for (int col = 0; col < 8; col++) {
+
+            for (int col = 0; col < TILE_PX_DIM; col++) {
 
                 // get pixel data for tile
                 unsigned char bit1 = (byte0 >> (7 - col)) & 1;
                 unsigned char bit0 = (byte1 >> (7 - col)) & 1;
                 unsigned char color = (bit1 << 1) | bit0;
-                vram[offsetY + row][offsetX + col] = {color, 0, BACKGROUND};
+                vram[rowOffset + row][colOffset + col] = {color, 0, PixelType::Background};
             }
         }
     }
 }
+
+void GB_PPU::drawDisplay() {
+    int scrollY = mem[0xFF42];
+    int scrollX = mem[0xFF43];
+    
+    // set background palette
+    QBrush colorZero = getShade(ZERO);
+    QBrush colorOne = getShade(ONE);
+    QBrush colorTwo = getShade(TWO);
+    QBrush colorThree = getShade(THREE);
+    
+    for (int row = 0; row < SCREEN_HEIGHT; row++) {
+        for (int col = 0; col < SCREEN_WIDTH; col++) {
+            pixel px = vram[scrollY + row][scrollX + col];
+            if (px.type == PixelType::Background) {
+                
+                QBrush pxColor;
+                switch (px.value) {
+                case ZERO:
+                    pxColor = colorZero;
+                case ONE:
+                    pxColor = colorOne;
+                case TWO:
+                    pxColor = colorTwo;
+                case THREE:
+                    pxColor = colorThree;
+                }
+
+                display->addRect(QRect(col, row, 4, 4), QPen(Qt::transparent), pxColor);
+            }
+        }
+    }
+}
+
 
 
 // -------------------- LCD CONTROL --------------------
@@ -101,54 +146,32 @@ int GB_PPU::bgDisplayEnable() {
     return mem[0xFF40] & 1;
 }
 
-void GB_PPU::drawTileMap() {
-	display->clear();
-	
-	QBrush zero = QBrush(QColor(255, 255, 255));
-	QBrush one = QBrush(QColor(170, 170, 170));
-	QBrush two = QBrush(QColor(85, 85, 85));
-	QBrush three = QBrush(QColor(0, 0, 0));
-	
-	int offsetX = 0;
-	int offsetY = 0;
-	int x = 0;
-	int y = 0;
-	for (int i = 0; i < 0x1800; i += 2) {
-		unsigned char byte1 = mem[i + 0x8000];
-		unsigned char byte2 = mem[i + 0x8001];
 
-		// set x offset for each tile col
-		if (i % 16 == 0 && i != 0) {
-			offsetX += 8;
-			offsetX %= 160;
-			offsetY = (i / (16 * 20)) * 8;
-			y = 0;
-		}
 
-		for (int j = 0; j < 8; j++) {
-			unsigned char value = ((byte1 >> (7 - j)) << 1) | (byte2 >> (7 - j));
-			QBrush color;
-			switch (value) {
-			case ZERO:
-				color = zero;
-				break;
-			case ONE:
-				color = one;
-				break;
-			case TWO:
-				color = two;
-				break;
-			case THREE:
-				color = three;
-				break;
-			default:
-				color = zero;
-				break;
-			}
-			display->addRect(QRect(offsetX + x, offsetY + y, 1, 1), QPen(Qt::transparent), color);
-			x++;
-		}
-		x = 0;
-		y++;
-	}
+// -------------------- BG PALETTE DATA --------------------
+
+QBrush GB_PPU::getShade(unsigned char value) {
+    switch (value) {
+    case ZERO:
+        return getBrush(mem[0xFF47] & 3);
+    case ONE:
+        return getBrush((mem[0xFF47] >> 2) & 3);
+    case TWO:
+        return getBrush((mem[0xFF47] >> 4) & 3);
+    case THREE:
+        return getBrush((mem[0xFF47] >> 6) & 3);
+    }
+}
+
+QBrush GB_PPU::getBrush(unsigned char value) {
+    switch (value) {
+    case ZERO:
+        return white;
+    case ONE:
+        return lightGray;
+    case TWO:
+        return darkGray;
+    case THREE:
+        return black;
+    }
 }
