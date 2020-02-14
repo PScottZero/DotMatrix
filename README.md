@@ -1,6 +1,6 @@
 # Project Status
 
-At the moment, the CPU instruction set is mostly implemented. I am currently creating unit tests in order to make sure the CPU code is working properly.
+I am currently working on the video implementation, which should take a good while :)
 
 # Notes
 
