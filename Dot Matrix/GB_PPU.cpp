@@ -30,13 +30,75 @@ void GB_PPU::pixelFIFO() {
 	
 }
 
+// takes background map and copies
+// corresponding tiles into video ram
 void GB_PPU::setBackgroundTiles() {
-	for (int i = 0; i < TILE_COUNT; i++) {
-		unsigned char tileNo = mem[0x9800 + i];
-		for (int row = 0; row < 8; row++) {
-			unsigned char byte0 = mem[0x8000 + ]
-		}
-	}
+    unsigned short bgDataAddr = BG_DATA_ADDR_0;
+    unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
+
+    if (bgWinDataSelect() == 1) {
+        bgDataAddr = BG_DATA_ADDR_1;
+    }
+
+    if (bgMapSelect() == 1) {
+        bgMapAddr = BG_WIN_MAP_ADDR_1;
+    }
+
+    // iterate through tile map
+    for (int index = 0; index < TILE_COUNT; index++) {
+        unsigned short tileAddr = bgDataAddr + 16 * mem[bgMapAddr + index];
+        int offsetX = (index % 32) * 8;
+        int offsetY = (index / 32) * 8;
+
+        // write tile to VRAM
+        for (int row = 0; row < 8; row++) {
+            unsigned char byte0 = mem[tileAddr + 2 * row];
+            unsigned char byte1 = mem[tileAddr + 2 * row + 1];
+            for (int col = 0; col < 8; col++) {
+
+                // get pixel data for tile
+                unsigned char bit1 = (byte0 >> (7 - col)) & 1;
+                unsigned char bit0 = (byte1 >> (7 - col)) & 1;
+                unsigned char color = (bit1 << 1) | bit0;
+                vram[offsetY + row][offsetX + col] = {color, 0, BACKGROUND};
+            }
+        }
+    }
+}
+
+
+// -------------------- LCD CONTROL --------------------
+
+int GB_PPU::lcdDisplayEnable() {
+    return (mem[0xFF40] >> 7) & 1;
+}
+
+int GB_PPU::windowMapSelect() {
+    return (mem[0xFF40] >> 6) & 1;
+}
+
+int GB_PPU::windowDisplayEnable() {
+    return (mem[0xFF40] >> 5) & 1;
+}
+
+int GB_PPU::bgWinDataSelect() {
+    return (mem[0xFF40] >> 4) & 1;
+}
+
+int GB_PPU::bgMapSelect() {
+    return (mem[0xFF40] >> 3) & 1;
+}
+
+int GB_PPU::spriteSize() {
+    return (mem[0xFF40] >> 2) & 1;
+}
+
+int GB_PPU::spriteEnable() {
+    return (mem[0xFF40] >> 1) & 1;
+}
+
+int GB_PPU::bgDisplayEnable() {
+    return mem[0xFF40] & 1;
 }
 
 void GB_PPU::drawTileMap() {

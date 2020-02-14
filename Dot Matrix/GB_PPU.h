@@ -9,6 +9,12 @@ constexpr auto TWO = 0b10;
 constexpr auto THREE = 0b11;
 constexpr auto TILE_COUNT = 32 * 32;
 
+// addresses
+constexpr auto BG_DATA_ADDR_0 = 0x8800;
+constexpr auto BG_DATA_ADDR_1 = 0x8000;
+constexpr auto BG_WIN_MAP_ADDR_0 = 0x9800;
+constexpr auto BG_WIN_MAP_ADDR_1 = 0x9C00;
+
 enum PixelType {
 	BACKGROUND,
 	WINDOW,
@@ -37,4 +43,14 @@ public:
 	void pixelFIFO();
 	void setBackgroundTiles();
 	void drawTileMap();
+
+    // lcd control
+    int lcdDisplayEnable();
+    int windowMapSelect();
+    int windowDisplayEnable();
+    int bgWinDataSelect();
+    int bgMapSelect();
+    int spriteSize();
+    int spriteEnable();
+    int bgDisplayEnable();
 };
