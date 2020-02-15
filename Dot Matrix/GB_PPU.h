@@ -1,7 +1,6 @@
 #pragma once
 #include "GB_CPU.h"
-#include "DotMatrix.h"
-#include <QtWidgets/QApplication>
+#include <QtWidgets/QMainWindow>
 
 // pixel values
 constexpr unsigned char ZERO = 0b00;
@@ -40,19 +39,19 @@ struct pixel {
 	PixelType type;
 };
 
-class GB_PPU {
+class GB_PPU : public QWidget {
 public:
 	unsigned char* mem;
 	pixel** vram;
-	QGraphicsScene* display;
 	QBrush white, lightGray, darkGray, black;
+	QMainWindow* dm;
 	
-	
-	GB_PPU(unsigned char* cpuMem, QGraphicsScene* scene);
-	void drawDisplay();
+	GB_PPU(QMainWindow* dotMatrixClass);
 	void initVideo();
 	void render();
 	void setBackgroundTiles();
+	void setMemory(unsigned char* cpuMem);
+	void paintEvent(QPaintEvent*);
 
     // lcd control
     int lcdDisplayEnable();

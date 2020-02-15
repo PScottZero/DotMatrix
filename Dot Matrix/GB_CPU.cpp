@@ -7,6 +7,9 @@ GB_CPU::GB_CPU() {
 	IME = true;
 	SP = 0xFFFE;
 	mem = new unsigned char[0xFFFF];
+
+	mem[0xFF42] = 0;
+	mem[0xFF43] = 0;
 }
 
 // Loads cartidge data into memory

@@ -9,9 +9,6 @@ class DotMatrix : public QMainWindow
 	Q_OBJECT
 
 public:
-	DotMatrix(QWidget *parent = Q_NULLPTR);
-	QGraphicsScene* scene;
-
-private:
+	DotMatrix(QWidget* parent = Q_NULLPTR);
 	Ui::DotMatrixClass ui;
 };

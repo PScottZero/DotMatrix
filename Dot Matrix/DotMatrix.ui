@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>640</width>
-    <height>660</height>
+    <height>576</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,51 +36,7 @@
     <normalon>:/DotMatrix/dotmatrix.ico</normalon>
    </iconset>
   </property>
-  <widget class="QWidget" name="centralWidget">
-   <widget class="QGraphicsView" name="graphicsView">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>640</width>
-      <height>640</height>
-     </rect>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>640</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuSettings">
-    <property name="title">
-     <string>Settings</string>
-    </property>
-    <widget class="QMenu" name="menuScreen_Scale">
-     <property name="title">
-      <string>Screen Scale</string>
-     </property>
-     <addaction name="actionx1"/>
-     <addaction name="actionx2"/>
-     <addaction name="actionx3"/>
-     <addaction name="actionx4"/>
-    </widget>
-    <addaction name="menuScreen_Scale"/>
-   </widget>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <addaction name="actionQuit"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuSettings"/>
-  </widget>
+  <widget class="GB_PPU" name="ppu"/>
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
@@ -108,6 +64,14 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>GB_PPU</class>
+   <extends>QWidget</extends>
+   <header>GB_PPU.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="DotMatrix.qrc"/>
  </resources>
