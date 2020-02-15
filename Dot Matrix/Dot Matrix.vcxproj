@@ -97,6 +97,7 @@
   <ItemGroup>
     <ClInclude Include="GB_CPU.h" />
     <ClInclude Include="GB_PPU.h" />
+    <ClInclude Include="x64\Debug\uic\ui_DotMatrix.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="dotmatrix.ico" />

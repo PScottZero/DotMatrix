@@ -56,6 +56,9 @@
     <ClInclude Include="GB_PPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="x64\Debug\uic\ui_DotMatrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="dotmatrix.ico" />
