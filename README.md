@@ -1,7 +1,7 @@
 # Project Status
 
 ![Nintendo Logo](https://i.imgur.com/GmHoigL.jpg)
-14 Feb 2020: THE NINTENDO LOGO IS SCROLLING!!!
+<br><b>14 Feb 2020:</b> THE NINTENDO LOGO IS SCROLLING!!!
 
 # Notes
 
