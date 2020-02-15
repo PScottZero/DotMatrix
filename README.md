@@ -1,6 +1,7 @@
 # Project Status
 
-I am currently working on the video implementation, which should take a good while :)
+![Nintendo Logo](https://i.imgur.com/GmHoigL.jpg)
+<br><b>14 Feb 2020:</b> THE NINTENDO LOGO IS SCROLLING!!!
 
 # Notes
 
