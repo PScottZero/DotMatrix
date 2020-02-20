@@ -4,18 +4,30 @@
 #include <QtWidgets/QApplication>
 #include <thread>
 
-void emuStart(DotMatrix *dm) {
+void initDisplay(DotMatrix *dm, GB_CPU *cpu, mutex *rw) {
+	dm->ui.ppu->setMemory(cpu->mem);
+	dm->ui.ppu->setMutex(rw);
+	chrono::milliseconds clock(10);
+	while (true) {
+		auto x = chrono::steady_clock::now() + clock;
+		dm->ui.ppu->render();
+		this_thread::sleep_until(x);
+	}
+}
+
+void initEmulator(DotMatrix *dm) {
 	GB_CPU cpu;
 	cpu.loadBootstrap();
 	cpu.loadCartridge("C:/Users/8psco/Documents/Emulation/.roms/GB/Tetris.gb");
-	dm->ui.ppu->setMemory(cpu.mem);
-	int i = 0;
-	while (cpu.PC <= 0x100) {
-		cpu.run();
-		if (i % 40 == 0) {
-			dm->ui.ppu->render();
-		}
-		i++;
+	
+	// create display thread
+	thread display(initDisplay, dm, &cpu, &(cpu.rw));
+	
+	chrono::nanoseconds clock(200);
+	while (true) {
+		auto x = chrono::steady_clock::now() + clock;
+		cpu.step();
+		this_thread::sleep_until(x);
 	}
 }
 
@@ -25,7 +37,7 @@ int main(int argc, char *argv[])
 	DotMatrix dm;
 	dm.show();
 	
-	thread thread_object(emuStart, &dm);
+	thread cpu(initEmulator, &dm);
 	return a.exec();
 	return 0;
 }

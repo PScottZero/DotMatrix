@@ -7,6 +7,7 @@ GB_CPU::GB_CPU() {
 	IME = true;
 	SP = 0xFFFE;
 	mem = new unsigned char[0xFFFF];
+	cartStart = new unsigned char[0xFF];
 
 	mem[0xFF42] = 0;
 	mem[0xFF43] = 0;
@@ -18,8 +19,13 @@ void GB_CPU::loadCartridge(string dir) {
 	ifstream cartridge (dir, ios::in | ios::binary);
 	cartridge.read(buffer, 0x8000);
 	if (buffer) {
-		for (unsigned short index = 0x100; index < 0x8000; index++) {
-			mem[index] = (unsigned char)buffer[index];
+		for (unsigned short index = 0; index < 0x8000; index++) {
+			if (index < 0x100) {
+				cartStart[index] = (unsigned char)buffer[index];
+			}
+			else {
+				mem[index] = (unsigned char)buffer[index];
+			}
 		}
 	}
 	delete[] buffer;
@@ -39,12 +45,18 @@ void GB_CPU::loadBootstrap() {
 
 // Run emulator
 // TODO: fully implement run function
-void GB_CPU::run() {
+void GB_CPU::step() {
+	if (PC == 0x100) {
+		for (int index = 0; index < 0x100; index++) {
+			mem[index] = cartStart[index];
+		}
+	}
 	decode(mem[PC]);
 }
 
 // Decode instruction
 void GB_CPU::decode(unsigned char opcode) {
+
 	switch (opcode) {
 
 		// -------------------- 8-BIT TRANSFER AND INPUT/OUTPUT INSTRUCTIONS --------------------
@@ -240,142 +252,142 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD r, (HL)
 		// Load memory at address HL into register r
 		case 0x7E:
-			A = mem[getHL()];
+			A = readMem(getHL());
 			break;
 		case 0x46:
-			B = mem[getHL()];
+			B = readMem(getHL());
 			break;
 		case 0x4E:
-			C = mem[getHL()];
+			C = readMem(getHL());
 			break;
 		case 0x56:
-			D = mem[getHL()];
+			D = readMem(getHL());
 			break;
 		case 0x5E:
-			E = mem[getHL()];
+			E = readMem(getHL());
 			break;
 		case 0x66:
-			H = mem[getHL()];
+			H = readMem(getHL());
 			break;
 		case 0x6E:
-			L = mem[getHL()];
+			L = readMem(getHL());
 			break;
 
 		// LD (HL), r
 		// Load register r into memory at address HL
 		case 0x77:
-			mem[getHL()] = A;
+			writeMem(getHL(), A);
 			break;
 		case 0x70:
-			mem[getHL()] = B;
+			writeMem(getHL(), B);
 			break;
 		case 0x71:
-			mem[getHL()] = C;
+			writeMem(getHL(), C);
 			break;
 		case 0x72:
-			mem[getHL()] = D;
+			writeMem(getHL(), D);
 			break;
 		case 0x73:
-			mem[getHL()] = E;
+			writeMem(getHL(), E);
 			break;
 		case 0x74:
-			mem[getHL()] = H;
+			writeMem(getHL(), H);
 			break;
 		case 0x75:
-			mem[getHL()] = L;
+			writeMem(getHL(), L);
 			break;
 
 		// LD (HL), n
 		// Load 8-bit immediate n into memory at address HL
 		case 0x36:
-			mem[getHL()] = getImm8();
+			writeMem(getHL(), getImm8());
 			break;
 
 		// LD A, (BC)
 		// Load memory at address BC into register A
 		case 0x0A:
-			A = mem[getBC()];
+			A = readMem(getBC());
 			break;
 
 		// LD A, (DE)
 		// Load memory at address DE into register A
 		case 0x1A:
-			A = mem[getDE()];
+			A = readMem(getDE());
 			break;
 
 		// LD A, (C)
 		// Load memory at address 0xFF00 + [register C] into register A
 		case 0xF2:
-			A = mem[0xFF00 + C];
+			A = readMem(0xFF00 + C);
 			break;
 
 		// LD (C), A
 		// Load register A into memory at address 0xFF00 + [register C]
 		case 0xE2:
-			mem[0xFF00 + C] = A;
+			writeMem(0xFF00 + C, A);
 			break;
 
 		// LD A, (n)
 		// Load memory at address 0xFF00 + [8-bit immediate n] into register A
 		case 0xF0:
-			A = mem[0xFF00 + getImm8()];
+			A = readMem(0xFF00 + getImm8());
 			break;
 
 		// LD (n), A
 		// Load register A into memory at address 0xFF00 + [8-bit immediate n]
 		case 0xE0:
-			mem[0xFF00 + getImm8()] = A;
+			writeMem(0xFF00 + getImm8(), A);
 			break;
 
 		// LD A, (nn)
 		// Load memory at address specified by 16-bit immediate nn into register A
 		case 0xFA:
-			A = mem[getImm16()];
+			A = readMem(getImm16());
 			break;
 
 		// LD (nn), A
 		// Load register A into memory at address specified by 16-bit immediate nn
 		case 0xEA:
-			mem[getImm16()] = A;
+			writeMem(getImm16(), A);
 			break;
 
 		// LD A, (HLI)
 		// Load memory at address HL into register A, then increment HL
 		case 0x2A:
-			A = mem[getHL()];
+			A = readMem(getHL());
 			setHL(getHL() + 1);
 			break;
 
 		// LD A, (HLD)
 		// Load memory at address HL into register A, then decrement HL
 		case 0x3A:
-			A = mem[getHL()];
+			A = readMem(getHL());
 			setHL(getHL() - 1);
 			break;
 
 		// LD (BC), A
 		// Load register A into memory at address BC
 		case 0x02:
-			mem[getBC()] = A;
+			writeMem(getBC(), A);
 			break;
 
 		// LD (DE), A
 		// Load register A into memory at address DE
 		case 0x12:
-			mem[getDE()] = A;
+			writeMem(getDE(), A);
 			break;
 
 		// LD (HLI), A
 		// Load register A into memory at address HL, then increment HL
 		case 0x22:
-			mem[getHL()] = A;
+			writeMem(getHL(), A);
 			setHL(getHL() + 1);
 			break;
 
 		// LD (HLD), A
 		// Load register A into memory at address HL, then decrement HL
 		case 0x32:
-			mem[getHL()] = A;
+			writeMem(getHL(), A);
 			setHL(getHL() - 1);
 			break;
 
@@ -407,39 +419,39 @@ void GB_CPU::decode(unsigned char opcode) {
 		// PUSH qq
 		// Push register qq onto stack
 		case 0xC5:
-			mem[SP--] = B;
-			mem[SP--] = C;
+			writeMem(SP--, B);
+			writeMem(SP--, C);
 			break;
 		case 0xD5:
-			mem[SP--] = D;
-			mem[SP--] = E;
+			writeMem(SP--, D);
+			writeMem(SP--, E);
 			break;
 		case 0xE5:
-			mem[SP--] = H;
-			mem[SP--] = L;
+			writeMem(SP--, H);
+			writeMem(SP--, L);
 			break;
 		case 0xF5:
-			mem[SP--] = A;
-			mem[SP--] = getF();
+			writeMem(SP--, A);
+			writeMem(SP--, getF());
 			break;
 
 		// POP qq
 		// Pop contents of stack into register pair qq
 		case 0xC1:
-			C = mem[++SP];
-			B = mem[++SP];
+			C = readMem(++SP);
+			B = readMem(++SP);
 			break;
 		case 0xD1:
-			E = mem[++SP];
-			D = mem[++SP];
+			E = readMem(++SP);
+			D = readMem(++SP);
 			break;
 		case 0xE1:
-			L = mem[++SP];
-			H = mem[++SP];
+			L = readMem(++SP);
+			H = readMem(++SP);
 			break;
 		case 0xF1:
-			setF(mem[++SP]);
-			A = mem[++SP];
+			setF(readMem(++SP));
+			A = readMem(++SP);
 			break;
 
 		// LDHL SP, e
@@ -452,7 +464,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// LD (nn), SP
 		// Load stack pointer into memory at address specified by 16-bit immediate nn
 		case 0x08:
-			mem[getImm16()] = SP;
+			writeMem(getImm16(), SP);
 			break;
 
 
@@ -492,7 +504,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADD A, (HL)
 		// Add memory at address HL to register A and store result in A
 		case 0x86:
-			A = add(A, mem[getHL()]);
+			A = add(A, readMem(getHL()));
 			break;
 
 		// ADC A, r
@@ -528,7 +540,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// ADC A, (HL)
 		// Add A, memory at address HL, and carry flag together and store result in A
 		case 0x8E:
-			A = addCarry(A, mem[getHL()]);
+			A = addCarry(A, readMem(getHL()));
 			break;
 
 		// SUB r
@@ -564,7 +576,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// SUB (HL)
 		// Subtract memory at address HL from register A and store result in 
 		case 0x96:
-			A = sub(A, mem[getHL()]);
+			A = sub(A, readMem(getHL()));
 			break;
 
 		// SBC A, r
@@ -600,7 +612,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// SBC A, (HL)
 		// Subtract memory at address HL and carry flag from register A and store result in A
 		case 0x9E:
-			A = sub(A, mem[getHL()] + carry);
+			A = sub(A, readMem(getHL()) + carry);
 			break;
 
 		// AND r
@@ -636,7 +648,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// AND (HL)
 		// And register A and memory at address HL together and store result in A
 		case 0xA6:
-			A = bitAnd(A, mem[getHL()]);
+			A = bitAnd(A, readMem(getHL()));
 			break;
 
 		// OR r
@@ -672,7 +684,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// OR (HL)
 		// Or register A and memory at address HL together and store result in A
 		case 0xB6:
-			A = bitOr(A, mem[getHL()]);
+			A = bitOr(A, readMem(getHL()));
 			break;
 
 		// XOR r
@@ -708,7 +720,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// XOR (HL)
 		// Xor register A and memory at address HL together and store result in A
 		case 0xAE:
-			A = bitXor(A, mem[getHL()]);
+			A = bitXor(A, readMem(getHL()));
 			break;
 
 		// CP r
@@ -744,7 +756,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// CP (HL)
 		// Compare register A and memory at address HL
 		case 0xBE:
-			sub(A, mem[getHL()]);
+			sub(A, readMem(getHL()));
 			break;
 
 		// INC r
@@ -774,7 +786,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// INC (HL)
 		// Increment memory at address HL
 		case 0x34:
-			mem[getHL()] = inc(mem[getHL()]);
+			writeMem(getHL(), inc(readMem(getHL())));
 			break;
 
 		// DEC r
@@ -804,7 +816,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// DEC (HL)
 		// Decrement memory at address HL
 		case 0x35:
-			mem[getHL()] = dec(mem[getHL()]);
+			writeMem(getHL(), dec(readMem(getHL())));
 			break;
 
 
@@ -923,7 +935,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// RLC (HL)
 				// Rotate memory at address HL to the left
 				case 0x06:
-					mem[getHL()] = rotateLeft(mem[getHL()]);
+					writeMem(getHL(), rotateLeft(readMem(getHL())));
 					break;
 
 				// RL r
@@ -953,7 +965,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// RL (HL)
 				// Rotate memory at address HL to the left through carry flag
 				case 0x16:
-					mem[getHL()] = rotateLeftCarry(mem[getHL()]);
+					writeMem(getHL(), rotateLeftCarry(readMem(getHL())));
 					break;
 
 				// RRC r
@@ -983,7 +995,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// RRC (HL)
 				// Rotate memory at address HL to the right
 				case 0x0E:
-					mem[getHL()] = rotateLeft(mem[getHL()]);
+					writeMem(getHL(), rotateLeft(readMem(getHL())));
 					break;
 
 				// RR r
@@ -1013,7 +1025,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// RR (HL)
 				// Rotate memory at address HL to the left through carry flag
 				case 0x1E:
-					mem[getHL()] = rotateRightCarry(mem[getHL()]);
+					writeMem(getHL(), rotateRightCarry(readMem(getHL())));
 					break;
 
 				// SLA r
@@ -1043,7 +1055,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// SLA (HL)
 				// Shift memory at register HL left
 				case 0x26:
-					mem[getHL()] = shiftLeft(mem[getHL()]);
+					writeMem(getHL(), shiftLeft(readMem(getHL())));
 					break;
 
 				// SRA r
@@ -1073,7 +1085,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// SRA (HL)
 				// Shift memory at HL to the right
 				case 0x2E:
-					mem[getHL()] = shiftRightArithmetic(mem[getHL()]);
+					writeMem(getHL(), shiftRightArithmetic(readMem(getHL())));
 					break;
 
 				// SRL r
@@ -1103,7 +1115,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// SRL (HL)
 				// Shift memory at HL to the right logically
 				case 0x3E:
-					mem[getHL()] = shiftRightLogical(mem[getHL()]);
+					writeMem(getHL(), shiftRightLogical(readMem(getHL())));
 					break;
 
 				// SWAP r
@@ -1133,7 +1145,7 @@ void GB_CPU::decode(unsigned char opcode) {
 				// SWAP (HL)
 				// Swap upper and lower nibbles of memory at HL
 				case 0x36:
-					mem[getHL()] = swap(mem[getHL()]);
+					writeMem(getHL(), swap(readMem(getHL())));
 					break;
 
 				// BIT b, r
@@ -1324,28 +1336,28 @@ void GB_CPU::decode(unsigned char opcode) {
 				// BIT b, (HL)
 				// Copies complement of specified bit b of memory at HL to Z flag
 				case 0x46:
-					compBitToZero(mem[getHL()], 0);
+					compBitToZero(readMem(getHL()), 0);
 					break;
 				case 0x4E:
-					compBitToZero(mem[getHL()], 1);
+					compBitToZero(readMem(getHL()), 1);
 					break;
 				case 0x56:
-					compBitToZero(mem[getHL()], 2);
+					compBitToZero(readMem(getHL()), 2);
 					break;
 				case 0x5E:
-					compBitToZero(mem[getHL()], 3);
+					compBitToZero(readMem(getHL()), 3);
 					break;
 				case 0x66:
-					compBitToZero(mem[getHL()], 4);
+					compBitToZero(readMem(getHL()), 4);
 					break;
 				case 0x6E:
-					compBitToZero(mem[getHL()], 5);
+					compBitToZero(readMem(getHL()), 5);
 					break;
 				case 0x76:
-					compBitToZero(mem[getHL()], 6);
+					compBitToZero(readMem(getHL()), 6);
 					break;
 				case 0x7E:
-					compBitToZero(mem[getHL()], 7);
+					compBitToZero(readMem(getHL()), 7);
 					break;
 
 				// SET b, r
@@ -1536,28 +1548,28 @@ void GB_CPU::decode(unsigned char opcode) {
 				// SET b, (HL)
 				// Sets bit b in memory at HL to 1
 				case 0xC6:
-					mem[getHL()] = setBit(mem[getHL()], 0);
+					writeMem(getHL(), setBit(readMem(getHL()), 0));
 					break;
 				case 0xCE:
-					mem[getHL()] = setBit(mem[getHL()], 1);
+					writeMem(getHL(), setBit(readMem(getHL()), 1));
 					break;
 				case 0xD6:
-					mem[getHL()] = setBit(mem[getHL()], 2);
+					writeMem(getHL(), setBit(readMem(getHL()), 2));
 					break;
 				case 0xDE:
-					mem[getHL()] = setBit(mem[getHL()], 3);
+					writeMem(getHL(), setBit(readMem(getHL()), 3));
 					break;
 				case 0xE6:
-					mem[getHL()] = setBit(mem[getHL()], 4);
+					writeMem(getHL(), setBit(readMem(getHL()), 4));
 					break;
 				case 0xEE:
-					mem[getHL()] = setBit(mem[getHL()], 5);
+					writeMem(getHL(), setBit(readMem(getHL()), 5));
 					break;
 				case 0xF6:
-					mem[getHL()] = setBit(mem[getHL()], 6);
+					writeMem(getHL(), setBit(readMem(getHL()), 6));
 					break;
 				case 0xFE:
-					mem[getHL()] = setBit(mem[getHL()], 7);
+					writeMem(getHL(), setBit(readMem(getHL()), 7));
 					break;
 
 				// RES b, r
@@ -1748,28 +1760,28 @@ void GB_CPU::decode(unsigned char opcode) {
 				// RES b, (HL)
 				// Reset bit b in memory at HL to 0
 				case 0x86:
-					mem[getHL()] = resetBit(mem[getHL()], 0);
+					writeMem(getHL(), resetBit(readMem(getHL()), 0));
 					break;
 				case 0x8E:
-					mem[getHL()] = resetBit(mem[getHL()], 1);
+					writeMem(getHL(), resetBit(readMem(getHL()), 1));
 					break;
 				case 0x96:
-					mem[getHL()] = resetBit(mem[getHL()], 2);
+					writeMem(getHL(), resetBit(readMem(getHL()), 2));
 					break;
 				case 0x9E:
-					mem[getHL()] = resetBit(mem[getHL()], 3);
+					writeMem(getHL(), resetBit(readMem(getHL()), 3));
 					break;
 				case 0xA6:
-					mem[getHL()] = resetBit(mem[getHL()], 4);
+					writeMem(getHL(), resetBit(readMem(getHL()), 4));
 					break;
 				case 0xAE:
-					mem[getHL()] = resetBit(mem[getHL()], 5);
+					writeMem(getHL(), resetBit(readMem(getHL()), 5));
 					break;
 				case 0xB6:
-					mem[getHL()] = resetBit(mem[getHL()], 6);
+					writeMem(getHL(), resetBit(readMem(getHL()), 6));
 					break;
 				case 0xBE:
-					mem[getHL()] = resetBit(mem[getHL()], 7);
+					writeMem(getHL(), resetBit(readMem(getHL()), 7));
 					break;
 			}
 			break;
@@ -1873,8 +1885,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// CALL nn
 		// Push current address onto stack and jump to address specified by 16 bit immediate
 		case 0xCD:
-			mem[SP--] = (PC >> 8) & 0xFF;
-			mem[SP--] = PC & 0xFF;
+			writeMem(SP--, (PC >> 8) & 0xFF);
+			writeMem(SP--, PC & 0xFF);
 			PC = getImm16() - 1;
 			break;
 
@@ -1884,8 +1896,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 0
 		case 0xC4:
 			if (!zero) {
-				mem[SP--] = (PC >> 8) & 0xFF;
-				mem[SP--] = PC & 0xFF;
+				writeMem(SP--, (PC >> 8) & 0xFF);
+				writeMem(SP--, PC & 0xFF);
 				PC = getImm16() - 1;
 			}
 			break;
@@ -1893,8 +1905,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 1
 		case 0xCC:
 			if (zero) {
-				mem[SP--] = (PC >> 8) & 0xFF;
-				mem[SP--] = PC & 0xFF;
+				writeMem(SP--, (PC >> 8) & 0xFF);
+				writeMem(SP--, PC & 0xFF);
 				PC = getImm16() - 1;
 			}
 			break;
@@ -1902,8 +1914,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 0
 		case 0xD4:
 			if (!carry) {
-				mem[SP--] = (PC >> 8) & 0xFF;
-				mem[SP--] = PC & 0xFF;
+				writeMem(SP--, (PC >> 8) & 0xFF);
+				writeMem(SP--, PC & 0xFF);
 				PC = getImm16() - 1;
 			}
 			break;
@@ -1911,8 +1923,8 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 1
 		case 0xDC:
 			if (carry) {
-				mem[SP--] = (PC >> 8) & 0xFF;
-				mem[SP--] = PC & 0xFF;
+				writeMem(SP--, (PC >> 8) & 0xFF);
+				writeMem(SP--, PC & 0xFF);
 				PC = getImm16() - 1;
 			}
 			break;
@@ -1920,13 +1932,13 @@ void GB_CPU::decode(unsigned char opcode) {
 		// RET
 		// Pop stack and return to popped address
 		case 0xC9:
-			PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
+			PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			break;
 
 		// RETI
 		// Return from interrupt routine
 		case 0xD9:
-			PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
+			PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			IME = true;
 			break;
 
@@ -1936,7 +1948,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 0
 		case 0xC0:
 			if (!zero) {
-				PC = (mem[++SP] | (mem[++SP] << 8)) + 2;
+				PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			}
 			PC += 2;
 			break;
@@ -1944,7 +1956,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// Z == 1
 		case 0xC8:
 			if (zero) {
-				PC = (mem[++SP] | (mem[++SP] << 8));
+				PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			}
 			PC += 2;
 			break;
@@ -1952,7 +1964,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 0
 		case 0xD0:
 			if (!carry) {
-				PC = (mem[++SP] | (mem[++SP] << 8));
+				PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			}
 			PC += 2;
 			break;
@@ -1960,7 +1972,7 @@ void GB_CPU::decode(unsigned char opcode) {
 		// C == 1
 		case 0xD8:
 			if (carry) {
-				PC = (mem[++SP] | (mem[++SP] << 8));
+				PC = (readMem(++SP) | (readMem(++SP) << 8)) + 2;
 			}
 			PC += 2;
 			break;
@@ -2046,6 +2058,21 @@ void GB_CPU::decode(unsigned char opcode) {
 			break;
 	}
 	PC++;
+}
+
+unsigned char GB_CPU::readMem(unsigned short addr) {
+	return mem[addr];
+}
+
+void GB_CPU::writeMem(unsigned short addr, unsigned char value) {
+	if (addr >= 0x8000) {
+		rw.lock();
+		mem[addr] = value;
+		rw.unlock();
+	}
+	else {
+		mem[addr] = value;
+	}
 }
 
 // Add opertaion for 8-bit numbers
@@ -2321,12 +2348,12 @@ unsigned short GB_CPU::getHL() {
 
 unsigned char GB_CPU::getImm8() {
 	PC++;
-	return mem[PC];
+	return readMem(PC);
 }
 
 unsigned short GB_CPU::getImm16() {
 	PC += 2;
-	return mem[PC] << 8 | mem[PC - 1];
+	return readMem(PC) << 8 | readMem(PC - 1);
 }
 
 void GB_CPU::setF(unsigned char value) {

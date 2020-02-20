@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <array>
+#include <mutex>
 
 using namespace std;
 
@@ -9,9 +10,12 @@ class GB_CPU
 {
 public:
 	unsigned char A, B, C, D, E, H, L;
+	unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, NULL, &A };
 	unsigned short PC, SP;
 	bool zero, halfCarry, subtract, carry, IME;
 	unsigned char* mem;
+	unsigned char* cartStart;
+	mutex rw;
 
 	GB_CPU();
 
@@ -19,7 +23,11 @@ public:
 	void decode(unsigned char opcode);
 	void loadBootstrap();
 	void loadCartridge(string dir);
-	void run();
+	void step();
+
+	// memory access
+	unsigned char readMem(unsigned short addr);
+	void writeMem(unsigned short addr, unsigned char value);
 	
 	// opcode functions
 	unsigned char add(unsigned char a, unsigned char b);

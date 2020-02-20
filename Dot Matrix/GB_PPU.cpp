@@ -5,17 +5,17 @@ GB_PPU::GB_PPU(QMainWindow* dotMatrixClass) {
     dm = dotMatrixClass;
     mem = NULL;
 
-    //// game boy pocket color palette
-    //white = QBrush(QColor(255, 255, 255));
-    //lightGray = QBrush(QColor(169, 169, 169));
-    //darkGray = QBrush(QColor(84, 84, 84));
-    //black = QBrush(QColor(0, 0, 0));
+    // game boy pocket color palette
+    white = QBrush(QColor(255, 255, 255));
+    lightGray = QBrush(QColor(169, 169, 169));
+    darkGray = QBrush(QColor(84, 84, 84));
+    black = QBrush(QColor(0, 0, 0));
 
-    // original game boy color palette
-    white = QBrush(QColor(155, 188, 15));
-    lightGray = QBrush(QColor(139, 172, 15));
-    darkGray = QBrush(QColor(48, 98, 48));
-    black = QBrush(QColor(15, 56, 15));
+    //// original game boy color palette
+    //white = QBrush(QColor(155, 188, 15));
+    //lightGray = QBrush(QColor(139, 172, 15));
+    //darkGray = QBrush(QColor(48, 98, 48));
+    //black = QBrush(QColor(15, 56, 15));
 	
 	// create vram
 	initVideo();
@@ -23,6 +23,10 @@ GB_PPU::GB_PPU(QMainWindow* dotMatrixClass) {
 
 void GB_PPU::setMemory(unsigned char* cpuMem) {
     mem = cpuMem;
+}
+
+void GB_PPU::setMutex(mutex* mutex) {
+    rw = mutex;
 }
 
 void GB_PPU::initVideo() {
@@ -47,6 +51,7 @@ void GB_PPU::render() {
 // takes background map and copies
 // corresponding tiles into video ram
 void GB_PPU::setBackgroundTiles() {
+    rw->lock();
     unsigned short bgDataAddr = BG_DATA_ADDR_0;
     unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
 
@@ -81,6 +86,7 @@ void GB_PPU::setBackgroundTiles() {
             }
         }
     }
+    rw->unlock();
 }
 
 void GB_PPU::paintEvent(QPaintEvent *e) {
@@ -90,16 +96,17 @@ void GB_PPU::paintEvent(QPaintEvent *e) {
         int scrollY = mem[0xFF42];
         int scrollX = mem[0xFF43];
 
-        mem[0xFF44] = 0;
-
         // set background palette
         QBrush colorZero = getShade(ZERO);
         QBrush colorOne = getShade(ONE);
         QBrush colorTwo = getShade(TWO);
         QBrush colorThree = getShade(THREE);
 
-        for (int row = 0; row < SCREEN_HEIGHT; row++) {
-            for (int col = 0; col < SCREEN_WIDTH; col++) {
+        for (int row = 0; row < BG_PX_DIM; row++) {
+            rw->lock();
+            mem[0xFF44] = row;
+            rw->unlock();
+            for (int col = 0; col < BG_PX_DIM; col++) {
                 pixel px = vram[(scrollY + row) % BG_PX_DIM][(scrollX + col) % BG_PX_DIM];
                 if (px.type == PixelType::Background) {
 
@@ -119,12 +126,10 @@ void GB_PPU::paintEvent(QPaintEvent *e) {
                         break;
                     }
 
-                    painter.fillRect(4 * col, 4 * row, 4, 4, pxColor);
+                    painter.fillRect(4 * (col - scrollX), 4 * (row - scrollY), 4, 4, pxColor);
                 }
             }
         }
-
-        mem[0xFF44] = SCREEN_HEIGHT;
     }
 }
 
