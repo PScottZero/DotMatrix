@@ -51,7 +51,6 @@ void PPU::render() {
 // takes background map and copies
 // corresponding tiles into video ram
 void PPU::setBackgroundTiles() {
-    rw->lock();
     unsigned short bgDataAddr = BG_DATA_ADDR_0;
     unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
 
@@ -86,10 +85,10 @@ void PPU::setBackgroundTiles() {
             }
         }
     }
-    rw->unlock();
 }
 
 void PPU::paintEvent(QPaintEvent *e) {
+    mem[0xFF44] = 0x90;
     if (mem != NULL) {
         QPainter painter(this);
 
@@ -103,9 +102,6 @@ void PPU::paintEvent(QPaintEvent *e) {
         QBrush colorThree = getShade(THREE);
 
         for (int row = 0; row < BG_PX_DIM; row++) {
-            rw->lock();
-            mem[0xFF44] = row;
-            rw->unlock();
             for (int col = 0; col < BG_PX_DIM; col++) {
                 pixel px = vram[(scrollY + row) % BG_PX_DIM][(scrollX + col) % BG_PX_DIM];
                 if (px.type == PixelType::Background) {

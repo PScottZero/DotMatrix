@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <QDir>
 
 // Initializes cpu data
 CPU::CPU() {
@@ -34,7 +35,7 @@ void CPU::loadCartridge(string dir) {
 // Loads gameboy bootstrap
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    ifstream bootstrap ("bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("C:/Users/8psco/Documents/GitHub/DotMatrix/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {

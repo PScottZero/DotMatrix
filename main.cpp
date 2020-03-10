@@ -8,7 +8,7 @@
 void initEmulator(DotMatrixWindow *dmw) {
     CPU cpu;
     cpu.loadBootstrap();
-    cpu.loadCartridge("C:/Users/8psco/Documents/Emulation/.roms/GB/Tetris.gb");
+    cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
 
     dmw->ppu->setMemory(cpu.mem);
     dmw->ppu->setMutex(&cpu.rw);
@@ -16,7 +16,7 @@ void initEmulator(DotMatrixWindow *dmw) {
     int i = 0;
     while (true) {
         cpu.step();
-        if (i % 60 == 0) {
+        if (i % 5 == 0) {
             dmw->ppu->render();
         }
         i++;

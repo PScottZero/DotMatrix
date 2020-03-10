@@ -39,3 +39,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 DISTFILES += \
     bootstrap.bin \
     dotmatrix.ico
+
+RESOURCES += \
+    resources.qrc
