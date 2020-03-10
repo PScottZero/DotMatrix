@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DotMatrixWindow</class>
+ <widget class="QMainWindow" name="DotMatrixWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>576</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Dot Matrix v0.0.0</string>
+  </property>
+  <property name="windowOpacity">
+   <double>11.000000000000000</double>
+  </property>
+  <widget class="PPU" name="ppu"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PPU</class>
+   <extends>QWidget</extends>
+   <header>ppu.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

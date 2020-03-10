@@ -1,7 +1,7 @@
-#include "GB_PPU.h"
+#include "ppu.h"
 #include <qpainter.h>
 
-GB_PPU::GB_PPU(QMainWindow* dotMatrixClass) {
+PPU::PPU(QMainWindow* dotMatrixClass) {
     dm = dotMatrixClass;
     mem = NULL;
 
@@ -16,41 +16,41 @@ GB_PPU::GB_PPU(QMainWindow* dotMatrixClass) {
     //lightGray = QBrush(QColor(139, 172, 15));
     //darkGray = QBrush(QColor(48, 98, 48));
     //black = QBrush(QColor(15, 56, 15));
-	
-	// create vram
-	initVideo();
+
+    // create vram
+    initVideo();
 }
 
-void GB_PPU::setMemory(unsigned char* cpuMem) {
+void PPU::setMemory(unsigned char* cpuMem) {
     mem = cpuMem;
 }
 
-void GB_PPU::setMutex(mutex* mutex) {
+void PPU::setMutex(mutex* mutex) {
     rw = mutex;
 }
 
-void GB_PPU::initVideo() {
-	vram = new pixel*[BG_PX_DIM];
-	for (int i = 0; i < BG_PX_DIM; i++) {
-		vram[i] = new pixel[BG_PX_DIM];
-		for (int j = 0; j < BG_PX_DIM; j++) {
-			vram[i][j] = {THREE, 0, PixelType::Background};
-		}
-	}
+void PPU::initVideo() {
+    vram = new pixel*[BG_PX_DIM];
+    for (int i = 0; i < BG_PX_DIM; i++) {
+        vram[i] = new pixel[BG_PX_DIM];
+        for (int j = 0; j < BG_PX_DIM; j++) {
+            vram[i][j] = {THREE, 0, PixelType::Background};
+        }
+    }
 }
 
 // Renders display
 // TODO: implement render function
-void GB_PPU::render() {
-	if (bgDisplayEnable() == 1) {
-		setBackgroundTiles();
-	}
+void PPU::render() {
+    if (bgDisplayEnable() == 1) {
+        setBackgroundTiles();
+    }
     update();
 }
 
 // takes background map and copies
 // corresponding tiles into video ram
-void GB_PPU::setBackgroundTiles() {
+void PPU::setBackgroundTiles() {
     rw->lock();
     unsigned short bgDataAddr = BG_DATA_ADDR_0;
     unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
@@ -66,13 +66,13 @@ void GB_PPU::setBackgroundTiles() {
     // iterate through tile map
     for (int index = 0; index < BG_TILE_COUNT; index++) {
         unsigned short tileAddr = bgDataAddr + BYTES_PER_TILE * mem[bgMapAddr + index];
-		int rowOffset = (index / BG_TILE_DIM) * TILE_PX_DIM;
+        int rowOffset = (index / BG_TILE_DIM) * TILE_PX_DIM;
         int colOffset = (index % BG_TILE_DIM) * TILE_PX_DIM;
 
         // write tile to VRAM
         for (int row = 0; row < TILE_PX_DIM; row++) {
 
-			// get row data
+            // get row data
             unsigned char byte0 = mem[tileAddr + 2 * row];
             unsigned char byte1 = mem[tileAddr + 2 * row + 1];
 
@@ -89,7 +89,7 @@ void GB_PPU::setBackgroundTiles() {
     rw->unlock();
 }
 
-void GB_PPU::paintEvent(QPaintEvent *e) {
+void PPU::paintEvent(QPaintEvent *e) {
     if (mem != NULL) {
         QPainter painter(this);
 
@@ -137,35 +137,35 @@ void GB_PPU::paintEvent(QPaintEvent *e) {
 
 // -------------------- LCD CONTROL --------------------
 
-int GB_PPU::lcdDisplayEnable() {
+int PPU::lcdDisplayEnable() {
     return (mem[0xFF40] >> 7) & 1;
 }
 
-int GB_PPU::windowMapSelect() {
+int PPU::windowMapSelect() {
     return (mem[0xFF40] >> 6) & 1;
 }
 
-int GB_PPU::windowDisplayEnable() {
+int PPU::windowDisplayEnable() {
     return (mem[0xFF40] >> 5) & 1;
 }
 
-int GB_PPU::bgWinDataSelect() {
+int PPU::bgWinDataSelect() {
     return (mem[0xFF40] >> 4) & 1;
 }
 
-int GB_PPU::bgMapSelect() {
+int PPU::bgMapSelect() {
     return (mem[0xFF40] >> 3) & 1;
 }
 
-int GB_PPU::spriteSize() {
+int PPU::spriteSize() {
     return (mem[0xFF40] >> 2) & 1;
 }
 
-int GB_PPU::spriteEnable() {
+int PPU::spriteEnable() {
     return (mem[0xFF40] >> 1) & 1;
 }
 
-int GB_PPU::bgDisplayEnable() {
+int PPU::bgDisplayEnable() {
     return mem[0xFF40] & 1;
 }
 
@@ -173,7 +173,7 @@ int GB_PPU::bgDisplayEnable() {
 
 // -------------------- BG PALETTE DATA --------------------
 
-QBrush GB_PPU::getShade(unsigned char value) {
+QBrush PPU::getShade(unsigned char value) {
     switch (value) {
     case ZERO:
         return getBrush(mem[0xFF47] & 3);
@@ -186,7 +186,7 @@ QBrush GB_PPU::getShade(unsigned char value) {
     }
 }
 
-QBrush GB_PPU::getBrush(unsigned char value) {
+QBrush PPU::getBrush(unsigned char value) {
     switch (value) {
     case ZERO:
         return white;
@@ -198,3 +198,4 @@ QBrush GB_PPU::getBrush(unsigned char value) {
         return black;
     }
 }
+

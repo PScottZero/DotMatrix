@@ -1,5 +1,8 @@
-#pragma once
-#include "GB_CPU.h"
+#ifndef PPU_H
+#define PPU_H
+
+
+#include "cpu.h"
 #include <QtWidgets/QMainWindow>
 #include <mutex>
 
@@ -29,32 +32,32 @@ constexpr auto BG_WIN_MAP_ADDR_0 = 0x9800;
 constexpr auto BG_WIN_MAP_ADDR_1 = 0x9C00;
 
 enum class PixelType {
-	Background,
-	Window,
-	Sprite
+    Background,
+    Window,
+    Sprite
 };
 
 struct pixel {
-	unsigned char value;
-	unsigned char palette;
-	PixelType type;
+    unsigned char value;
+    unsigned char palette;
+    PixelType type;
 };
 
-class GB_PPU : public QWidget {
+class PPU : public QWidget {
 public:
-	unsigned char* mem;
-	pixel** vram;
-	QBrush white, lightGray, darkGray, black;
-	QMainWindow* dm;
-	mutex* rw;
-	
-	GB_PPU(QMainWindow* dotMatrixClass);
-	void initVideo();
-	void render();
-	void setBackgroundTiles();
-	void setMemory(unsigned char* cpuMem);
-	void setMutex(mutex* mutex);
-	void paintEvent(QPaintEvent*);
+    unsigned char* mem;
+    pixel** vram;
+    QBrush white, lightGray, darkGray, black;
+    QMainWindow* dm;
+    mutex* rw;
+
+    PPU(QMainWindow* dotMatrixClass);
+    void initVideo();
+    void render();
+    void setBackgroundTiles();
+    void setMemory(unsigned char* cpuMem);
+    void setMutex(mutex* mutex);
+    void paintEvent(QPaintEvent*);
 
     // lcd control
     int lcdDisplayEnable();
@@ -66,7 +69,10 @@ public:
     int spriteEnable();
     int bgDisplayEnable();
 
-	// background palette data
-	QBrush getShade(unsigned char value);
-	QBrush getBrush(unsigned char value);
+    // background palette data
+    QBrush getShade(unsigned char value);
+    QBrush getBrush(unsigned char value);
 };
+
+
+#endif // PPU_H
