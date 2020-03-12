@@ -11,7 +11,6 @@ void initEmulator(DotMatrixWindow *dmw) {
     cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
 
     dmw->ppu->setMemory(cpu.mem);
-    dmw->ppu->setMutex(&cpu.rw);
 
     int i = 0;
     while (true) {

@@ -4,9 +4,16 @@
 #include <iostream>
 #include <fstream>
 #include <array>
-#include <mutex>
 
 using namespace std;
+
+constexpr unsigned char BC = 0b00;
+constexpr unsigned char DE = 0b01;
+constexpr unsigned char HL = 0b10;
+constexpr unsigned char AF_SP = 0b11;
+
+constexpr unsigned char WITH_CARRY = true;
+constexpr unsigned char NO_CARRY = false;
 
 class CPU
 {
@@ -17,7 +24,7 @@ public:
     bool zero, halfCarry, subtract, carry, IME;
     unsigned char* mem;
     unsigned char* cartStart;
-    mutex rw;
+    int clock;
 
     CPU();
 
@@ -32,8 +39,7 @@ public:
     void writeMem(unsigned short addr, unsigned char value);
 
     // opcode functions
-    unsigned char add(unsigned char a, unsigned char b);
-    unsigned char addCarry(unsigned char a, unsigned char b);
+    unsigned char add(unsigned char a, unsigned char b, bool withCarry);
     unsigned short add16(unsigned short a, unsigned short b);
     unsigned char bitAnd(unsigned char a, unsigned char b);
     unsigned char bitOr(unsigned char a, unsigned char b);
@@ -50,22 +56,21 @@ public:
     unsigned char shiftLeft(unsigned char value);
     unsigned char shiftRightArithmetic(unsigned char value);
     unsigned char shiftRightLogical(unsigned char value);
-    unsigned char sub(unsigned char a, unsigned char b);
-    unsigned char subCarry(unsigned char a, unsigned char b);
+    unsigned char sub(unsigned char a, unsigned char b, bool withCarry);
     unsigned char swap(unsigned char value);
     unsigned char setBit(unsigned char value, unsigned int bit);
 
+    // stack functions
+    void pushRegPair(unsigned char regPair);
+    void popRegPair(unsigned char regPair);
+
     // register functions
     unsigned char getF();
-    unsigned short getBC();
-    unsigned short getDE();
-    unsigned short getHL();
+    unsigned short getRegPair(unsigned char regPair);
     unsigned char getImm8();
     unsigned short getImm16();
     void setF(unsigned char value);
-    void setBC(unsigned short value);
-    void setDE(unsigned short value);
-    void setHL(unsigned short value);
+    void setRegPair(unsigned char regPair, unsigned short value);
 };
 
 #endif // CPU_H

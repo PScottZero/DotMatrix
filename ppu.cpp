@@ -25,10 +25,6 @@ void PPU::setMemory(unsigned char* cpuMem) {
     mem = cpuMem;
 }
 
-void PPU::setMutex(mutex* mutex) {
-    rw = mutex;
-}
-
 void PPU::initVideo() {
     vram = new pixel*[BG_PX_DIM];
     for (int i = 0; i < BG_PX_DIM; i++) {

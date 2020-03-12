@@ -4,7 +4,6 @@
 
 #include "cpu.h"
 #include <QtWidgets/QMainWindow>
-#include <mutex>
 
 // pixel values
 constexpr unsigned char ZERO = 0b00;
@@ -49,14 +48,12 @@ public:
     pixel** vram;
     QBrush white, lightGray, darkGray, black;
     QMainWindow* dm;
-    mutex* rw;
 
     PPU(QMainWindow* dotMatrixClass);
     void initVideo();
     void render();
     void setBackgroundTiles();
     void setMemory(unsigned char* cpuMem);
-    void setMutex(mutex* mutex);
     void paintEvent(QPaintEvent*);
 
     // lcd control
