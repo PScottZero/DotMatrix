@@ -6,10 +6,10 @@
 #include <QtWidgets/QMainWindow>
 
 // pixel values
-constexpr unsigned char ZERO = 0b00;
-constexpr unsigned char ONE = 0b01;
-constexpr unsigned char TWO = 0b10;
-constexpr unsigned char THREE = 0b11;
+constexpr unsigned char PX_ZERO = 0b00;
+constexpr unsigned char PX_ONE = 0b01;
+constexpr unsigned char PX_TWO = 0b10;
+constexpr unsigned char PX_THREE = 0b11;
 
 // tile sizing
 constexpr auto TILE_PX_DIM = 8;

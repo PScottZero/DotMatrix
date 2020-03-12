@@ -30,7 +30,7 @@ void PPU::initVideo() {
     for (int i = 0; i < BG_PX_DIM; i++) {
         vram[i] = new pixel[BG_PX_DIM];
         for (int j = 0; j < BG_PX_DIM; j++) {
-            vram[i][j] = {THREE, 0, PixelType::Background};
+            vram[i][j] = {PX_THREE, 0, PixelType::Background};
         }
     }
 }
@@ -92,10 +92,10 @@ void PPU::paintEvent(QPaintEvent *e) {
         int scrollX = mem[0xFF43];
 
         // set background palette
-        QBrush colorZero = getShade(ZERO);
-        QBrush colorOne = getShade(ONE);
-        QBrush colorTwo = getShade(TWO);
-        QBrush colorThree = getShade(THREE);
+        QBrush colorZero = getShade(PX_ZERO);
+        QBrush colorOne = getShade(PX_ONE);
+        QBrush colorTwo = getShade(PX_TWO);
+        QBrush colorThree = getShade(PX_THREE);
 
         for (int row = 0; row < BG_PX_DIM; row++) {
             for (int col = 0; col < BG_PX_DIM; col++) {
@@ -104,16 +104,16 @@ void PPU::paintEvent(QPaintEvent *e) {
 
                     QBrush pxColor;
                     switch (px.value) {
-                    case ZERO:
+                    case PX_ZERO:
                         pxColor = colorZero;
                         break;
-                    case ONE:
+                    case PX_ONE:
                         pxColor = colorOne;
                         break;
-                    case TWO:
+                    case PX_TWO:
                         pxColor = colorTwo;
                         break;
-                    case THREE:
+                    case PX_THREE:
                         pxColor = colorThree;
                         break;
                     }
@@ -167,26 +167,26 @@ int PPU::bgDisplayEnable() {
 
 QBrush PPU::getShade(unsigned char value) {
     switch (value) {
-    case ZERO:
+    case PX_ZERO:
         return getBrush(mem[0xFF47] & 3);
-    case ONE:
+    case PX_ONE:
         return getBrush((mem[0xFF47] >> 2) & 3);
-    case TWO:
+    case PX_TWO:
         return getBrush((mem[0xFF47] >> 4) & 3);
-    case THREE:
+    case PX_THREE:
         return getBrush((mem[0xFF47] >> 6) & 3);
     }
 }
 
 QBrush PPU::getBrush(unsigned char value) {
     switch (value) {
-    case ZERO:
+    case PX_ZERO:
         return white;
-    case ONE:
+    case PX_ONE:
         return lightGray;
-    case TWO:
+    case PX_TWO:
         return darkGray;
-    case THREE:
+    case PX_THREE:
         return black;
     }
 }

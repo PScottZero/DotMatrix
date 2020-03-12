@@ -12,8 +12,20 @@ constexpr unsigned char DE = 0b01;
 constexpr unsigned char HL = 0b10;
 constexpr unsigned char AF_SP = 0b11;
 
+constexpr unsigned char NOT_ZERO = 0b00;
+constexpr unsigned char ZERO = 0b01;
+constexpr unsigned char NOT_CARRY = 0b10;
+constexpr unsigned char CARRY = 0b11;
+
 constexpr unsigned char WITH_CARRY = true;
 constexpr unsigned char NO_CARRY = false;
+
+enum Control {
+    JUMP,
+    JUMP_REL,
+    CALL,
+    RETURN
+};
 
 class CPU
 {
@@ -25,6 +37,7 @@ public:
     unsigned char* mem;
     unsigned char* cartStart;
     int clock;
+    void* classPtr;
 
     CPU();
 
@@ -44,7 +57,7 @@ public:
     unsigned char bitAnd(unsigned char a, unsigned char b);
     unsigned char bitOr(unsigned char a, unsigned char b);
     unsigned char bitXor(unsigned char a, unsigned char b);
-    void compBitToZero(unsigned char value, unsigned int bit);
+    void compBitToZero(unsigned char value, unsigned char bit);
     unsigned char dec(unsigned char value);
     void decimalAdjustAcc();
     unsigned char inc(unsigned char value);
@@ -63,6 +76,14 @@ public:
     // stack functions
     void pushRegPair(unsigned char regPair);
     void popRegPair(unsigned char regPair);
+
+    // control flow functions
+    void jump(unsigned short imm);
+    void jumpRel(char imm);
+    void call(unsigned short imm);
+    void ret();
+    void condition(Control condFunc, unsigned char condValue,
+                   unsigned short imm, int clockSuccess, int clockFail);
 
     // register functions
     unsigned char getF();
