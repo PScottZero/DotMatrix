@@ -15,7 +15,8 @@ void initEmulator(DotMatrixWindow *dmw) {
     int i = 0;
     while (true) {
         cpu.step();
-        if (i % 5 == 0) {
+        dmw->ppu->render();
+        if (i % 3 == 0) {
             dmw->ppu->render();
         }
         i++;

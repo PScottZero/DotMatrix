@@ -11,11 +11,11 @@ PPU::PPU(QMainWindow* dotMatrixClass) {
     darkGray = QBrush(QColor(84, 84, 84));
     black = QBrush(QColor(0, 0, 0));
 
-    //// original game boy color palette
-    //white = QBrush(QColor(155, 188, 15));
-    //lightGray = QBrush(QColor(139, 172, 15));
-    //darkGray = QBrush(QColor(48, 98, 48));
-    //black = QBrush(QColor(15, 56, 15));
+//    // original game boy color palette
+//    white = QBrush(QColor(155, 188, 15));
+//    lightGray = QBrush(QColor(139, 172, 15));
+//    darkGray = QBrush(QColor(48, 98, 48));
+//    black = QBrush(QColor(15, 56, 15));
 
     // create vram
     initVideo();
@@ -97,28 +97,32 @@ void PPU::paintEvent(QPaintEvent *e) {
         QBrush colorTwo = getShade(PX_TWO);
         QBrush colorThree = getShade(PX_THREE);
 
+        painter.fillRect(0, 0, 256 * 4, 256 * 4, colorZero);
+
         for (int row = 0; row < BG_PX_DIM; row++) {
             for (int col = 0; col < BG_PX_DIM; col++) {
-                pixel px = vram[(scrollY + row) % BG_PX_DIM][(scrollX + col) % BG_PX_DIM];
-                if (px.type == PixelType::Background) {
+                if (scrollY + row < 256) {
+                    pixel px = vram[scrollY + row][(scrollX + col) % BG_PX_DIM];
+                    if (px.type == PixelType::Background) {
 
-                    QBrush pxColor;
-                    switch (px.value) {
-                    case PX_ZERO:
-                        pxColor = colorZero;
-                        break;
-                    case PX_ONE:
-                        pxColor = colorOne;
-                        break;
-                    case PX_TWO:
-                        pxColor = colorTwo;
-                        break;
-                    case PX_THREE:
-                        pxColor = colorThree;
-                        break;
+                        QBrush pxColor;
+                        switch (px.value) {
+                        case PX_ZERO:
+                            pxColor = colorZero;
+                            break;
+                        case PX_ONE:
+                            pxColor = colorOne;
+                            break;
+                        case PX_TWO:
+                            pxColor = colorTwo;
+                            break;
+                        case PX_THREE:
+                            pxColor = colorThree;
+                            break;
+                        }
+
+                        painter.fillRect(4 * (col - scrollX), 4 * (row - scrollY), 4, 4, pxColor);
                     }
-
-                    painter.fillRect(4 * (col - scrollX), 4 * (row - scrollY), 4, 4, pxColor);
                 }
             }
         }

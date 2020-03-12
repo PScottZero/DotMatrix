@@ -5,10 +5,12 @@ CPU::CPU() {
     A = B = C = D = E = H = L = PC = 0;
     zero = halfCarry = subtract = carry = false;
     IME = true;
-    SP = 0xFFFE;
     mem = new unsigned char[0xFFFF];
     cartStart = new unsigned char[0xFF];
-    classPtr = this;
+    clock = 0;
+
+    writeMem(SCROLL_X, 0);
+    writeMem(SCROLL_Y, 0);
 }
 
 // Loads cartidge data into memory
@@ -56,6 +58,7 @@ void CPU::step() {
 void CPU::decode(unsigned char opcode) {
 
     unsigned char upperTwo = opcode >> 6 & 0b11;
+    unsigned char bitFive = opcode >> 5 & 1;
     unsigned char cond = (opcode >> 3) & 0b11;
     unsigned char regDest = opcode >> 3 & 0b111;
     unsigned char regSrc = opcode & 0b111;
@@ -508,9 +511,9 @@ void CPU::decode(unsigned char opcode) {
     case 0xCB:
 
         unsigned char imm8 = getImm8();
-        upperTwo = imm8 >> 6 & 0b11;
-        regDest = imm8 >> 3 & 0b111;
-        regSrc = imm8 & 0b111;
+        unsigned char upperTwoCB = imm8 >> 6 & 0b11;
+        unsigned char regDestCB = imm8 >> 3 & 0b111;
+        unsigned char regSrcCB = imm8 & 0b111;
 
         // ======================================================================================
         // ----------------------- CB PREFIX OPCODES IN NON-GENERAL FORM ------------------------
@@ -578,68 +581,68 @@ void CPU::decode(unsigned char opcode) {
         // ======================================================================================
         // ------------------------- CB PREFIX OPCODES IN GENERAL FORM --------------------------
         // ======================================================================================
-        switch (upperTwo) {
+        switch (upperTwoCB) {
 
         // ========================
         // OPCODES OF FORM 00XXXRRR
         // ========================
         case 0b00:
 
-            switch (regDest) {
+            switch (regDestCB) {
 
             // RLC r
             // Rotate register r to the left
             case 0b000:
-                *(regArr[regSrc]) = rotateLeft(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = rotateLeft(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // RRC r
             // Rotate register r to the right
             case 0b001:
-                *(regArr[regSrc]) = rotateRight(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // RL r
             // Rotate register r to the left through carry flag
             case 0b010:
-                *(regArr[regSrc]) = rotateLeftCarry(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = rotateLeftCarry(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // RR r
             // Rotate register r to the right through carry flag
             case 0b011:
-                *(regArr[regSrc]) = rotateRightCarry(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = rotateRightCarry(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // SLA r
             // Shift register r to the left
             case 0b100:
-                *(regArr[regSrc]) = shiftLeft(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = shiftLeft(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // SRA r
             // Shift register r to the right
             case 0b101:
-                *(regArr[regSrc]) = shiftRightArithmetic(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = shiftRightArithmetic(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // SWAP r
             // Swap upper and lower nibbles of register r
             case 0b110:
-                *(regArr[regSrc]) = swap(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = swap(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
 
             // SRL r
             // Shift register r to the right logically
             case 0b111:
-                *(regArr[regSrc]) = shiftRightLogical(*(regArr[regSrc]));
+                *(regArr[regSrcCB]) = shiftRightLogical(*(regArr[regSrcCB]));
                 clock += 2;
                 break;
             }
@@ -652,15 +655,15 @@ void CPU::decode(unsigned char opcode) {
 
             // BIT b, (HL)
             // Copies complement of specified bit b of memory at HL to Z flag
-            if (regSrc == 0b110) {
-                compBitToZero(readMem(getRegPair(HL)), regDest);
+            if (regSrcCB == 0b110) {
+                compBitToZero(readMem(getRegPair(HL)), regDestCB);
                 clock += 3;
             }
 
             // BIT b, r
             // Copies complement of specified bit b of register r to Z flag
             else {
-                compBitToZero(*(regArr[regSrc]), regDest);
+                compBitToZero(*(regArr[regSrcCB]), regDestCB);
                 clock += 2;
             }
             break;
@@ -672,15 +675,15 @@ void CPU::decode(unsigned char opcode) {
 
             // RES b, (HL)
             // Reset bit b in memory at HL to 0
-            if (regSrc == 0b110) {
-                writeMem(getRegPair(HL), resetBit(readMem(getRegPair(HL)), regDest));
+            if (regSrcCB == 0b110) {
+                writeMem(getRegPair(HL), resetBit(readMem(getRegPair(HL)), regDestCB));
                 clock += 4;
             }
 
             // RES b, r
             // Set bit b in register r to 0
             else {
-                *(regArr[regSrc]) = resetBit(*(regArr[regSrc]), regDest);
+                *(regArr[regSrcCB]) = resetBit(*(regArr[regSrcCB]), regDestCB);
                 clock += 2;
             }
             break;
@@ -692,15 +695,15 @@ void CPU::decode(unsigned char opcode) {
 
             // SET b, (HL)
             // Sets bit b in memory at HL to 1
-            if (regSrc == 0b110) {
-                writeMem(getRegPair(HL), setBit(readMem(getRegPair(HL)), regDest));
+            if (regSrcCB == 0b110) {
+                writeMem(getRegPair(HL), setBit(readMem(getRegPair(HL)), regDestCB));
                 clock += 4;
             }
 
             // SET b, r
             // Sets bit b in register r to 1
             else {
-                *(regArr[regSrc]) = setBit(*(regArr[regSrc]), regDest);
+                *(regArr[regSrcCB]) = setBit(*(regArr[regSrcCB]), regDestCB);
                 clock += 2;
             }
             break;
@@ -725,7 +728,9 @@ void CPU::decode(unsigned char opcode) {
         // JR cc, e
         // Jump to PC + (signed) e if condition cc is met
         case 0b000:
-            condition(JUMP_REL, cond, getImm8(), 3, 2);
+            if (bitFive == 1) {
+                condition(JUMP_REL, cond, getImm8(), 3, 2);
+            }
             break;
 
         // INC r
@@ -875,6 +880,7 @@ void CPU::decode(unsigned char opcode) {
             clock += 1;
             break;
         }
+        break;
 
     case 0b11:
 
@@ -894,19 +900,19 @@ void CPU::decode(unsigned char opcode) {
 
         // RET cc
         // Return from subroutine if condition cc is true
-        else if (regSrc == 0b000) {
+        else if (regSrc == 0b000 && bitFive == 0) {
             condition(RETURN, cond, 0, 5, 2);
         }
 
         // JP cc, nn
         // Jump to address specific if condition cc is met
-        else if (regSrc == 0b010) {
+        else if (regSrc == 0b010 && bitFive == 0) {
             condition(JUMP, cond, getImm16(), 4, 3);
         }
 
         // CALL cc, nn
         // Call address at nn if condition cc is met
-        else if (regSrc == 0b100) {
+        else if (regSrc == 0b100 && bitFive == 0) {
             condition(CALL, cond, getImm16(), 6, 3);
         }
         break;
@@ -1233,12 +1239,26 @@ void CPU::setRegPair(unsigned char regPair, unsigned short value) {
     }
 }
 
+unsigned short CPU::getRegPair(unsigned char regPair) {
+    switch (regPair) {
+    case BC:
+        return (B << 8) | C;
+    case DE:
+        return (D << 8) | E;
+    case HL:
+        return (H << 8) | L;
+    case AF_SP:
+        return SP;
+    }
+    return 0;
+}
+
 void CPU::jump(unsigned short imm) {
     PC = imm - 1;
 }
 
 void CPU::jumpRel(char imm) {
-    PC += (char)imm;
+    PC += imm;
 }
 
 void CPU::call(unsigned short imm) {
@@ -1249,7 +1269,7 @@ void CPU::call(unsigned short imm) {
 
 void CPU::ret() {
     unsigned char lo = readMem(++SP);
-    PC = lo | (readMem(++SP) << 8) + 2;
+    PC = lo | (readMem(++SP) << 8);
 }
 
 void CPU::condition(Control condFunc, unsigned char condValue,

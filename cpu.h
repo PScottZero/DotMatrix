@@ -20,6 +20,14 @@ constexpr unsigned char CARRY = 0b11;
 constexpr unsigned char WITH_CARRY = true;
 constexpr unsigned char NO_CARRY = false;
 
+// display register addresses
+constexpr unsigned short SCROLL_Y = 0xFF42;
+constexpr unsigned short SCROLL_X = 0xFF43;
+constexpr unsigned short LCDC_Y = 0xFF44;
+constexpr unsigned short LY_COMP = 0xFF45;
+constexpr unsigned short WINDOW_Y = 0xFF4A;
+constexpr unsigned short WINDOW_X = 0xFF4B;
+
 enum Control {
     JUMP,
     JUMP_REL,
@@ -37,7 +45,6 @@ public:
     unsigned char* mem;
     unsigned char* cartStart;
     int clock;
-    void* classPtr;
 
     CPU();
 
