@@ -1,6 +1,8 @@
 #include "cpu.h"
 
-// Initializes cpu data
+// ================================
+// Initialize cpu data
+// ================================
 CPU::CPU() {
     A = B = C = D = E = H = L = PC = 0;
     zero = halfCarry = subtract = carry = false;
@@ -8,12 +10,11 @@ CPU::CPU() {
     mem = new unsigned char[0xFFFF];
     cartStart = new unsigned char[0xFF];
     clock = 0;
-
-    writeMem(SCROLL_X, 0);
-    writeMem(SCROLL_Y, 0);
 }
 
-// Loads cartidge data into memory
+// ================================
+// Load cartidge data into memory
+// ================================
 void CPU::loadCartridge(string dir) {
     char* buffer = new char[0x8000];
     ifstream cartridge (dir, ios::in | ios::binary);
@@ -31,7 +32,9 @@ void CPU::loadCartridge(string dir) {
     delete[] buffer;
 }
 
-// Loads gameboy bootstrap
+// ================================
+// Load gameboy bootstrap
+// ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
     ifstream bootstrap ("C:/Users/8psco/Documents/GitHub/DotMatrix/bootstrap.bin", ios::in | ios::binary);
@@ -43,8 +46,10 @@ void CPU::loadBootstrap() {
     }
 }
 
+// ================================
 // Run emulator
-// TODO: fully implement run function
+// TODO: fully implement function
+// ================================
 void CPU::step() {
     if (PC == 0x100) {
         for (int index = 0; index < 0x100; index++) {
@@ -54,7 +59,9 @@ void CPU::step() {
     decode(mem[PC]);
 }
 
+// ================================
 // Decode instruction
+// ================================
 void CPU::decode(unsigned char opcode) {
 
     unsigned char upperTwo = opcode >> 6 & 0b11;
@@ -920,243 +927,30 @@ void CPU::decode(unsigned char opcode) {
     PC++;
 }
 
+
+
+// ======================================================================================
+// ------------------------------ MEMORY ACCESS FUNCTIONS -------------------------------
+// ======================================================================================
+
+// ================================
+// Read from memory
+// ================================
 unsigned char CPU::readMem(unsigned short addr) {
     return mem[addr];
 }
 
+// ================================
+// Write to memory
+// ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
     mem[addr] = value;
 }
 
-// Add opertaion for 8-bit numbers
-// Input: a (unsigned char), b (unsigned char)
-// Output: a + b (unsigned char)
-unsigned char CPU::add(unsigned char a, unsigned char b, bool withCarry) {
-    unsigned char c = carry;
-    if (!withCarry) {
-        c = 0;
-    }
-    unsigned short result = a + b + c;
-    zero = (result & 0xFF) == 0;
-    halfCarry = (a & 0xF) + (b & 0xF) > 0xF;
-    subtract = false;
-    carry = result > 0xFF;
-    return (unsigned char)result;
-}
-
-// Add opertaion for 16-bit numbers
-// Input: a (unsigned short), b (unsigned short)
-// Output: a + b (unsigned short)
-unsigned short CPU::add16(unsigned short a, unsigned short b) {
-    unsigned int result = a + b;
-    halfCarry = (a & 0xFFF) + (b & 0xFFF) > 0xFFF;
-    subtract = false;
-    carry = result > 0xFFFF;
-    return (unsigned short)result;
-}
-
-// Subtract opertaion for 8-bit numbers
-// Input: a (unsigned char), b (unsigned char)
-// Output: a - b (unsigned char)
-unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
-    carry = !carry;
-    return add(a, ~b + 1, withCarry);
-}
-
-// ANDs two 8-bit numbers together
-// Input: a (unsigned char), b (unsigned char)
-// Output: a & b
-unsigned char CPU::bitAnd(unsigned char a, unsigned char b) {
-    unsigned char result = a & b;
-    zero = result == 0;
-    halfCarry = true;
-    subtract = false;
-    carry = false;
-    return result;
-}
-
-// ORs two 8-bit numbers together
-// Input: a (unsigned char), b (unsigned char)
-// Output: a | b
-unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
-    unsigned char result = a | b;
-    zero = result == 0;
-    return result;
-}
-
-// XORs two 8-bit numbers together
-// Input: a (unsigned char), b (unsigned char)
-// Output: a ^ b
-unsigned char CPU::bitXor(unsigned char a, unsigned char b) {
-    unsigned char result = a ^ b;
-    zero = result == 0;
-    return result;
-}
-
-// Increments value by one
-// Input: value (unsigned char)
-// Output: value + 1
-unsigned char CPU::inc(unsigned char value) {
-    unsigned char result = value + 1;
-    zero = result == 0;
-    halfCarry = (value & 0xF) + 1 > 0xF;
-    subtract = false;
-    return result;
-}
-
-// Decrements value by one
-// Input: value (unsigned char)
-// Output: value - 1
-unsigned char CPU::dec(unsigned char value) {
-    unsigned char result = value - 1;
-    zero = result == 0;
-    halfCarry = (value & 0xF) - 1 < 0;
-    subtract = true;
-    return result;
-}
-
-// Rotates value to the left
-// Input: value (unsigned char)
-// Output: rotated value
-unsigned char CPU::rotateLeft(unsigned char value) {
-    unsigned char bit7 = (value & 0x80) >> 7;
-    unsigned char result = (value << 1) | bit7;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = bit7;
-    return result;
-}
-
-// Rotates value to the left through carry flag
-// Input: value (unsigned char)
-// Output: rotated value
-unsigned char CPU::rotateLeftCarry(unsigned char value) {
-    unsigned char result = (value << 1) | (unsigned char)carry;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = (value & 0x80) >> 7;
-    return result;
-}
-
-// Rotates value to the right
-// Input: value (unsigned char)
-// Output: rotated value
-unsigned char CPU::rotateRight(unsigned char value) {
-    unsigned char result = (value >> 1) | ((value & 0x1) << 7);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
-    return result;
-}
-
-// Rotates value to the right through carry flag
-// Input: value (unsigned char)
-// Output: rotated value
-unsigned char CPU::rotateRightCarry(unsigned char value) {
-    unsigned char result = (value >> 1) | (carry << 7);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
-    return result;
-}
-
-// Shifts value to the left by one
-// Input: value (unsigned char)
-// Output: value << 1
-unsigned char CPU::shiftLeft(unsigned char value) {
-    unsigned char result = value << 1;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = (value & 0x80) >> 7;
-    return result;
-}
-
-// Arithmetically shifts value to the right by one
-// Input: value (unsigned char)
-// Output: value >> 1
-unsigned char CPU::shiftRightArithmetic(unsigned char value) {
-    unsigned char msb = value & 0x80;
-    unsigned char result = (value >> 1) | msb;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
-    return result;
-}
-
-// Logically shifts value to the right by one
-// Input: value (unsigned char)
-// Output: value >> 1
-unsigned char CPU::shiftRightLogical(unsigned char value) {
-    unsigned char result = (value >> 1) & 0x7F;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
-    return result;
-}
-
-// Swaps lower and upper nibbles of specified value
-// Input: value (unsigned char)
-// Output: swapped value (unsigned char)
-unsigned char CPU::swap(unsigned char value) {
-    unsigned char result = ((value << 4) & 0xF0) | ((value >> 4) & 0xF);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = false;
-    return result;
-}
-
-// Copies complement of bit in value into zero flag
-// Input: value (unsigned char), bit (int)
-// Output: none
-void CPU::compBitToZero(unsigned char value, unsigned char bit) {
-    zero = !(bool)((value >> bit) & 0x1);
-    halfCarry = true;
-    subtract = false;
-}
-
-// Sets specified bit to 1
-// Input: value (unsigned char), bit (int)
-// Output: value with specified bit set to 1 (unsigned char)
-unsigned char CPU::setBit(unsigned char value, unsigned int bit) {
-    return value | (1 << bit);
-}
-
-// Sets specified bit to 0
-// Input: value (unsigned char), bit (int)
-// Output: value with specified bit set to 0 (unsigned char)
-unsigned char CPU::resetBit(unsigned char value, unsigned int bit) {
-    return value & ~(1 << bit);
-}
-
-void CPU::decimalAdjustAcc() {
-    if (!subtract) {
-        if (halfCarry || (A & 0xF) > 0x9) {
-            A += 0x6;
-        }
-        if (carry || A > 0x99) {
-            A += 0x60;
-            carry = true;
-        }
-    } else {
-        if (carry) {
-            A -= 0x60;
-        }
-        if (halfCarry) {
-            A -= 0x6;
-        }
-    }
-    zero = A == 0;
-    halfCarry = 0;
-}
-
+// ================================
+// Push given register pair
+// onto stack
+// ================================
 void CPU::pushRegPair(unsigned char regPair) {
     switch (regPair) {
     case BC:
@@ -1178,6 +972,10 @@ void CPU::pushRegPair(unsigned char regPair) {
     }
 }
 
+// ================================
+// Pop given register pair
+// from stack
+// ================================
 void CPU::popRegPair(unsigned char regPair) {
     switch (regPair) {
     case BC:
@@ -1199,19 +997,9 @@ void CPU::popRegPair(unsigned char regPair) {
     }
 }
 
-unsigned char CPU::getF() {
-    return 0x00 | zero << 7 | subtract << 6 | halfCarry << 5 | carry << 4;
-}
-
-unsigned char CPU::getImm8() {
-    return readMem(++PC);
-}
-
-unsigned short CPU::getImm16() {
-    unsigned short imm16 = readMem(++PC);
-    return imm16 | (readMem(++PC) << 8);
-}
-
+// ================================
+// Set flag register
+// ================================
 void CPU::setF(unsigned char value) {
     zero = value >> 7 & 0x1;
     subtract = value >> 6 & 0x1;
@@ -1219,6 +1007,32 @@ void CPU::setF(unsigned char value) {
     carry = value >> 4 & 0x1;
 }
 
+// ================================
+// Return flag register
+// ================================
+unsigned char CPU::getF() {
+    return 0x00 | zero << 7 | subtract << 6 | halfCarry << 5 | carry << 4;
+}
+
+// ================================
+// Return 8-bit immediate value
+// ================================
+unsigned char CPU::getImm8() {
+    return readMem(++PC);
+}
+
+// ================================
+// Return 16-bit immediate value
+// ================================
+unsigned short CPU::getImm16() {
+    unsigned short imm16 = readMem(++PC);
+    return imm16 | (readMem(++PC) << 8);
+}
+
+// ================================
+// Set specified register pair to
+// given 16-bit value
+// ================================
 void CPU::setRegPair(unsigned char regPair, unsigned short value) {
     switch (regPair) {
     case BC:
@@ -1239,6 +1053,9 @@ void CPU::setRegPair(unsigned char regPair, unsigned short value) {
     }
 }
 
+// ================================
+// Return specified register pair
+// ================================
 unsigned short CPU::getRegPair(unsigned char regPair) {
     switch (regPair) {
     case BC:
@@ -1253,25 +1070,299 @@ unsigned short CPU::getRegPair(unsigned char regPair) {
     return 0;
 }
 
-void CPU::jump(unsigned short imm) {
-    PC = imm - 1;
+
+
+// ======================================================================================
+// ------------------------------- ARITHMETIC FUNCTIONS ---------------------------------
+// ======================================================================================
+
+// ================================
+// Add two 8-bit numbers together
+// ================================
+unsigned char CPU::add(unsigned char a, unsigned char b, bool withCarry) {
+    unsigned char c = carry;
+    if (!withCarry) {
+        c = 0;
+    }
+    unsigned short result = a + b + c;
+    zero = (result & 0xFF) == 0;
+    halfCarry = (a & 0xF) + (b & 0xF) > 0xF;
+    subtract = false;
+    carry = result > 0xFF;
+    return (unsigned char)result;
 }
 
-void CPU::jumpRel(char imm) {
-    PC += imm;
+// ================================
+// Add two 16-bit numbers together
+// ================================
+unsigned short CPU::add16(unsigned short a, unsigned short b) {
+    unsigned int result = a + b;
+    halfCarry = (a & 0xFFF) + (b & 0xFFF) > 0xFFF;
+    subtract = false;
+    carry = result > 0xFFFF;
+    return (unsigned short)result;
 }
 
-void CPU::call(unsigned short imm) {
+// ================================
+// Subtract two 8-bit numbers
+// ================================
+unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
+    carry = !carry;
+    return add(a, ~b + 1, withCarry);
+}
+
+// ================================
+// Increment given value by one
+// ================================
+unsigned char CPU::inc(unsigned char value) {
+    unsigned char result = value + 1;
+    zero = result == 0;
+    halfCarry = (value & 0xF) + 1 > 0xF;
+    subtract = false;
+    return result;
+}
+
+// ================================
+// Decrement given value by one
+// ================================
+unsigned char CPU::dec(unsigned char value) {
+    unsigned char result = value - 1;
+    zero = result == 0;
+    halfCarry = (value & 0xF) - 1 < 0;
+    subtract = true;
+    return result;
+}
+
+// ================================
+// Decimal adjust accumulator
+// after add or subtract operation
+// ================================
+void CPU::decimalAdjustAcc() {
+    if (!subtract) {
+        if (halfCarry || (A & 0xF) > 0x9) {
+            A += 0x6;
+        }
+        if (carry || A > 0x99) {
+            A += 0x60;
+            carry = true;
+        }
+    } else {
+        if (carry) {
+            A -= 0x60;
+        }
+        if (halfCarry) {
+            A -= 0x6;
+        }
+    }
+    zero = A == 0;
+    halfCarry = 0;
+}
+
+
+
+// ======================================================================================
+// --------------------------------- LOGICAL FUNCTIONS ----------------------------------
+// ======================================================================================
+
+// ================================
+// AND two 8-bit numbers together
+// ================================
+unsigned char CPU::bitAnd(unsigned char a, unsigned char b) {
+    unsigned char result = a & b;
+    zero = result == 0;
+    halfCarry = true;
+    subtract = false;
+    carry = false;
+    return result;
+}
+
+// ================================
+// OR two 8-bit numbers together
+// ================================
+unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
+    unsigned char result = a | b;
+    zero = result == 0;
+    return result;
+}
+
+// ================================
+// XOR two 8-bit numbers together
+// ================================
+unsigned char CPU::bitXor(unsigned char a, unsigned char b) {
+    unsigned char result = a ^ b;
+    zero = result == 0;
+    return result;
+}
+
+// ================================
+// Rotate given value to the left
+// ================================
+unsigned char CPU::rotateLeft(unsigned char value) {
+    unsigned char bit7 = (value & 0x80) >> 7;
+    unsigned char result = (value << 1) | bit7;
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = bit7;
+    return result;
+}
+
+// ================================
+// Rotate given value to the left
+// through carry flag
+// ================================
+unsigned char CPU::rotateLeftCarry(unsigned char value) {
+    unsigned char result = (value << 1) | (unsigned char)carry;
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = (value & 0x80) >> 7;
+    return result;
+}
+
+// ================================
+// Rotate given value to the right
+// ================================
+unsigned char CPU::rotateRight(unsigned char value) {
+    unsigned char result = (value >> 1) | ((value & 0x1) << 7);
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = value & 0x1;
+    return result;
+}
+
+// ================================
+// Rotates value to the right
+// through carry flag
+// ================================
+unsigned char CPU::rotateRightCarry(unsigned char value) {
+    unsigned char result = (value >> 1) | (carry << 7);
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = value & 0x1;
+    return result;
+}
+
+// ================================
+// Shift given value to the left
+// ================================
+unsigned char CPU::shiftLeft(unsigned char value) {
+    unsigned char result = value << 1;
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = (value & 0x80) >> 7;
+    return result;
+}
+
+// ================================
+// Arithmetically shift given value
+// to the right
+// ================================
+unsigned char CPU::shiftRightArithmetic(unsigned char value) {
+    unsigned char msb = value & 0x80;
+    unsigned char result = (value >> 1) | msb;
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = value & 0x1;
+    return result;
+}
+
+// ================================
+// Logically shift given value to
+// the right by one
+// ================================
+unsigned char CPU::shiftRightLogical(unsigned char value) {
+    unsigned char result = (value >> 1) & 0x7F;
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = value & 0x1;
+    return result;
+}
+
+// ================================
+// Swap lower and upper nibbles of
+// a given value
+// ================================
+unsigned char CPU::swap(unsigned char value) {
+    unsigned char result = ((value << 4) & 0xF0) | ((value >> 4) & 0xF);
+    zero = (result == 0);
+    halfCarry = false;
+    subtract = false;
+    carry = false;
+    return result;
+}
+
+// ================================
+// Copy complement of specified bit
+// of a given value into zero flag
+// ================================
+void CPU::compBitToZero(unsigned char value, unsigned char bit) {
+    zero = !(bool)((value >> bit) & 0x1);
+    halfCarry = true;
+    subtract = false;
+}
+
+// ================================
+// Set specified bit to 1
+// ================================
+unsigned char CPU::setBit(unsigned char value, unsigned int bit) {
+    return value | (1 << bit);
+}
+
+// ================================
+// Set specified bit to 0
+// ================================
+unsigned char CPU::resetBit(unsigned char value, unsigned int bit) {
+    return value & ~(1 << bit);
+}
+
+
+
+// ======================================================================================
+// ------------------------------ CONTROL FLOW FUNCTIONS --------------------------------
+// ======================================================================================
+
+// ================================
+// Jump to given address
+// ================================
+void CPU::jump(unsigned short addr) {
+    PC = addr - 1;
+}
+
+// ================================
+// Jump to address relative
+// to given 8-bit value
+// ================================
+void CPU::jumpRel(char addrRel) {
+    PC += addrRel;
+}
+
+// ================================
+// Call subroutine at given address
+// ================================
+void CPU::call(unsigned short addr) {
     writeMem(SP--, (PC >> 8) & 0xFF);
     writeMem(SP--, PC & 0xFF);
-    PC = imm - 1;
+    jump(addr);
 }
 
+// ================================
+// Return from current subroutine
+// ================================
 void CPU::ret() {
     unsigned char lo = readMem(++SP);
     PC = lo | (readMem(++SP) << 8);
 }
 
+// ================================
+// Performs speficied action if a
+// given condition is met
+// ================================
 void CPU::condition(Control condFunc, unsigned char condValue,
                     unsigned short imm, int clockSuccess, int clockFail) {
     bool cond;

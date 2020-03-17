@@ -5,6 +5,9 @@
 
 #include <QApplication>
 
+// ================================
+// Initialize emulation
+// ================================s
 void initEmulator(DotMatrixWindow *dmw) {
     CPU cpu;
     cpu.loadBootstrap();
@@ -16,13 +19,16 @@ void initEmulator(DotMatrixWindow *dmw) {
     while (true) {
         cpu.step();
         dmw->ppu->render();
-        if (i % 3 == 0) {
+        if (i % 10 == 0) {
             dmw->ppu->render();
         }
         i++;
     }
 }
 
+// ================================
+// Main function
+// ================================
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);

@@ -23,6 +23,8 @@ PPU::PPU(QMainWindow* dotMatrixClass) {
 
 void PPU::setMemory(unsigned char* cpuMem) {
     mem = cpuMem;
+    mem[SCROLL_X] = 0;
+    mem[SCROLL_Y] = 0;
 }
 
 void PPU::initVideo() {
