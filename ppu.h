@@ -40,6 +40,12 @@ constexpr auto BG_WIN_MAP_ADDR_0 = 0x9800;
 constexpr auto BG_WIN_MAP_ADDR_1 = 0x9C00;
 
 // ================================
+// Screen timing
+// ================================
+constexpr auto SCANLINE = 114;
+constexpr auto SCREEN_CYCLE = 17556;
+
+// ================================
 // Display register addresses
 // ================================
 constexpr unsigned short SCROLL_Y = 0xFF42;
@@ -59,6 +65,16 @@ enum class PixelType {
 };
 
 // ================================
+// Display modes
+// ================================
+enum class Mode {
+    MODE_0,
+    MODE_1,
+    MODE_2,
+    MODE_3,
+};
+
+// ================================
 // Pixel structure
 // ================================
 struct pixel {
@@ -74,19 +90,21 @@ public:
     // Instance data
     // ================================
     unsigned char* mem;
-    pixel** vram;
+    unsigned int *cpuClock;
     QBrush white, lightGray, darkGray, black;
     QMainWindow* dm;
+    Mode ppuMode;
+    int currLine;
 
     // ================================
     // Display functions
     // ================================
     PPU(QMainWindow* dotMatrixClass);
     void initVideo();
-    void render();
-    void setBackgroundTiles();
     void setMemory(unsigned char* cpuMem);
+    void setCPUClock(unsigned int* cpuClock);
     void paintEvent(QPaintEvent*);
+    void step();
 
     // ================================
     // LCD control functions

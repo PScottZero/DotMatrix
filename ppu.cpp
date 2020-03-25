@@ -4,6 +4,9 @@
 PPU::PPU(QMainWindow* dotMatrixClass) {
     dm = dotMatrixClass;
     mem = NULL;
+    cpuClock = 0;
+    ppuMode = Mode::MODE_2;
+    currLine = 0;
 
     // game boy pocket color palette
     white = QBrush(QColor(255, 255, 255));
@@ -16,121 +19,118 @@ PPU::PPU(QMainWindow* dotMatrixClass) {
 //    lightGray = QBrush(QColor(139, 172, 15));
 //    darkGray = QBrush(QColor(48, 98, 48));
 //    black = QBrush(QColor(15, 56, 15));
-
-    // create vram
-    initVideo();
 }
 
 void PPU::setMemory(unsigned char* cpuMem) {
     mem = cpuMem;
     mem[SCROLL_X] = 0;
     mem[SCROLL_Y] = 0;
+    mem[LCDC_Y] = 0;
 }
 
-void PPU::initVideo() {
-    vram = new pixel*[BG_PX_DIM];
-    for (int i = 0; i < BG_PX_DIM; i++) {
-        vram[i] = new pixel[BG_PX_DIM];
-        for (int j = 0; j < BG_PX_DIM; j++) {
-            vram[i][j] = {PX_THREE, 0, PixelType::Background};
+void PPU::setCPUClock(unsigned int* clk) {
+    cpuClock = clk;
+}
+
+void PPU::step() {
+    currLine = (*cpuClock % SCREEN_CYCLE) / SCANLINE + 1;
+    auto lcdc = mem[LCDC_Y];
+    if (currLine != mem[LCDC_Y] && currLine == 1) {
+        mem[LCDC_Y] = 0;
+    }
+    if (currLine <= SCREEN_HEIGHT) {
+        ppuMode = Mode::MODE_3;
+        if (currLine != mem[LCDC_Y]) {
+            mem[LCDC_Y]++;
+            repaint(QRect(0, mem[LCDC_Y] * 4, SCREEN_WIDTH * 4, 4));
         }
-    }
-}
-
-// Renders display
-// TODO: implement render function
-void PPU::render() {
-    if (bgDisplayEnable() == 1) {
-        setBackgroundTiles();
-    }
-    update();
-}
-
-// takes background map and copies
-// corresponding tiles into video ram
-void PPU::setBackgroundTiles() {
-    unsigned short bgDataAddr = BG_DATA_ADDR_0;
-    unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
-
-    if (bgWinDataSelect() == 1) {
-        bgDataAddr = BG_DATA_ADDR_1;
-    }
-
-    if (bgMapSelect() == 1) {
-        bgMapAddr = BG_WIN_MAP_ADDR_1;
-    }
-
-    // iterate through tile map
-    for (int index = 0; index < BG_TILE_COUNT; index++) {
-        unsigned short tileAddr = bgDataAddr + BYTES_PER_TILE * mem[bgMapAddr + index];
-        int rowOffset = (index / BG_TILE_DIM) * TILE_PX_DIM;
-        int colOffset = (index % BG_TILE_DIM) * TILE_PX_DIM;
-
-        // write tile to VRAM
-        for (int row = 0; row < TILE_PX_DIM; row++) {
-
-            // get row data
-            unsigned char byte0 = mem[tileAddr + 2 * row];
-            unsigned char byte1 = mem[tileAddr + 2 * row + 1];
-
-            for (int col = 0; col < TILE_PX_DIM; col++) {
-
-                // get pixel data for tile
-                unsigned char bit1 = (byte0 >> (7 - col)) & 1;
-                unsigned char bit0 = (byte1 >> (7 - col)) & 1;
-                unsigned char color = (bit1 << 1) | bit0;
-                vram[rowOffset + row][colOffset + col] = {color, 0, PixelType::Background};
-            }
+    } else {
+        ppuMode = Mode::MODE_1;
+        if (currLine != mem[LCDC_Y]) {
+            mem[LCDC_Y]++;
+            repaint(QRect(0, mem[LCDC_Y] * 4, SCREEN_WIDTH * 4, 4));
         }
     }
 }
 
 void PPU::paintEvent(QPaintEvent *e) {
-    mem[0xFF44] = 0x90;
-    if (mem != NULL) {
-        QPainter painter(this);
+    QPainter painter(this);
+    switch (ppuMode) {
 
+    // draw sprites
+    case Mode::MODE_2:
+        break;
+
+    // vertical blank
+    case Mode::MODE_1:
+        mem[LCDC_Y]++;
+        break;
+
+    // horizontal blank
+    case Mode::MODE_0:
+        break;
+
+    // draw background
+    case Mode::MODE_3:
+
+        // scroll registers
         int scrollY = mem[0xFF42];
         int scrollX = mem[0xFF43];
 
-        // set background palette
+        // background addresses
+        unsigned short bgDataAddr = BG_DATA_ADDR_0;
+        unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
+
+        if (bgWinDataSelect() == 1) {
+            bgDataAddr = BG_DATA_ADDR_1;
+        }
+
+        if (bgMapSelect() == 1) {
+            bgMapAddr = BG_WIN_MAP_ADDR_1;
+        }
+
+        // background palette
         QBrush colorZero = getShade(PX_ZERO);
         QBrush colorOne = getShade(PX_ONE);
         QBrush colorTwo = getShade(PX_TWO);
         QBrush colorThree = getShade(PX_THREE);
 
-        painter.fillRect(0, 0, 256 * 4, 256 * 4, colorZero);
+        // render line
+        for (int i = 0; i < SCREEN_WIDTH; i++) {
+            unsigned short tileMapOffset = (((scrollX + i) % BG_PX_DIM) / TILE_PX_DIM) +
+                    (((scrollY + mem[LCDC_Y]) % BG_PX_DIM) / TILE_PX_DIM) * BG_TILE_DIM;
+            unsigned short tileOffset = mem[bgMapAddr + tileMapOffset];
+            unsigned short tileAddr = bgDataAddr + tileOffset * BYTES_PER_TILE + (scrollY + mem[LCDC_Y]) % TILE_PX_DIM;
+            unsigned char byte0 = mem[tileAddr];
+            unsigned char byte1 = mem[tileAddr + 1];
 
-        for (int row = 0; row < BG_PX_DIM; row++) {
-            for (int col = 0; col < BG_PX_DIM; col++) {
-                if (scrollY + row < 256) {
-                    pixel px = vram[scrollY + row][(scrollX + col) % BG_PX_DIM];
-                    if (px.type == PixelType::Background) {
+            unsigned char bit1 = (byte0 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
+            unsigned char bit0 = (byte1 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
 
-                        QBrush pxColor;
-                        switch (px.value) {
-                        case PX_ZERO:
-                            pxColor = colorZero;
-                            break;
-                        case PX_ONE:
-                            pxColor = colorOne;
-                            break;
-                        case PX_TWO:
-                            pxColor = colorTwo;
-                            break;
-                        case PX_THREE:
-                            pxColor = colorThree;
-                            break;
-                        }
+            unsigned char color = (bit1 << 1) | bit0;
 
-                        painter.fillRect(4 * (col - scrollX), 4 * (row - scrollY), 4, 4, pxColor);
-                    }
-                }
+            QBrush pxColor;
+
+            switch (color) {
+            case PX_ZERO:
+                pxColor = colorZero;
+                break;
+            case PX_ONE:
+                pxColor = colorOne;
+                break;
+            case PX_TWO:
+                pxColor = colorTwo;
+                break;
+            case PX_THREE:
+                pxColor = colorThree;
+                break;
             }
+
+            painter.fillRect(4 * i, 4 * (mem[LCDC_Y] - 1), 4, 4, pxColor);
         }
+        break;
     }
 }
-
 
 
 // -------------------- LCD CONTROL --------------------

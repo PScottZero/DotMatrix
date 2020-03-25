@@ -14,15 +14,11 @@ void initEmulator(DotMatrixWindow *dmw) {
     cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
 
     dmw->ppu->setMemory(cpu.mem);
+    dmw->ppu->setCPUClock(&cpu.clock);
 
-    int i = 0;
     while (true) {
         cpu.step();
-        dmw->ppu->render();
-        if (i % 10 == 0) {
-            dmw->ppu->render();
-        }
-        i++;
+        dmw->ppu->step();
     }
 }
 
@@ -34,8 +30,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     DotMatrixWindow dmw;
     dmw.show();
-
-    thread cpu(initEmulator, &dmw);
+    initEmulator(&dmw);
     return a.exec();
     return 0;
 }

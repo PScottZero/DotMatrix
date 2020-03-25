@@ -52,7 +52,7 @@ public:
     bool zero, halfCarry, subtract, carry, IME;
     unsigned char* mem;
     unsigned char* cartStart;
-    int clock;
+    unsigned int clock;
 
     // ================================
     // Emulator functions
