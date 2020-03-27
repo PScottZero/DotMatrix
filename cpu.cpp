@@ -37,7 +37,7 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    ifstream bootstrap ("C:/Users/8psco/Documents/GitHub/DotMatrix/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {

@@ -7,7 +7,7 @@ GBThread::GBThread(QObject *parent) : QThread(parent)
 
 GBThread::~GBThread()
 {
-    wait();
+
 }
 
 void GBThread::run() {
@@ -24,8 +24,10 @@ void GBThread::run() {
         if (cpu.mem[LCDC_Y] > 144 && !emitted) {
             emitted = true;
             emit sendFrame(frame);
+            QImage frame1(160, 144, QImage::Format_RGB32);
         } else if (cpu.mem[LCDC_Y] <= 144) {
             emitted = false;
         }
+        this_thread::sleep_for(chrono::nanoseconds(100));
     }
 }

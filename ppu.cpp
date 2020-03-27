@@ -70,12 +70,16 @@ void PPU::render() {
 
         // render line
         for (int i = 0; i < SCREEN_WIDTH; i++) {
-            unsigned short tileMapOffset = (((scrollX + i) % BG_PX_DIM) / TILE_PX_DIM) +
-                    (((scrollY + mem[LCDC_Y]) % BG_PX_DIM) / TILE_PX_DIM) * BG_TILE_DIM;
+            unsigned short pxX = (scrollX + i) % BG_PX_DIM;
+            unsigned short pxY = (scrollY + mem[LCDC_Y] - 1) % BG_PX_DIM;
+
+            unsigned short tileMapOffset = pxX / TILE_PX_DIM + (pxY / TILE_PX_DIM) * BG_TILE_DIM;
             unsigned short tileOffset = mem[bgMapAddr + tileMapOffset];
-            unsigned short tileAddr = bgDataAddr + tileOffset * BYTES_PER_TILE + (scrollY + mem[LCDC_Y]) % TILE_PX_DIM;
-            unsigned char byte0 = mem[tileAddr];
-            unsigned char byte1 = mem[tileAddr + 1];
+
+            unsigned short tileRowAddr = bgDataAddr + tileOffset * BYTES_PER_TILE + (pxY % TILE_PX_DIM) * 2;
+
+            unsigned char byte0 = mem[tileRowAddr];
+            unsigned char byte1 = mem[tileRowAddr + 1];
 
             unsigned char bit1 = (byte0 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
             unsigned char bit0 = (byte1 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;

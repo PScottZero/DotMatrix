@@ -6,11 +6,12 @@ GBWidget::GBWidget(QWidget *parent)
     setWindowTitle(tr("Dot Matrix v0.0.0"));
     connect(&gbthread, SIGNAL(sendFrame(QImage)), this, SLOT(updateDisplay(QImage)));
     resize(640, 576);
+    gbthread.start();
 }
 
 GBWidget::~GBWidget()
 {
-
+    gbthread.exit();
 }
 
 void GBWidget::paintEvent(QPaintEvent *) {
