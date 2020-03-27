@@ -10,24 +10,25 @@ using namespace std;
 // ================================
 // Register pairs
 // ================================
-constexpr unsigned char BC = 0b00;
-constexpr unsigned char DE = 0b01;
-constexpr unsigned char HL = 0b10;
-constexpr unsigned char AF_SP = 0b11;
+constexpr auto BC = 0b00;
+constexpr auto DE = 0b01;
+constexpr auto HL = 0b10;
+constexpr auto AF_SP = 0b11;
+constexpr auto MEM = 0b110;
 
 // ================================
 // Conditions
 // ================================
-constexpr unsigned char NOT_ZERO = 0b00;
-constexpr unsigned char ZERO = 0b01;
-constexpr unsigned char NOT_CARRY = 0b10;
-constexpr unsigned char CARRY = 0b11;
+constexpr auto NOT_ZERO = 0b00;
+constexpr auto ZERO = 0b01;
+constexpr auto NOT_CARRY = 0b10;
+constexpr auto CARRY = 0b11;
 
 // ================================
 // Carry options
 // ================================
-constexpr unsigned char WITH_CARRY = true;
-constexpr unsigned char NO_CARRY = false;
+constexpr auto WITH_CARRY = true;
+constexpr auto NO_CARRY = false;
 
 // ================================
 // Control flow options

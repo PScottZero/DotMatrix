@@ -37,8 +37,8 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    // ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
+    // ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {
@@ -78,13 +78,6 @@ void CPU::decode(unsigned char opcode) {
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
     // ======================================================================================
     switch (opcode) {
-
-    // LD (HL), n
-    // Load 8-bit immediate n into memory at address HL
-    case 0x36:
-        writeMem(getRegPair(HL), getImm8());
-        clock += 3;
-        break;
 
     // LD A, (BC)
     // Load memory at address BC into register A
@@ -217,24 +210,10 @@ void CPU::decode(unsigned char opcode) {
         clock += 2;
         break;
 
-    // ADD A, (HL)
-    // Add memory at address HL to register A and store result in A
-    case 0x86:
-        A = add(A, readMem(getRegPair(HL)), NO_CARRY);
-        clock += 2;
-        break;
-
     // ADC A, n
     // Add A, 8-bit immediate n, and carry flag together and store result in A
     case 0xCE:
         A = add(A, getImm8(), WITH_CARRY);
-        clock += 2;
-        break;
-
-    // ADC A, (HL)
-    // Add A, memory at address HL, and carry flag together and store result in A
-    case 0x8E:
-        A = add(A, readMem(getRegPair(HL)), WITH_CARRY);
         clock += 2;
         break;
 
@@ -245,24 +224,10 @@ void CPU::decode(unsigned char opcode) {
         clock += 2;
         break;
 
-    // SUB (HL)
-    // Subtract memory at address HL from register A and store result in
-    case 0x96:
-        A = sub(A, readMem(getRegPair(HL)), NO_CARRY);
-        clock += 2;
-        break;
-
     // SBC A, n
     // Subtract 8-bit immediate n and carry flag from register A and store result in A
     case 0xDE:
         A = sub(A, getImm8(), WITH_CARRY);
-        clock += 2;
-        break;
-
-    // SBC A, (HL)
-    // Subtract memory at address HL and carry flag from register A and store result in A
-    case 0x9E:
-        A = sub(A, readMem(getRegPair(HL)), WITH_CARRY);
         clock += 2;
         break;
 
@@ -273,24 +238,10 @@ void CPU::decode(unsigned char opcode) {
         clock += 2;
         break;
 
-    // AND (HL)
-    // And register A and memory at address HL together and store result in A
-    case 0xA6:
-        A = bitAnd(A, readMem(getRegPair(HL)));
-        clock += 2;
-        break;
-
     // OR n
     // Or register A and 8-bit immediate n together and store result in A
     case 0xF6:
         A = bitOr(A, getImm8());
-        clock += 2;
-        break;
-
-    // OR (HL)
-    // Or register A and memory at address HL together and store result in A
-    case 0xB6:
-        A = bitOr(A, readMem(getRegPair(HL)));
         clock += 2;
         break;
 
@@ -301,39 +252,11 @@ void CPU::decode(unsigned char opcode) {
         clock += 2;
         break;
 
-    // XOR (HL)
-    // Xor register A and memory at address HL together and store result in A
-    case 0xAE:
-        A = bitXor(A, readMem(getRegPair(HL)));
-        clock += 2;
-        break;
-
     // CP n
     // Compare register A and 8-bit immediate n
     case 0xFE:
         sub(A, getImm8(), NO_CARRY);
         clock += 2;
-        break;
-
-    // CP (HL)
-    // Compare register A and memory at address HL
-    case 0xBE:
-        sub(A, readMem(getRegPair(HL)), NO_CARRY);
-        clock += 2;
-        break;
-
-    // INC (HL)
-    // Increment memory at address HL
-    case 0x34:
-        writeMem(getRegPair(HL), inc(readMem(getRegPair(HL))));
-        clock += 3;
-        break;
-
-    // DEC (HL)
-    // Decrement memory at address HL
-    case 0x35:
-        writeMem(getRegPair(HL), dec(readMem(getRegPair(HL))));
-        clock += 3;
         break;
 
     // ADD SP, e
@@ -523,72 +446,6 @@ void CPU::decode(unsigned char opcode) {
         unsigned char regDestCB = imm8 >> 3 & 0b111;
         unsigned char regSrcCB = imm8 & 0b111;
 
-        // ======================================================================================
-        // ----------------------- CB PREFIX OPCODES IN NON-GENERAL FORM ------------------------
-        // ======================================================================================
-        switch (imm8) {
-
-        // RLC (HL)
-        // Rotate memory at address HL to the left
-        case 0x06:
-            writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // RL (HL)
-        // Rotate memory at address HL to the left through carry flag
-        case 0x16:
-            writeMem(getRegPair(HL), rotateLeftCarry(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // RRC (HL)
-        // Rotate memory at address HL to the right
-        case 0x0E:
-            writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // RR (HL)
-        // Rotate memory at address HL to the left through carry flag
-        case 0x1E:
-            writeMem(getRegPair(HL), rotateRightCarry(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // SLA (HL)
-        // Shift memory at register HL left
-        case 0x26:
-            writeMem(getRegPair(HL), shiftLeft(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // SRA (HL)
-        // Shift memory at HL to the right
-        case 0x2E:
-            writeMem(getRegPair(HL), shiftRightArithmetic(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // SRL (HL)
-        // Shift memory at HL to the right logically
-        case 0x3E:
-            writeMem(getRegPair(HL), shiftRightLogical(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-
-        // SWAP (HL)
-        // Swap upper and lower nibbles of memory at HL
-        case 0x36:
-            writeMem(getRegPair(HL), swap(readMem(getRegPair(HL))));
-            clock += 4;
-            break;
-        }
-
-
-        // ======================================================================================
-        // ------------------------- CB PREFIX OPCODES IN GENERAL FORM --------------------------
-        // ======================================================================================
         switch (upperTwoCB) {
 
         // ========================
@@ -601,57 +458,97 @@ void CPU::decode(unsigned char opcode) {
             // RLC r
             // Rotate register r to the left
             case 0b000:
-                *(regArr[regSrcCB]) = rotateLeft(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = rotateLeft(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // RRC r
             // Rotate register r to the right
             case 0b001:
-                *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // RL r
             // Rotate register r to the left through carry flag
             case 0b010:
-                *(regArr[regSrcCB]) = rotateLeftCarry(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), rotateLeftCarry(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = rotateLeftCarry(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // RR r
             // Rotate register r to the right through carry flag
             case 0b011:
-                *(regArr[regSrcCB]) = rotateRightCarry(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), rotateRightCarry(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = rotateRightCarry(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // SLA r
             // Shift register r to the left
             case 0b100:
-                *(regArr[regSrcCB]) = shiftLeft(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), shiftLeft(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = shiftLeft(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // SRA r
             // Shift register r to the right
             case 0b101:
-                *(regArr[regSrcCB]) = shiftRightArithmetic(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), shiftRightArithmetic(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = shiftRightArithmetic(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // SWAP r
             // Swap upper and lower nibbles of register r
             case 0b110:
-                *(regArr[regSrcCB]) = swap(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), swap(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = swap(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
 
             // SRL r
             // Shift register r to the right logically
             case 0b111:
-                *(regArr[regSrcCB]) = shiftRightLogical(*(regArr[regSrcCB]));
-                clock += 2;
+                if (regSrcCB == MEM) {
+                    writeMem(getRegPair(HL), shiftRightLogical(readMem(getRegPair(HL))));
+                    clock += 4;
+                } else {
+                    *(regArr[regSrcCB]) = shiftRightLogical(*(regArr[regSrcCB]));
+                    clock += 2;
+                }
                 break;
             }
             break;
@@ -663,7 +560,7 @@ void CPU::decode(unsigned char opcode) {
 
             // BIT b, (HL)
             // Copies complement of specified bit b of memory at HL to Z flag
-            if (regSrcCB == 0b110) {
+            if (regSrcCB == MEM) {
                 compBitToZero(readMem(getRegPair(HL)), regDestCB);
                 clock += 3;
             }
@@ -683,7 +580,7 @@ void CPU::decode(unsigned char opcode) {
 
             // RES b, (HL)
             // Reset bit b in memory at HL to 0
-            if (regSrcCB == 0b110) {
+            if (regSrcCB == MEM) {
                 writeMem(getRegPair(HL), resetBit(readMem(getRegPair(HL)), regDestCB));
                 clock += 4;
             }
@@ -703,7 +600,7 @@ void CPU::decode(unsigned char opcode) {
 
             // SET b, (HL)
             // Sets bit b in memory at HL to 1
-            if (regSrcCB == 0b110) {
+            if (regSrcCB == MEM) {
                 writeMem(getRegPair(HL), setBit(readMem(getRegPair(HL)), regDestCB));
                 clock += 4;
             }
@@ -744,22 +641,37 @@ void CPU::decode(unsigned char opcode) {
         // INC r
         // Increment register r
         case 0b100:
-            *(regArr[regDest]) = inc(*(regArr[regDest]));
-            clock += 1;
+            if (regDest == MEM) {
+                writeMem(getRegPair(HL), inc(readMem(getRegPair(HL))));
+                clock += 3;
+            } else {
+                *(regArr[regDest]) = inc(*(regArr[regDest]));
+                clock += 1;
+            }
             break;
 
         // DEC r
         // Decrement register r
         case 0b101:
-            *(regArr[regDest]) = dec(*(regArr[regDest]));
-            clock += 1;
+            if (regDest == MEM) {
+                writeMem(getRegPair(HL), dec(readMem(getRegPair(HL))));
+                clock += 3;
+            } else {
+                *(regArr[regDest]) = dec(*(regArr[regDest]));
+                clock += 1;
+            }
             break;
 
         // LD r, n
         // Load 8-bit immediate n into register r
         case 0b110:
-            *regArr[regDest] = getImm8();
-            clock += 2;
+            if (regDest == MEM) {
+                writeMem(getRegPair(HL), getImm8());
+                clock += 3;
+            } else {
+                *regArr[regDest] = getImm8();
+                clock += 2;
+            }
             break;
         }
 
@@ -802,7 +714,7 @@ void CPU::decode(unsigned char opcode) {
 
         // LD r, (HL)
         // Load memory at register pair HL into register r
-        if (regSrc == 0b110) {
+        if (regSrc == MEM) {
             *(regArr[regDest]) = readMem(getRegPair(HL));
             clock += 2;
         }
@@ -810,7 +722,7 @@ void CPU::decode(unsigned char opcode) {
         // LD (HL), e
         // Load contents of register r into memory location
         // specified by register pair HL
-        else if (regDest == 0b110) {
+        else if (regDest == MEM) {
             writeMem(getRegPair(HL), *(regArr[regSrc]));
             clock += 2;
         }
@@ -833,59 +745,100 @@ void CPU::decode(unsigned char opcode) {
         // ADD A, r
         // Add register r to register A and store result in A
         case 0b000:
-            A = add(A, *(regArr[regSrc]), NO_CARRY);
-            clock += 1;
+            if (regSrc == MEM) {
+                A = add(A, readMem(getRegPair(HL)), NO_CARRY);
+                clock += 2;
+                break;
+            } else {
+                A = add(A, *(regArr[regSrc]), NO_CARRY);
+                clock += 1;
+            }
             break;
 
         // ADC A, r
         // Add A, register r, and carry flag together
         // and store result in A
         case 0b001:
-            A = add(A, *(regArr[regSrc]), WITH_CARRY);
-            clock += 1;
+            if (regSrc == MEM) {
+                A = add(A, readMem(getRegPair(HL)), WITH_CARRY);
+                clock += 2;
+            } else {
+                A = add(A, *(regArr[regSrc]), WITH_CARRY);
+                clock += 1;
+            }
             break;
 
         // SUB r
         // Subtract register r from register A and store result in A
         case 0b010:
-            A = sub(A, *(regArr[regSrc]), NO_CARRY);
-            clock += 1;
+            if (regSrc == MEM) {
+                A = sub(A, readMem(getRegPair(HL)), NO_CARRY);
+                clock += 2;
+            } else {
+                A = sub(A, *(regArr[regSrc]), NO_CARRY);
+                clock += 1;
+            }
             break;
 
         // SBC A, r
         // Subtract register r and carry flag from
         // register A and store result in A
         case 0b011:
-            A = sub(A, *(regArr[regSrc]), WITH_CARRY);
-            clock += 1;
+            if (regSrc == MEM) {
+                A = sub(A, readMem(getRegPair(HL)), WITH_CARRY);
+                clock += 2;
+            } else {
+                A = sub(A, *(regArr[regSrc]), WITH_CARRY);
+                clock += 1;
+            }
             break;
 
         // AND r
         // And register A and register r together and store result in A
         case 0b100:
-            A = bitAnd(A, *(regArr[regSrc]));
-            clock += 1;
+            if (regSrc == MEM) {
+                A = bitAnd(A, readMem(getRegPair(HL)));
+                clock += 2;
+            } else {
+                A = bitAnd(A, *(regArr[regSrc]));
+                clock += 1;
+            }
             break;
 
         // XOR r
         // Xor register A and register r together and store result in A
         case 0b101:
-            A = bitXor(A, *(regArr[regSrc]));
-            clock += 1;
+            if (regSrc == MEM) {
+                A = bitXor(A, readMem(getRegPair(HL)));
+                clock += 2;
+            } else {
+                A = bitXor(A, *(regArr[regSrc]));
+                clock += 1;
+            }
             break;
 
         // OR r
         // Or register A and register r together and store result in A
         case 0b110:
-            A = bitOr(A, *(regArr[regSrc]));
-            clock += 1;
+            if (regSrc == MEM) {
+                A = bitOr(A, readMem(getRegPair(HL)));
+                clock += 2;
+            } else {
+                A = bitOr(A, *(regArr[regSrc]));
+                clock += 1;
+            }
             break;
 
         // CP r
         // Compare register A and register R
         case 0b111:
-            sub(A, *(regArr[regSrc]), NO_CARRY);
-            clock += 1;
+            if (regSrc == MEM) {
+                sub(A, readMem(getRegPair(HL)), NO_CARRY);
+                clock += 2;
+            } else {
+                sub(A, *(regArr[regSrc]), NO_CARRY);
+                clock += 1;
+            }
             break;
         }
         break;
@@ -1366,6 +1319,8 @@ void CPU::ret() {
 // ================================
 void CPU::condition(Control condFunc, unsigned char condValue,
                     unsigned short imm, int clockSuccess, int clockFail) {
+
+    // get condition
     bool cond;
     switch (condValue) {
     case NOT_ZERO:
@@ -1382,6 +1337,7 @@ void CPU::condition(Control condFunc, unsigned char condValue,
         break;
     }
 
+    // run condition function is condition holds
     if (cond) {
         switch (condFunc) {
         case JUMP:

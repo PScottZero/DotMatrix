@@ -21,13 +21,11 @@ void PPU::step() {
     if (currLine <= SCREEN_HEIGHT) {
         ppuMode = Mode::MODE_3;
         if (currLine != mem[LCDC_Y]) {
-            mem[LCDC_Y]++;
             render();
         }
     } else {
         ppuMode = Mode::MODE_1;
         if (currLine != mem[LCDC_Y]) {
-            mem[LCDC_Y]++;
             render();
         }
     }
@@ -51,6 +49,7 @@ void PPU::render() {
 
     // draw background
     case Mode::MODE_3:
+        mem[LCDC_Y]++;
 
         // scroll registers
         int scrollY = mem[0xFF42];
