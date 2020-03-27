@@ -15,27 +15,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-SOURCES += \
-    cpu.cpp \
-    main.cpp \
-    dotmatrixwindow.cpp \
-    ppu.cpp
-
 HEADERS += \
     cpu.h \
-    dotmatrixwindow.h \
+    gbthread.h \
+    gbwidget.h \
     ppu.h
 
-FORMS += \
-    dotmatrixwindow.ui
-
-RC_ICONS = dotmatrix.ico
+SOURCES += \
+    cpu.cpp \
+    gbthread.cpp \
+    gbwidget.cpp \
+    main.cpp \
+    ppu.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-DISTFILES += \
-    bootstrap.bin \
-    dotmatrix.ico

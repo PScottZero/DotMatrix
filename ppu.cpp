@@ -1,40 +1,20 @@
 #include "ppu.h"
 #include <qpainter.h>
 
-PPU::PPU(QMainWindow* dotMatrixClass) {
-    dm = dotMatrixClass;
-    mem = NULL;
-    cpuClock = 0;
+PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
+    mem = cpuMem;
+    clk = cpuClock;
+    display = frame;
     ppuMode = Mode::MODE_2;
     currLine = 0;
 
-    // game boy pocket color palette
-    white = QBrush(QColor(255, 255, 255));
-    lightGray = QBrush(QColor(169, 169, 169));
-    darkGray = QBrush(QColor(84, 84, 84));
-    black = QBrush(QColor(0, 0, 0));
-
-//    // original game boy color palette
-//    white = QBrush(QColor(155, 188, 15));
-//    lightGray = QBrush(QColor(139, 172, 15));
-//    darkGray = QBrush(QColor(48, 98, 48));
-//    black = QBrush(QColor(15, 56, 15));
-}
-
-void PPU::setMemory(unsigned char* cpuMem) {
-    mem = cpuMem;
     mem[SCROLL_X] = 0;
     mem[SCROLL_Y] = 0;
     mem[LCDC_Y] = 0;
 }
 
-void PPU::setCPUClock(unsigned int* clk) {
-    cpuClock = clk;
-}
-
 void PPU::step() {
-    currLine = (*cpuClock % SCREEN_CYCLE) / SCANLINE + 1;
-    auto lcdc = mem[LCDC_Y];
+    currLine = (*clk % SCREEN_CYCLE) / SCANLINE + 1;
     if (currLine != mem[LCDC_Y] && currLine == 1) {
         mem[LCDC_Y] = 0;
     }
@@ -42,19 +22,18 @@ void PPU::step() {
         ppuMode = Mode::MODE_3;
         if (currLine != mem[LCDC_Y]) {
             mem[LCDC_Y]++;
-            repaint(QRect(0, mem[LCDC_Y] * 4, SCREEN_WIDTH * 4, 4));
+            render();
         }
     } else {
         ppuMode = Mode::MODE_1;
         if (currLine != mem[LCDC_Y]) {
             mem[LCDC_Y]++;
-            repaint(QRect(0, mem[LCDC_Y] * 4, SCREEN_WIDTH * 4, 4));
+            render();
         }
     }
 }
 
-void PPU::paintEvent(QPaintEvent *e) {
-    QPainter painter(this);
+void PPU::render() {
     switch (ppuMode) {
 
     // draw sprites
@@ -89,12 +68,6 @@ void PPU::paintEvent(QPaintEvent *e) {
             bgMapAddr = BG_WIN_MAP_ADDR_1;
         }
 
-        // background palette
-        QBrush colorZero = getShade(PX_ZERO);
-        QBrush colorOne = getShade(PX_ONE);
-        QBrush colorTwo = getShade(PX_TWO);
-        QBrush colorThree = getShade(PX_THREE);
-
         // render line
         for (int i = 0; i < SCREEN_WIDTH; i++) {
             unsigned short tileMapOffset = (((scrollX + i) % BG_PX_DIM) / TILE_PX_DIM) +
@@ -109,28 +82,12 @@ void PPU::paintEvent(QPaintEvent *e) {
 
             unsigned char color = (bit1 << 1) | bit0;
 
-            QBrush pxColor;
-
-            switch (color) {
-            case PX_ZERO:
-                pxColor = colorZero;
-                break;
-            case PX_ONE:
-                pxColor = colorOne;
-                break;
-            case PX_TWO:
-                pxColor = colorTwo;
-                break;
-            case PX_THREE:
-                pxColor = colorThree;
-                break;
-            }
-
-            painter.fillRect(4 * i, 4 * (mem[LCDC_Y] - 1), 4, 4, pxColor);
+            display->setPixel(i, mem[LCDC_Y] - 1, getPixelColor(color));
         }
         break;
     }
 }
+
 
 
 // -------------------- LCD CONTROL --------------------
@@ -171,29 +128,31 @@ int PPU::bgDisplayEnable() {
 
 // -------------------- BG PALETTE DATA --------------------
 
-QBrush PPU::getShade(unsigned char value) {
+uint PPU::getPixelColor(unsigned char value) {
     switch (value) {
     case PX_ZERO:
-        return getBrush(mem[0xFF47] & 3);
+        return getColor(mem[0xFF47] & 3);
     case PX_ONE:
-        return getBrush((mem[0xFF47] >> 2) & 3);
+        return getColor((mem[0xFF47] >> 2) & 3);
     case PX_TWO:
-        return getBrush((mem[0xFF47] >> 4) & 3);
+        return getColor((mem[0xFF47] >> 4) & 3);
     case PX_THREE:
-        return getBrush((mem[0xFF47] >> 6) & 3);
+        return getColor((mem[0xFF47] >> 6) & 3);
     }
+    return 0;
 }
 
-QBrush PPU::getBrush(unsigned char value) {
+uint PPU::getColor(unsigned char value) {
     switch (value) {
     case PX_ZERO:
-        return white;
+        return 0xFFFFFF;
     case PX_ONE:
-        return lightGray;
+        return 0xAAAAAA;
     case PX_TWO:
-        return darkGray;
+        return 0x555555;
     case PX_THREE:
-        return black;
+        return 0x000000;
     }
+    return 0;
 }
 

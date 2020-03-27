@@ -83,28 +83,24 @@ struct pixel {
     PixelType type;
 };
 
-class PPU : public QWidget {
+class PPU {
 public:
 
     // ================================
     // Instance data
     // ================================
     unsigned char* mem;
-    unsigned int *cpuClock;
-    QBrush white, lightGray, darkGray, black;
-    QMainWindow* dm;
+    unsigned int* clk;
     Mode ppuMode;
+    QImage *display;
     int currLine;
 
     // ================================
     // Display functions
     // ================================
-    PPU(QMainWindow* dotMatrixClass);
-    void initVideo();
-    void setMemory(unsigned char* cpuMem);
-    void setCPUClock(unsigned int* cpuClock);
-    void paintEvent(QPaintEvent*);
+    PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
+    void render();
 
     // ================================
     // LCD control functions
@@ -121,8 +117,8 @@ public:
     // ================================
     // Background palette functions
     // ================================
-    QBrush getShade(unsigned char value);
-    QBrush getBrush(unsigned char value);
+    uint getPixelColor(unsigned char value);
+    uint getColor(unsigned char value);
 };
 
 #endif // PPU_H
