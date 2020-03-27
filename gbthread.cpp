@@ -16,7 +16,10 @@ void GBThread::run() {
     PPU ppu(cpu.mem, &cpu.clock, &frame);
 
     cpu.loadBootstrap();
-    cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
+    // cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
+    cpu.loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
+
+    auto cycleStart = chrono::system_clock::now();
 
     forever {
         cpu.step();
@@ -24,10 +27,11 @@ void GBThread::run() {
         if (cpu.mem[LCDC_Y] > 144 && !emitted) {
             emitted = true;
             emit sendFrame(frame);
-            QImage frame1(160, 144, QImage::Format_RGB32);
+            auto nextCycle = cycleStart + chrono::milliseconds(1);
+            this_thread::sleep_until(nextCycle);
+            cycleStart = chrono::system_clock::now();
         } else if (cpu.mem[LCDC_Y] <= 144) {
             emitted = false;
         }
-        this_thread::sleep_for(chrono::nanoseconds(100));
     }
 }
