@@ -101,6 +101,7 @@ public:
     PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
     void render();
+    uint getPixelColor(unsigned char value);
 
     // ================================
     // LCD control functions
@@ -115,10 +116,10 @@ public:
     int bgDisplayEnable();
 
     // ================================
-    // Background palette functions
+    // Interrupt functions
     // ================================
-    uint getPixelColor(unsigned char value);
-    uint getColor(unsigned char value);
+    void setVblankInt();
+    void setLcdInt();
 };
 
 #endif // PPU_H

@@ -22,9 +22,6 @@ void GBThread::run() {
     auto cycleStart = chrono::system_clock::now();
 
     forever {
-        if (cpu.PC == 0x281) {
-            cout << "hello" << endl;
-        }
         cpu.step();
         ppu.step();
         if (cpu.mem[LCDC_Y] > 144 && !emitted) {
@@ -33,7 +30,6 @@ void GBThread::run() {
             auto nextCycle = cycleStart + chrono::milliseconds(16);
             this_thread::sleep_until(nextCycle);
             cycleStart = chrono::system_clock::now();
-            printf("%x\n", cpu.PC);
         } else if (cpu.mem[LCDC_Y] <= 144) {
             emitted = false;
         }

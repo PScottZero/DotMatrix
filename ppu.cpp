@@ -1,6 +1,9 @@
 #include "ppu.h"
 #include <qpainter.h>
 
+// ================================
+// Initialize ppu data
+// ================================
 PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
     mem = cpuMem;
     clk = cpuClock;
@@ -13,6 +16,15 @@ PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
     mem[LCDC_Y] = 0;
 }
 
+
+
+// ======================================================================================
+// -------------------------------- DISPLAY FUNCTIONS -----------------------------------
+// ======================================================================================
+
+// ================================
+// Step through one display cycle
+// ================================
 void PPU::step() {
     currLine = (*clk % SCREEN_CYCLE) / SCANLINE + 1;
     if (currLine != mem[LCDC_Y] && currLine == 1) {
@@ -31,6 +43,9 @@ void PPU::step() {
     }
 }
 
+// ================================
+// Render display cycle
+// ================================
 void PPU::render() {
     switch (ppuMode) {
 
@@ -41,6 +56,7 @@ void PPU::render() {
     // vertical blank
     case Mode::MODE_1:
         mem[LCDC_Y]++;
+        setVblankInt();
         break;
 
     // horizontal blank
@@ -87,13 +103,55 @@ void PPU::render() {
 
             display->setPixel(i, mem[LCDC_Y] - 1, getPixelColor(color));
         }
+
+        // throw lcd status interrupt if LCDC_Y == LY_COMP
+        setLcdInt();
         break;
     }
 }
 
+// ================================
+// Get pixel color based on
+// palette map
+// ================================
+uint PPU::getPixelColor(unsigned char value) {
+    unsigned char color;
+
+    // get map of color value
+    switch (value) {
+    case PX_ZERO:
+        color = mem[0xFF47] & 3;
+        break;
+    case PX_ONE:
+        color = (mem[0xFF47] >> 2) & 3;
+        break;
+    case PX_TWO:
+        color = (mem[0xFF47] >> 4) & 3;
+        break;
+    case PX_THREE:
+        color = (mem[0xFF47] >> 6) & 3;
+        break;
+    }
+
+    // get color value
+    switch (color) {
+    case PX_ZERO:
+        return 0xFFFFFF;
+    case PX_ONE:
+        return 0xAAAAAA;
+    case PX_TWO:
+        return 0x555555;
+    case PX_THREE:
+        return 0x000000;
+    }
+    return 0;
+}
 
 
-// -------------------- LCD CONTROL --------------------
+
+// ======================================================================================
+// ------------------------------ LCD CONTROL FUNCTIONS ---------------------------------
+// ======================================================================================
 
 int PPU::lcdDisplayEnable() {
     return (mem[0xFF40] >> 7) & 1;
@@ -129,33 +187,22 @@ int PPU::bgDisplayEnable() {
 
 
 
-// -------------------- BG PALETTE DATA --------------------
+// ======================================================================================
+// ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
+// ======================================================================================
 
-uint PPU::getPixelColor(unsigned char value) {
-    switch (value) {
-    case PX_ZERO:
-        return getColor(mem[0xFF47] & 3);
-    case PX_ONE:
-        return getColor((mem[0xFF47] >> 2) & 3);
-    case PX_TWO:
-        return getColor((mem[0xFF47] >> 4) & 3);
-    case PX_THREE:
-        return getColor((mem[0xFF47] >> 6) & 3);
+void PPU::setLcdInt() {
+    if (mem[LCDC_Y] == mem[LY_COMP]) {
+        mem[INT] |= 0b10;
+    } else {
+        mem[INT] &= 0xFD;
     }
-    return 0;
 }
 
-uint PPU::getColor(unsigned char value) {
-    switch (value) {
-    case PX_ZERO:
-        return 0xFFFFFF;
-    case PX_ONE:
-        return 0xAAAAAA;
-    case PX_TWO:
-        return 0x555555;
-    case PX_THREE:
-        return 0x000000;
+void PPU::setVblankInt() {
+    if (mem[LCDC_Y] == 154) {
+        mem[INT] |= 0b01;
+    } else {
+        mem[INT] &= 0xFE;
     }
-    return 0;
 }
-
