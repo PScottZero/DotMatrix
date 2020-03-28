@@ -6,12 +6,8 @@
 CPU::CPU() {
     A = B = C = D = E = H = L = PC = 0;
     zero = halfCarry = subtract = carry = false;
+    IME = true;
     mem = new unsigned char[0x10000];
-    for (int i = 0; i < 0x10000; i++) {
-        mem[i] = 0;
-    }
-    mem[IME] = 0;
-    tempInt = mem[IME];
     cartStart = new unsigned char[0xFF];
     clock = 0;
 }
@@ -41,8 +37,8 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-    // ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
+    // ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {
@@ -69,10 +65,6 @@ void CPU::step() {
 // Decode instruction
 // ================================
 void CPU::decode(unsigned char opcode) {
-
-    if (PC == 0x28A) {
-        cout << "henlo" << endl;
-    }
 
     unsigned char upperTwo = opcode >> 6 & 0b11;
     unsigned char bitFive = opcode >> 5 & 1;
@@ -343,7 +335,7 @@ void CPU::decode(unsigned char opcode) {
     case 0xD9:
         ret();
         clock += 4;
-        mem[IME] = tempInt;
+        IME = true;
         break;
 
     // RST t
@@ -418,14 +410,14 @@ void CPU::decode(unsigned char opcode) {
     // DI
     // Reset interrupt master enable flag
     case 0xF3:
-        mem[IME] = 0;
+        IME = false;
         clock += 1;
         break;
 
     // EI
     // Set interrupt master enable flag
     case 0xFB:
-        mem[IME] = 0xFF;
+        IME = true;
         clock += 1;
         break;
 
@@ -908,7 +900,6 @@ unsigned char CPU::readMem(unsigned short addr) {
 // ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
     mem[addr] = value;
-    printf("%x: %x %x\n", addr, value, mem[addr]);
 }
 
 // ================================
@@ -1376,64 +1367,66 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 // ======================================================================================
 
 void CPU::checkForInt() {
-    unsigned short intAddr = 0;
+    if (IME) {
+        unsigned short intAddr = 0;
 
-    if (vblankIntTriggered()) {
-        intAddr = 0x40;
-    } else if (lcdIntTriggered()) {
-        intAddr = 0x48;
-    } else if (timerIntTriggered()) {
-        intAddr = 0x50;
-    } else if (serialIntTriggered()) {
-        intAddr = 0x58;
-    } else if (joypadIntTriggered()) {
-        intAddr = 0x60;
-    }
+        if (vblankIntTriggered()) {
+            intAddr = 0x40;
+        } else if (lcdIntTriggered()) {
+            intAddr = 0x48;
+        } else if (timerIntTriggered()) {
+            intAddr = 0x50;
+        } else if (serialIntTriggered()) {
+            intAddr = 0x58;
+        } else if (joypadIntTriggered()) {
+            intAddr = 0x60;
+        }
 
-    if (intAddr != 0) {
-        tempInt = mem[IME];
-        mem[IME] = 0;
-        writeMem(SP--, (PC >> 8) & 0xF);
-        writeMem(SP--, PC & 0xF);
-        PC = intAddr;
+        if (intAddr != 0) {
+            IME = false;
+            writeMem(SP--, (PC >> 8) & 0xF);
+            writeMem(SP--, PC & 0xF);
+            PC = intAddr;
+            clock += 3;
+        }
     }
 }
 
 bool CPU::vblankIntTriggered() {
-    if ((mem[IME] & 1) == 1) {
-        return mem[INT] & 1;
+    if ((mem[IE] & 1) == 1) {
+        return mem[IF] & 1;
     } else {
         return false;
     }
 }
 
 bool CPU::lcdIntTriggered() {
-    if (((mem[IME] >> 1) & 1) == 1) {
-        return (mem[IME] >> 1) & 1;
+    if (((mem[IE] >> 1) & 1) == 1) {
+        return (mem[IF] >> 1) & 1;
     } else {
         return false;
     }
 }
 
 bool CPU::timerIntTriggered() {
-    if (((mem[IME] >> 2) & 1) == 1) {
-        return (mem[IME] >> 2) & 1;
+    if (((mem[IE] >> 2) & 1) == 1) {
+        return (mem[IF] >> 2) & 1;
     } else {
         return false;
     }
 }
 
 bool CPU::serialIntTriggered() {
-    if (((mem[IME] >> 3) & 1) == 1) {
-        return (mem[IME] >> 3) & 1;
+    if (((mem[IE] >> 3) & 1) == 1) {
+        return (mem[IF] >> 3) & 1;
     } else {
         return false;
     }
 }
 
 bool CPU::joypadIntTriggered() {
-    if (((mem[IME] >> 4) & 1) == 1) {
-        return (mem[IME] >> 4) & 1;
+    if (((mem[IE] >> 4) & 1) == 1) {
+        return (mem[IF] >> 4) & 1;
     } else {
         return false;
     }

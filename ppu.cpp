@@ -105,9 +105,11 @@ void PPU::render() {
         }
 
         // throw lcd status interrupt if LCDC_Y == LY_COMP
-        setLcdInt();
         break;
     }
+
+    setLcdInt();
+    setVblankInt();
 }
 
 // ================================
@@ -193,16 +195,16 @@ int PPU::bgDisplayEnable() {
 
 void PPU::setLcdInt() {
     if (mem[LCDC_Y] == mem[LY_COMP]) {
-        mem[INT] |= 0b10;
+        mem[IF] |= 0b10;
     } else {
-        mem[INT] &= 0xFD;
+        mem[IF] &= 0xFD;
     }
 }
 
 void PPU::setVblankInt() {
-    if (mem[LCDC_Y] == 154) {
-        mem[INT] |= 0b01;
+    if (mem[LCDC_Y] == 144) {
+        mem[IF] |= 0b01;
     } else {
-        mem[INT] &= 0xFE;
+        mem[IF] &= 0xFE;
     }
 }

@@ -15,8 +15,8 @@ constexpr auto DE = 0b01;
 constexpr auto HL = 0b10;
 constexpr auto AF_SP = 0b11;
 constexpr auto MEM = 0b110;
-constexpr auto IME = 0xFFFF;
-constexpr auto INT = 0xFF0F;
+constexpr auto IE = 0xFFFF;
+constexpr auto IF = 0xFF0F;
 
 // ================================
 // Conditions
@@ -52,11 +52,11 @@ public:
     unsigned char A, B, C, D, E, H, L;
     unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, NULL, &A };
     unsigned short PC, SP;
-    bool zero, halfCarry, subtract, carry;
+    bool zero, halfCarry, subtract, carry, IME;
     unsigned char* mem;
     unsigned char* cartStart;
     unsigned int clock;
-    unsigned char tempInt;
+
     // ================================
     // Emulator functions
     // ================================
