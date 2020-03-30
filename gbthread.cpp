@@ -16,8 +16,8 @@ void GBThread::run() {
     PPU ppu(cpu.mem, &cpu.clock, &frame);
 
     cpu.loadBootstrap();
-    // cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
-    cpu.loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
+    cpu.loadCartridge("D:/Roms/GB/Dr. Mario.gb");
+//    cpu.loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
 
     auto cycleStart = chrono::system_clock::now();
 

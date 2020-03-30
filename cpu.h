@@ -56,6 +56,7 @@ public:
     unsigned char* mem;
     unsigned char* cartStart;
     unsigned int clock;
+    bool halted;
 
     // ================================
     // Emulator functions
@@ -73,6 +74,8 @@ public:
     void writeMem(unsigned short addr, unsigned char value);
     void pushRegPair(unsigned char regPair);
     void popRegPair(unsigned char regPair);
+    void push(unsigned short value);
+    unsigned short pop();
     unsigned char getF();
     unsigned short getRegPair(unsigned char regPair);
     unsigned char getImm8();

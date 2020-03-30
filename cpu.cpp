@@ -6,7 +6,8 @@
 CPU::CPU() {
     A = B = C = D = E = H = L = PC = 0;
     zero = halfCarry = subtract = carry = false;
-    IME = true;
+    IME = false;
+    halted = false;
     mem = new unsigned char[0x10000];
     cartStart = new unsigned char[0xFF];
     clock = 0;
@@ -37,8 +38,8 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    // ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
+//    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {
@@ -58,7 +59,9 @@ void CPU::step() {
         }
     }
     checkForInt();
-    decode(mem[PC]);
+    if (!halted) {
+        decode(mem[PC]);
+    }
 }
 
 // ================================
@@ -74,6 +77,9 @@ void CPU::decode(unsigned char opcode) {
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
 
+    if (PC == 856) {
+        cout << "Hello" << endl;
+    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -341,35 +347,35 @@ void CPU::decode(unsigned char opcode) {
     // RST t
     // Load zero page memory address specified by t into PC
     case 0xC7:
-        PC = 0xFFFF;
+        call(0x00);
         clock += 4;
         break;
     case 0xCF:
-        PC = 0x07;
+        call(0x08);
         clock += 4;
         break;
     case 0xD7:
-        PC = 0x0F;
+        call(0x10);
         clock += 4;
         break;
     case 0xDF:
-        PC = 0x17;
+        call(0x18);
         clock += 4;
         break;
     case 0xE7:
-        PC = 0x1F;
+        call(0x20);
         clock += 4;
         break;
     case 0xEF:
-        PC = 0x27;
+        call(0x28);
         clock += 4;
         break;
     case 0xF7:
-        PC = 0x2F;
+        call(0x30);
         clock += 4;
         break;
     case 0xFF:
-        PC = 0x37;
+        call(0x38);
         clock += 4;
         break;
 
@@ -418,13 +424,6 @@ void CPU::decode(unsigned char opcode) {
     // Set interrupt master enable flag
     case 0xFB:
         IME = true;
-        clock += 1;
-        break;
-
-    // HALT
-    // stop system clock
-    // TODO: implement halt instruction
-    case 0x76:
         clock += 1;
         break;
 
@@ -712,12 +711,21 @@ void CPU::decode(unsigned char opcode) {
         break;
 
     case 0b01:
-
-        // LD r, (HL)
-        // Load memory at register pair HL into register r
         if (regSrc == MEM) {
-            *(regArr[regDest]) = readMem(getRegPair(HL));
-            clock += 2;
+
+            // HALT
+            // stop system clock
+            if (regDest == MEM) {
+                halted = true;
+                clock += 1;
+            }
+
+            // LD r, (HL)
+            // Load memory at register pair HL into register r
+            else {
+                *(regArr[regDest]) = readMem(getRegPair(HL));
+                clock += 2;
+            }
         }
 
         // LD (HL), e
@@ -907,23 +915,10 @@ void CPU::writeMem(unsigned short addr, unsigned char value) {
 // onto stack
 // ================================
 void CPU::pushRegPair(unsigned char regPair) {
-    switch (regPair) {
-    case BC:
-        writeMem(SP--, B);
-        writeMem(SP--, C);
-        break;
-    case DE:
-        writeMem(SP--, D);
-        writeMem(SP--, E);
-        break;
-    case HL:
-        writeMem(SP--, H);
-        writeMem(SP--, L);
-        break;
-    case AF_SP:
-        writeMem(SP--, A);
-        writeMem(SP--, getF());
-        break;
+    if (regPair == AF_SP) {
+        push((A << 8) | getF());
+    } else {
+        push(getRegPair(regPair));
     }
 }
 
@@ -932,23 +927,12 @@ void CPU::pushRegPair(unsigned char regPair) {
 // from stack
 // ================================
 void CPU::popRegPair(unsigned char regPair) {
-    switch (regPair) {
-    case BC:
-        C = readMem(++SP);
-        B = readMem(++SP);
-        break;
-    case DE:
-        D = readMem(++SP);
-        E = readMem(++SP);
-        break;
-    case HL:
-        H = readMem(++SP);
-        L = readMem(++SP);
-        break;
-    case AF_SP:
-        A = readMem(++SP);
-        setF(readMem(++SP));
-        break;
+    unsigned short popVal = pop();
+    if (regPair == AF_SP) {
+        A = (popVal >> 8) & 0xF;
+        setF(popVal & 0xF);
+    } else {
+        setRegPair(regPair, popVal);
     }
 }
 
@@ -1023,6 +1007,22 @@ unsigned short CPU::getRegPair(unsigned char regPair) {
         return SP;
     }
     return 0;
+}
+
+// ================================
+// Push value onto stack
+// ================================
+void CPU::push(unsigned short value) {
+    writeMem(--SP, value & 0xFF);
+    writeMem(--SP, (value >> 8) & 0xFF);
+}
+
+// ================================
+// Pop value from stack
+// ================================
+unsigned short CPU::pop() {
+    unsigned char hi = readMem(SP++);
+    return (hi << 8) | readMem(SP++);
 }
 
 
@@ -1301,8 +1301,7 @@ void CPU::jumpRel(char addrRel) {
 // Call subroutine at given address
 // ================================
 void CPU::call(unsigned short addr) {
-    writeMem(SP--, (PC >> 8) & 0xFF);
-    writeMem(SP--, PC & 0xFF);
+    push(PC + 1);
     jump(addr);
 }
 
@@ -1310,8 +1309,7 @@ void CPU::call(unsigned short addr) {
 // Return from current subroutine
 // ================================
 void CPU::ret() {
-    unsigned char lo = readMem(++SP);
-    PC = lo | (readMem(++SP) << 8);
+    PC = pop() - 1;
 }
 
 // ================================
@@ -1367,25 +1365,33 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 // ======================================================================================
 
 void CPU::checkForInt() {
+    if (halted && mem[IF] != 0) {
+        halted = false;
+    }
+
     if (IME) {
         unsigned short intAddr = 0;
 
         if (vblankIntTriggered()) {
             intAddr = 0x40;
+            mem[IF] &= 0xFE;
         } else if (lcdIntTriggered()) {
             intAddr = 0x48;
+            mem[IF] &= 0xFD;
         } else if (timerIntTriggered()) {
             intAddr = 0x50;
+            mem[IF] &= 0xFB;
         } else if (serialIntTriggered()) {
             intAddr = 0x58;
+            mem[IF] &= 0xF7;
         } else if (joypadIntTriggered()) {
             intAddr = 0x60;
+            mem[IF] &= 0xEF;
         }
 
         if (intAddr != 0) {
             IME = false;
-            writeMem(SP--, (PC >> 8) & 0xF);
-            writeMem(SP--, PC & 0xF);
+            push(PC);
             PC = intAddr;
             clock += 3;
         }
