@@ -82,6 +82,7 @@ public:
     unsigned short getImm16();
     void setF(unsigned char value);
     void setRegPair(unsigned char regPair, unsigned short value);
+    void setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond);
 
     // ================================
     // Arithmetic functions

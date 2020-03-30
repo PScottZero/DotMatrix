@@ -8,12 +8,7 @@ PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
     mem = cpuMem;
     clk = cpuClock;
     display = frame;
-    ppuMode = Mode::MODE_2;
     currLine = 0;
-
-    mem[SCROLL_X] = 0;
-    mem[SCROLL_Y] = 0;
-    mem[LCDC_Y] = 0;
 }
 
 
@@ -31,12 +26,12 @@ void PPU::step() {
         mem[LCDC_Y] = 0;
     }
     if (currLine <= SCREEN_HEIGHT) {
-        ppuMode = Mode::MODE_3;
+        mem[LCD_STAT] = (unsigned char) Mode::MODE_3;
         if (currLine != mem[LCDC_Y]) {
             render();
         }
     } else {
-        ppuMode = Mode::MODE_1;
+        mem[LCD_STAT] = (unsigned char) Mode::MODE_1;
         if (currLine != mem[LCDC_Y]) {
             render();
         }
@@ -47,7 +42,7 @@ void PPU::step() {
 // Render display cycle
 // ================================
 void PPU::render() {
-    switch (ppuMode) {
+    switch ((Mode)mem[LCD_STAT]) {
 
     // draw sprites
     case Mode::MODE_2:
@@ -85,26 +80,18 @@ void PPU::render() {
 
         // render line
         for (int i = 0; i < SCREEN_WIDTH; i++) {
-            unsigned short pxX = (scrollX + i) % BG_PX_DIM;
-            unsigned short pxY = (scrollY + mem[LCDC_Y] - 1) % BG_PX_DIM;
+            unsigned short dispX = (scrollX + i) % BG_PX_DIM;
+            unsigned short dispY = (scrollY + mem[LCDC_Y] - 1) % BG_PX_DIM;
 
-            unsigned short tileMapOffset = pxX / TILE_PX_DIM + (pxY / TILE_PX_DIM) * BG_TILE_DIM;
+            unsigned short tileMapOffset = dispX / TILE_PX_DIM + (dispY / TILE_PX_DIM) * BG_TILE_DIM;
             unsigned short tileOffset = mem[bgMapAddr + tileMapOffset];
+            unsigned short tileRowAddr = bgDataAddr + tileOffset * BYTES_PER_TILE + (dispY % TILE_PX_DIM) * 2;
 
-            unsigned short tileRowAddr = bgDataAddr + tileOffset * BYTES_PER_TILE + (pxY % TILE_PX_DIM) * 2;
+            unsigned char bit1 = (mem[tileRowAddr] >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
+            unsigned char bit0 = (mem[tileRowAddr + 1] >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
 
-            unsigned char byte0 = mem[tileRowAddr];
-            unsigned char byte1 = mem[tileRowAddr + 1];
-
-            unsigned char bit1 = (byte0 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
-            unsigned char bit0 = (byte1 >> (7 - ((scrollX + i) % TILE_PX_DIM))) & 1;
-
-            unsigned char color = (bit1 << 1) | bit0;
-
-            display->setPixel(i, mem[LCDC_Y] - 1, getPixelColor(color));
+            display->setPixel(i, mem[LCDC_Y] - 1, getPixelColor((bit1 << 1) | bit0));
         }
-
-        // throw lcd status interrupt if LCDC_Y == LY_COMP
         break;
     }
 
@@ -194,17 +181,9 @@ int PPU::bgDisplayEnable() {
 // ======================================================================================
 
 void PPU::setLcdInt() {
-    if (mem[LCDC_Y] == mem[LY_COMP]) {
-        mem[IF] |= 0b10;
-    } else {
-        mem[IF] &= 0xFD;
-    }
+    mem[IF] &= 0xFF & ((mem[LCDC_Y] == mem[LY_COMP]) << 1);
 }
 
 void PPU::setVblankInt() {
-    if (mem[LCDC_Y] == 144) {
-        mem[IF] |= 0b01;
-    } else {
-        mem[IF] &= 0xFE;
-    }
+    mem[IF] &= 0xFF & (mem[LCDC_Y] == 144);
 }

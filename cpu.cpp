@@ -9,7 +9,7 @@ CPU::CPU() {
     IME = false;
     halted = false;
     mem = new unsigned char[0x10000];
-    cartStart = new unsigned char[0xFF];
+    cartStart = new unsigned char[0x100];
     clock = 0;
 }
 
@@ -38,8 +38,8 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-//    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
+//    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {
@@ -50,7 +50,6 @@ void CPU::loadBootstrap() {
 
 // ================================
 // Run emulator
-// TODO: fully implement function
 // ================================
 void CPU::step() {
     if (PC == 0x100) {
@@ -76,10 +75,6 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regSrc = opcode & 0b111;
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
-
-    if (PC == 856) {
-        cout << "Hello" << endl;
-    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -1025,6 +1020,13 @@ unsigned short CPU::pop() {
     return (hi << 8) | readMem(SP++);
 }
 
+void CPU::setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond) {
+    zero = zeroCond;
+    halfCarry = halfCond;
+    carry = carryCond;
+    subtract = subCond;
+}
+
 
 
 // ======================================================================================
@@ -1040,10 +1042,7 @@ unsigned char CPU::add(unsigned char a, unsigned char b, bool withCarry) {
         c = 0;
     }
     unsigned short result = a + b + c;
-    zero = (result & 0xFF) == 0;
-    halfCarry = (a & 0xF) + (b & 0xF) > 0xF;
-    subtract = false;
-    carry = result > 0xFF;
+    setFlags((result & 0xFF) == 0, (a & 0xF) + (b & 0xF) > 0xF, false, result > 0xFF);
     return (unsigned char)result;
 }
 
@@ -1052,9 +1051,7 @@ unsigned char CPU::add(unsigned char a, unsigned char b, bool withCarry) {
 // ================================
 unsigned short CPU::add16(unsigned short a, unsigned short b) {
     unsigned int result = a + b;
-    halfCarry = (a & 0xFFF) + (b & 0xFFF) > 0xFFF;
-    subtract = false;
-    carry = result > 0xFFFF;
+    setFlags(zero, (a & 0xFFF) + (b & 0xFFF) > 0xFFF, false, result > 0xFFFF);
     return (unsigned short)result;
 }
 
@@ -1071,9 +1068,7 @@ unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
 // ================================
 unsigned char CPU::inc(unsigned char value) {
     unsigned char result = value + 1;
-    zero = result == 0;
-    halfCarry = (value & 0xF) + 1 > 0xF;
-    subtract = false;
+    setFlags(result == 0, (value & 0xF) + 1 > 0xF, false, carry);
     return result;
 }
 
@@ -1082,9 +1077,7 @@ unsigned char CPU::inc(unsigned char value) {
 // ================================
 unsigned char CPU::dec(unsigned char value) {
     unsigned char result = value - 1;
-    zero = result == 0;
-    halfCarry = (value & 0xF) - 1 < 0;
-    subtract = true;
+    setFlags(result == 0, (value & 0xF) - 1 < 0, true, carry);
     return result;
 }
 
@@ -1124,10 +1117,7 @@ void CPU::decimalAdjustAcc() {
 // ================================
 unsigned char CPU::bitAnd(unsigned char a, unsigned char b) {
     unsigned char result = a & b;
-    zero = result == 0;
-    halfCarry = true;
-    subtract = false;
-    carry = false;
+    setFlags(result == 0, true, false, false);
     return result;
 }
 
@@ -1136,7 +1126,7 @@ unsigned char CPU::bitAnd(unsigned char a, unsigned char b) {
 // ================================
 unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
     unsigned char result = a | b;
-    zero = result == 0;
+    setFlags(result == 0, halfCarry, subtract, carry);
     return result;
 }
 
@@ -1145,7 +1135,7 @@ unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
 // ================================
 unsigned char CPU::bitXor(unsigned char a, unsigned char b) {
     unsigned char result = a ^ b;
-    zero = result == 0;
+    setFlags(result == 0, halfCarry, subtract, carry);
     return result;
 }
 
@@ -1155,10 +1145,7 @@ unsigned char CPU::bitXor(unsigned char a, unsigned char b) {
 unsigned char CPU::rotateLeft(unsigned char value) {
     unsigned char bit7 = (value & 0x80) >> 7;
     unsigned char result = (value << 1) | bit7;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = bit7;
+    setFlags(result == 0, false, false, bit7);
     return result;
 }
 
@@ -1168,10 +1155,7 @@ unsigned char CPU::rotateLeft(unsigned char value) {
 // ================================
 unsigned char CPU::rotateLeftCarry(unsigned char value) {
     unsigned char result = (value << 1) | (unsigned char)carry;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = (value & 0x80) >> 7;
+    setFlags(result == 0, false, false, (value & 0x80) >> 7);
     return result;
 }
 
@@ -1180,10 +1164,7 @@ unsigned char CPU::rotateLeftCarry(unsigned char value) {
 // ================================
 unsigned char CPU::rotateRight(unsigned char value) {
     unsigned char result = (value >> 1) | ((value & 0x1) << 7);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
+    setFlags(result == 0, false, false, value & 0x1);
     return result;
 }
 
@@ -1193,10 +1174,7 @@ unsigned char CPU::rotateRight(unsigned char value) {
 // ================================
 unsigned char CPU::rotateRightCarry(unsigned char value) {
     unsigned char result = (value >> 1) | (carry << 7);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
+    setFlags(result == 0, false, false, value & 0x1);
     return result;
 }
 
@@ -1205,10 +1183,7 @@ unsigned char CPU::rotateRightCarry(unsigned char value) {
 // ================================
 unsigned char CPU::shiftLeft(unsigned char value) {
     unsigned char result = value << 1;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = (value & 0x80) >> 7;
+    setFlags(result == 0, false, false, (value & 0x80) >> 7);
     return result;
 }
 
@@ -1219,10 +1194,7 @@ unsigned char CPU::shiftLeft(unsigned char value) {
 unsigned char CPU::shiftRightArithmetic(unsigned char value) {
     unsigned char msb = value & 0x80;
     unsigned char result = (value >> 1) | msb;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
+    setFlags(result == 0, false, false, value & 0x1);
     return result;
 }
 
@@ -1232,10 +1204,7 @@ unsigned char CPU::shiftRightArithmetic(unsigned char value) {
 // ================================
 unsigned char CPU::shiftRightLogical(unsigned char value) {
     unsigned char result = (value >> 1) & 0x7F;
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = value & 0x1;
+    setFlags(result == 0, false, false, value & 0x1);
     return result;
 }
 
@@ -1245,10 +1214,7 @@ unsigned char CPU::shiftRightLogical(unsigned char value) {
 // ================================
 unsigned char CPU::swap(unsigned char value) {
     unsigned char result = ((value << 4) & 0xF0) | ((value >> 4) & 0xF);
-    zero = (result == 0);
-    halfCarry = false;
-    subtract = false;
-    carry = false;
+    setFlags(result == 0, false, false, false);
     return result;
 }
 
@@ -1258,8 +1224,7 @@ unsigned char CPU::swap(unsigned char value) {
 // ================================
 void CPU::compBitToZero(unsigned char value, unsigned char bit) {
     zero = !(bool)((value >> bit) & 0x1);
-    halfCarry = true;
-    subtract = false;
+    setFlags(zero, true, false, carry);
 }
 
 // ================================
@@ -1365,7 +1330,7 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 // ======================================================================================
 
 void CPU::checkForInt() {
-    if (halted && mem[IF] != 0) {
+    if (halted && (mem[IF] & mem[IE]) != 0) {
         halted = false;
     }
 
@@ -1399,41 +1364,21 @@ void CPU::checkForInt() {
 }
 
 bool CPU::vblankIntTriggered() {
-    if ((mem[IE] & 1) == 1) {
-        return mem[IF] & 1;
-    } else {
-        return false;
-    }
+    return (mem[IE] & mem[IF]) & 1;
 }
 
 bool CPU::lcdIntTriggered() {
-    if (((mem[IE] >> 1) & 1) == 1) {
-        return (mem[IF] >> 1) & 1;
-    } else {
-        return false;
-    }
+    return ((mem[IE] & mem[IF]) >> 1) & 1;
 }
 
 bool CPU::timerIntTriggered() {
-    if (((mem[IE] >> 2) & 1) == 1) {
-        return (mem[IF] >> 2) & 1;
-    } else {
-        return false;
-    }
+    return ((mem[IE] & mem[IF]) >> 2) & 1;
 }
 
 bool CPU::serialIntTriggered() {
-    if (((mem[IE] >> 3) & 1) == 1) {
-        return (mem[IF] >> 3) & 1;
-    } else {
-        return false;
-    }
+    return ((mem[IE] & mem[IF]) >> 3) & 1;
 }
 
 bool CPU::joypadIntTriggered() {
-    if (((mem[IE] >> 4) & 1) == 1) {
-        return (mem[IF] >> 4) & 1;
-    } else {
-        return false;
-    }
+    return ((mem[IE] & mem[IF]) >> 4) & 1;
 }
