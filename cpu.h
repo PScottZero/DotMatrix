@@ -33,6 +33,29 @@ constexpr auto WITH_CARRY = true;
 constexpr auto NO_CARRY = false;
 
 // ================================
+// Special memory addresses
+// ================================
+constexpr auto BANK_TYPE = 0x147;
+constexpr auto WORK_RAM = 0xC000;
+constexpr auto ECHO_START = 0xE000;
+constexpr auto ECHO_END = 0xFE00;
+constexpr auto LCD_STAT = 0xFF41;
+constexpr auto SCROLL_Y = 0xFF42;
+constexpr auto SCROLL_X = 0xFF43;
+constexpr auto LCDC_Y = 0xFF44;
+constexpr auto LY_COMP = 0xFF45;
+constexpr auto DMA = 0xFF46;
+constexpr auto WINDOW_Y = 0xFF4A;
+constexpr auto WINDOW_X = 0xFF4B;
+
+// ================================
+// OAM constants
+// ================================
+constexpr auto OAM_ADDR = 0xFE00;
+constexpr auto OAM_COUNT = 40;
+constexpr auto BYTES_PER_OAM = 4;
+
+// ================================
 // Control flow options
 // ================================
 enum Control {
@@ -57,6 +80,7 @@ public:
     unsigned char* cartStart;
     unsigned int clock;
     bool halted;
+    unsigned char* instr;
 
     // ================================
     // Emulator functions
@@ -83,6 +107,8 @@ public:
     void setF(unsigned char value);
     void setRegPair(unsigned char regPair, unsigned short value);
     void setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond);
+    void saveSP();
+    void dmaTransfer(unsigned short addr);
 
     // ================================
     // Arithmetic functions

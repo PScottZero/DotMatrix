@@ -67,15 +67,15 @@ void PPU::render() {
         int scrollX = mem[0xFF43];
 
         // background addresses
-        unsigned short bgDataAddr = BG_DATA_ADDR_0;
-        unsigned short bgMapAddr = BG_WIN_MAP_ADDR_0;
+        unsigned short bgDataAddr = BG_WIN_DATA_ADDR_0;
+        unsigned short bgMapAddr = BG_MAP_ADDR_0;
 
         if (bgWinDataSelect() == 1) {
-            bgDataAddr = BG_DATA_ADDR_1;
+            bgDataAddr = BG_WIN_DATA_ADDR_1;
         }
 
         if (bgMapSelect() == 1) {
-            bgMapAddr = BG_WIN_MAP_ADDR_1;
+            bgMapAddr = BG_MAP_ADDR_1;
         }
 
         // render line

@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include <QDebug>
 
 // ================================
 // Initialize cpu data
@@ -11,6 +12,10 @@ CPU::CPU() {
     mem = new unsigned char[0x10000];
     cartStart = new unsigned char[0x100];
     clock = 0;
+    instr = new unsigned char[0x100];
+    for (int i = 0; i < 0x100; i++) {
+        instr[i] = 0;
+    }
 }
 
 // ================================
@@ -38,8 +43,8 @@ void CPU::loadCartridge(string dir) {
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
-//    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
+    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
+//    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
     bootstrap.read(buffer, 0x100);
     unsigned short index = 0;
     for (char byte : buffer) {
@@ -75,6 +80,11 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regSrc = opcode & 0b111;
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
+
+    if (instr[opcode] == 0) {
+        instr[opcode] = 1;
+        qDebug("OP: %02x | PC: %04x", opcode, PC);
+    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -193,7 +203,7 @@ void CPU::decode(unsigned char opcode) {
     // LDHL SP, e
     // Add 8-bit immediate e to SP and store result in HL
     case 0xF8:
-        setRegPair(HL, add16(SP, getImm8()));
+        setRegPair(HL, add16(SP, (char)getImm8()));
         zero = false;
         clock += 3;
         break;
@@ -201,7 +211,7 @@ void CPU::decode(unsigned char opcode) {
     // LD (nn), SP
     // Load stack pointer into memory at address specified by 16-bit immediate nn
     case 0x08:
-        writeMem(getImm16(), SP);
+        saveSP();
         clock += 5;
         break;
 
@@ -723,7 +733,7 @@ void CPU::decode(unsigned char opcode) {
             }
         }
 
-        // LD (HL), e
+        // LD (HL), r
         // Load contents of register r into memory location
         // specified by register pair HL
         else if (regDest == MEM) {
@@ -902,6 +912,11 @@ unsigned char CPU::readMem(unsigned short addr) {
 // Write to memory
 // ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
+    if (addr == DMA) {
+        dmaTransfer(value << 8);
+    } else if (addr >= ECHO_START && addr < ECHO_END) {
+        mem[WORK_RAM + addr - ECHO_START] = value;
+    }
     mem[addr] = value;
 }
 
@@ -1008,23 +1023,44 @@ unsigned short CPU::getRegPair(unsigned char regPair) {
 // Push value onto stack
 // ================================
 void CPU::push(unsigned short value) {
-    writeMem(--SP, value & 0xFF);
     writeMem(--SP, (value >> 8) & 0xFF);
+    writeMem(--SP, value & 0xFF);
 }
 
 // ================================
 // Pop value from stack
 // ================================
 unsigned short CPU::pop() {
-    unsigned char hi = readMem(SP++);
-    return (hi << 8) | readMem(SP++);
+    unsigned char lo = readMem(SP++);
+    return (readMem(SP++) << 8) | lo;
 }
 
+// ================================
+// Set all system flags
+// ================================
 void CPU::setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond) {
     zero = zeroCond;
     halfCarry = halfCond;
     carry = carryCond;
     subtract = subCond;
+}
+
+// ================================
+// Save stack pointer to memory
+// ================================
+void CPU::saveSP() {
+    unsigned short imm16 = getImm16();
+    writeMem(imm16, SP & 0xFF);
+    writeMem(imm16 + 1, (SP >> 8) & 0xFF);
+}
+
+// ================================
+// Perform DMA transfer
+// ================================
+void CPU::dmaTransfer(unsigned short addr) {
+    for (int i = 0; i < OAM_COUNT * BYTES_PER_OAM; i++) {
+        writeMem(OAM_ADDR + i, addr + i);
+    }
 }
 
 
@@ -1059,8 +1095,12 @@ unsigned short CPU::add16(unsigned short a, unsigned short b) {
 // Subtract two 8-bit numbers
 // ================================
 unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
-    carry = !carry;
-    return add(a, ~b + 1, withCarry);
+    if (carry == 1) {
+        carry = -1;
+    }
+    unsigned char result = add(a, ~b + 1, withCarry);
+    subtract = true;
+    return result;
 }
 
 // ================================
@@ -1259,7 +1299,7 @@ void CPU::jump(unsigned short addr) {
 // to given 8-bit value
 // ================================
 void CPU::jumpRel(char addrRel) {
-    PC += addrRel;
+    PC += (short)addrRel;
 }
 
 // ================================
