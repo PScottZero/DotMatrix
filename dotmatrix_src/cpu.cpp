@@ -1,11 +1,11 @@
 #include "cpu.h"
-#include <QDebug>
 
 // ================================
 // Initialize cpu data
 // ================================
 CPU::CPU() {
     A = B = C = D = E = H = L = PC = 0;
+    SP = 0xFFFE;
     zero = halfCarry = subtract = carry = false;
     IME = false;
     halted = false;
@@ -19,9 +19,9 @@ CPU::CPU() {
 }
 
 // ================================
-// Load cartidge data into memory
+// Load cartridge data into memory
 // ================================
-void CPU::loadCartridge(string dir) {
+void CPU::loadCartridge(const string& dir) {
     char* buffer = new char[0x8000];
     ifstream cartridge (dir, ios::in | ios::binary);
     cartridge.read(buffer, 0x8000);
@@ -39,7 +39,7 @@ void CPU::loadCartridge(string dir) {
 }
 
 // ================================
-// Load gameboy bootstrap
+// Load Game Boy bootstrap
 // ================================
 void CPU::loadBootstrap() {
     char buffer[0x100];
@@ -80,11 +80,6 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regSrc = opcode & 0b111;
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
-
-    if (instr[opcode] == 0) {
-        instr[opcode] = 1;
-        qDebug("OP: %02x | PC: %04x", opcode, PC);
-    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -1078,7 +1073,7 @@ unsigned char CPU::add(unsigned char a, unsigned char b, bool withCarry) {
         c = 0;
     }
     unsigned short result = a + b + c;
-    setFlags((result & 0xFF) == 0, (a & 0xF) + (b & 0xF) > 0xF, false, result > 0xFF);
+    setFlags((result & 0xFF) == 0, (a & 0xF) + (b & 0xF) + c > 0xF, false, result > 0xFF);
     return (unsigned char)result;
 }
 
@@ -1095,12 +1090,13 @@ unsigned short CPU::add16(unsigned short a, unsigned short b) {
 // Subtract two 8-bit numbers
 // ================================
 unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
-    if (carry == 1) {
-        carry = -1;
+    unsigned char c = carry;
+    if (!withCarry) {
+        c = 0;
     }
-    unsigned char result = add(a, ~b + 1, withCarry);
-    subtract = true;
-    return result;
+    unsigned short result = a - b - c;
+    setFlags(result == 0, (short)((a & 0xF) - (b  & 0xF) - c) < 0, true, (short)result < 0);
+    return (unsigned char)result;
 }
 
 // ================================

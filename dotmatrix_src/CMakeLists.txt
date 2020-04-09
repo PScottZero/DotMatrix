@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.10)
+project(dotmatrix)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_PREFIX_PATH "C:\\Qt\\5.12.6\\mingw73_32\\")
+
+find_package(Qt5Widgets REQUIRED)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+add_executable(dotmatrix cpu.cpp ppu.cpp gbthread.cpp gbwidget.cpp main.cpp)
+target_link_libraries(dotmatrix Qt5::Widgets)

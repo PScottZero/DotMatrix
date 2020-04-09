@@ -88,7 +88,7 @@ public:
     CPU();
     void decode(unsigned char opcode);
     void loadBootstrap();
-    void loadCartridge(string dir);
+    void loadCartridge(const string& dir);
     void step();
 
     // ================================
