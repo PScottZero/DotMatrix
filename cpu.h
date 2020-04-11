@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <array>
+#include <Windows.h>
 
 using namespace std;
 
@@ -39,6 +39,7 @@ constexpr auto BANK_TYPE = 0x147;
 constexpr auto WORK_RAM = 0xC000;
 constexpr auto ECHO_START = 0xE000;
 constexpr auto ECHO_END = 0xFE00;
+constexpr auto JOYPAD = 0xFF00;
 constexpr auto LCD_STAT = 0xFF41;
 constexpr auto SCROLL_Y = 0xFF42;
 constexpr auto SCROLL_X = 0xFF43;
@@ -80,7 +81,6 @@ public:
     unsigned char* cartStart;
     unsigned int clock;
     bool halted;
-    unsigned char* instr;
 
     // ================================
     // Emulator functions
@@ -90,6 +90,7 @@ public:
     void loadBootstrap();
     void loadCartridge(const string& dir);
     void step();
+    void checkForInput();
 
     // ================================
     // Memory access functions

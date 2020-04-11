@@ -15,10 +15,8 @@ CPU::CPU() {
     mem = new unsigned char[0x10000];
     cartStart = new unsigned char[0x100];
     clock = 0;
-    instr = new unsigned char[0x100];
-    for (int i = 0; i < 0x100; i++) {
-        instr[i] = 0;
-    }
+    mem[SCROLL_X] = 0;
+    mem[SCROLL_Y] = 0;
 }
 
 // ================================
@@ -65,9 +63,36 @@ void CPU::step() {
             mem[index] = cartStart[index];
         }
     }
+    mem[JOYPAD] |= 0xF;
     checkForInt();
     if (!halted) {
         decode(mem[PC]);
+    }
+}
+
+void CPU::checkForInput() {
+    if ((GetAsyncKeyState('D') & 0x8000) || (GetAsyncKeyState('P') & 0x8000)) {
+        mem[JOYPAD] &= 0xFE;
+    } else {
+        mem[JOYPAD] |= 0x01;
+    }
+
+    if ((GetAsyncKeyState('D') & 0x8000) || (GetAsyncKeyState('O') & 0x8000)) {
+        mem[JOYPAD] &= 0xFD;
+    } else {
+        mem[JOYPAD] |= 0x02;
+    }
+
+    if ((GetAsyncKeyState('W') & 0x8000) || (GetAsyncKeyState('N') & 0x8000)) {
+        mem[JOYPAD] &= 0xFB;
+    } else {
+        mem[JOYPAD] |= 0x04;
+    }
+
+    if ((GetAsyncKeyState('S') & 0x8000) || (GetAsyncKeyState('M') & 0x8000)) {
+        mem[JOYPAD] &= 0xF7;
+    } else {
+        mem[JOYPAD] |= 0x08;
     }
 }
 
@@ -83,10 +108,6 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regSrc = opcode & 0b111;
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
-
-    if (PC == 0x29b8) {
-        cout << "benlo" << endl;
-    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -924,9 +945,6 @@ unsigned char CPU::readMem(unsigned short addr) {
 // Write to memory
 // ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
-    if (addr == 0xff80) {
-        cout << "oh no" << endl;
-    }
     if (addr == DMA) {
         dmaTransfer(value << 8);
     } else if (addr >= ECHO_START && addr < ECHO_END) {

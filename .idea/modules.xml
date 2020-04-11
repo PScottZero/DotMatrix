@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/DotMatrix.iml" filepath="$PROJECT_DIR$/.idea/DotMatrix.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/dotmatrix_src.iml" filepath="$PROJECT_DIR$/.idea/dotmatrix_src.iml" />
     </modules>
   </component>
 </project>

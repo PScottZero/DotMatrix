@@ -10,7 +10,7 @@ class GBThread: public QThread
     Q_OBJECT
 
 public:
-    GBThread(QObject *parent = 0);
+    GBThread(QObject *parent = nullptr);
     ~GBThread();
 
 protected:

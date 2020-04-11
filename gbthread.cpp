@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "gbthread.h"
 
 GBThread::GBThread(QObject *parent) : QThread(parent)
@@ -5,10 +7,7 @@ GBThread::GBThread(QObject *parent) : QThread(parent)
     emitted = false;
 }
 
-GBThread::~GBThread()
-{
-
-}
+GBThread::~GBThread() = default;
 
 void GBThread::run() {
     CPU cpu;
@@ -24,6 +23,7 @@ void GBThread::run() {
     forever {
         cpu.step();
         ppu.step();
+
         if (cpu.mem[LCDC_Y] > 144 && !emitted) {
             emitted = true;
             emit sendFrame(frame);
@@ -35,3 +35,5 @@ void GBThread::run() {
         }
     }
 }
+
+#pragma clang diagnostic pop
