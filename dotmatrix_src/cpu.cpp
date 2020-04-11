@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-multiway-paths-covered"
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "cpu.h"
 
 // ================================
@@ -80,6 +83,10 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regSrc = opcode & 0b111;
     unsigned char lo = opcode & 0xF;
     unsigned char regPair = opcode >> 4 & 0b11;
+
+    if (PC == 0x29b8) {
+        cout << "benlo" << endl;
+    }
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -277,6 +284,7 @@ void CPU::decode(unsigned char opcode) {
     // Rotate register A to the left
     case 0x07:
         A = rotateLeft(A);
+        zero = false;
         clock += 1;
         break;
 
@@ -284,6 +292,7 @@ void CPU::decode(unsigned char opcode) {
     // Rotate register A to the left through the carry flag
     case 0x17:
         A = rotateLeftCarry(A);
+        zero = false;
         clock += 1;
         break;
 
@@ -291,6 +300,7 @@ void CPU::decode(unsigned char opcode) {
     // Rotate register A to the right
     case 0x0F:
         A = rotateRight(A);
+        zero = false;
         clock += 1;
         break;
 
@@ -298,6 +308,7 @@ void CPU::decode(unsigned char opcode) {
     // Rotate register A to the right through the carry flag
     case 0x1F:
         A = rotateRightCarry(A);
+        zero = false;
         clock += 1;
         break;
 
@@ -311,7 +322,7 @@ void CPU::decode(unsigned char opcode) {
     // JR e
     // Jump to PC + (signed) e
     case 0x18:
-        jumpRel(getImm8());
+        jumpRel((char)getImm8());
         clock += 3;
         break;
 
@@ -390,6 +401,8 @@ void CPU::decode(unsigned char opcode) {
     // Complement register A
     case 0x2F:
         A = ~A;
+        halfCarry = true;
+        subtract = true;
         clock += 1;
         break;
 
@@ -403,6 +416,8 @@ void CPU::decode(unsigned char opcode) {
     // Complement carry flag
     case 0x3F:
         carry = !carry;
+        halfCarry = false;
+        subtract = false;
         clock += 1;
         break;
 
@@ -410,6 +425,8 @@ void CPU::decode(unsigned char opcode) {
     // Set carry flag
     case 0x37:
         carry = true;
+        halfCarry = false;
+        subtract = false;
         clock += 1;
         break;
 
@@ -907,6 +924,9 @@ unsigned char CPU::readMem(unsigned short addr) {
 // Write to memory
 // ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
+    if (addr == 0xff80) {
+        cout << "oh no" << endl;
+    }
     if (addr == DMA) {
         dmaTransfer(value << 8);
     } else if (addr >= ECHO_START && addr < ECHO_END) {
@@ -1054,7 +1074,7 @@ void CPU::saveSP() {
 // ================================
 void CPU::dmaTransfer(unsigned short addr) {
     for (int i = 0; i < OAM_COUNT * BYTES_PER_OAM; i++) {
-        writeMem(OAM_ADDR + i, addr + i);
+        writeMem(OAM_ADDR + i, readMem(addr + i));
     }
 }
 
@@ -1139,7 +1159,7 @@ void CPU::decimalAdjustAcc() {
         }
     }
     zero = A == 0;
-    halfCarry = 0;
+    halfCarry = false;
 }
 
 
@@ -1162,7 +1182,7 @@ unsigned char CPU::bitAnd(unsigned char a, unsigned char b) {
 // ================================
 unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
     unsigned char result = a | b;
-    setFlags(result == 0, halfCarry, subtract, carry);
+    setFlags(result == 0, false, false, false);
     return result;
 }
 
@@ -1171,7 +1191,7 @@ unsigned char CPU::bitOr(unsigned char a, unsigned char b) {
 // ================================
 unsigned char CPU::bitXor(unsigned char a, unsigned char b) {
     unsigned char result = a ^ b;
-    setFlags(result == 0, halfCarry, subtract, carry);
+    setFlags(result == 0, false, false, false);
     return result;
 }
 
@@ -1259,8 +1279,7 @@ unsigned char CPU::swap(unsigned char value) {
 // of a given value into zero flag
 // ================================
 void CPU::compBitToZero(unsigned char value, unsigned char bit) {
-    zero = !(bool)((value >> bit) & 0x1);
-    setFlags(zero, true, false, carry);
+    setFlags(!(bool)((value >> bit) & 0x1), true, false, carry);
 }
 
 // ================================
@@ -1314,14 +1333,14 @@ void CPU::ret() {
 }
 
 // ================================
-// Performs speficied action if a
+// Performs specified action if a
 // given condition is met
 // ================================
 void CPU::condition(Control condFunc, unsigned char condValue,
                     unsigned short imm, int clockSuccess, int clockFail) {
 
     // get condition
-    bool cond;
+    bool cond = false;
     switch (condValue) {
     case NOT_ZERO:
         cond = !zero;
@@ -1344,7 +1363,7 @@ void CPU::condition(Control condFunc, unsigned char condValue,
             jump(imm);
             break;
         case JUMP_REL:
-            jumpRel(imm);
+            jumpRel((char)imm);
             break;
         case CALL:
             call(imm);
@@ -1418,3 +1437,5 @@ bool CPU::serialIntTriggered() {
 bool CPU::joypadIntTriggered() {
     return ((mem[IE] & mem[IF]) >> 4) & 1;
 }
+
+#pragma clang diagnostic pop

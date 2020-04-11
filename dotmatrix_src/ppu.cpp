@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "ppu.h"
 #include <qpainter.h>
 
@@ -181,9 +183,19 @@ int PPU::bgDisplayEnable() {
 // ======================================================================================
 
 void PPU::setLcdInt() {
-    mem[IF] &= 0xFF & ((mem[LCDC_Y] == mem[LY_COMP]) << 1);
+    if (mem[LCDC_Y] == mem[LY_COMP]) {
+        mem[IF] |= 0b10;
+    } else {
+        mem[IF] &= 0xFD;
+    }
 }
 
 void PPU::setVblankInt() {
-    mem[IF] &= 0xFF & (mem[LCDC_Y] == 144);
+    if (mem[LCDC_Y] == 145) {
+        mem[IF] |= 0b01;
+    } else {
+        mem[IF] &= 0xFE;
+    }
 }
+
+#pragma clang diagnostic pop
