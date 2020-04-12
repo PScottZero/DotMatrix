@@ -1,8 +1,13 @@
 # Project Status
 
-![Nintendo Logo](https://i.imgur.com/GmHoigL.jpg)
-<br><b>14 Feb 2020:</b> THE NINTENDO LOGO IS SCROLLING!!!
+<img src="https://i.imgur.com/EFEmEq0.jpg" width="300" height="300">
+<h2>11 May 2020:</h2>
+<p>Tetris finally boots. Took me a bit to find the bug that prevented it from booting!</p><br>
 
-# Notes
+<img src="https://i.imgur.com/GmHoigL.jpg" width="300" height="300">
+<h2>14 Feb 2020:</h2>
+<p>The Nintendo logo is scrolling!!!</p><br>
 
-This emulator is written in C++ and uses the Qt library for its UI. I am using Visual Studio with the Qt Tools extension.
+# About
+
+This emulator is written in C++ and uses the Qt library for its UI. I am using CLion to write the code. Right now, I am working on finishing the video implementation. I will then add joypad input so that the games can be played. This project is probably about 80%, and I hope to get it finished soon!
