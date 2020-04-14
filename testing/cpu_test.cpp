@@ -1,7 +1,6 @@
-#include "../dotmatrix_src/cpu.h"
+#include "../cpu.h"
 #include "gtest/gtest.h"
 
-constexpr auto REG_COUNT = 7;
 static CPU gb;
 
 TEST(TestArithmetic, TestAdd) {
@@ -167,14 +166,6 @@ TEST(TestArithmetic, TestSubCarry) {
 	ASSERT_TRUE(gb.halfCarry);
 	ASSERT_TRUE(gb.subtract);
 	ASSERT_TRUE(gb.carry);
-}
-
-TEST(TestControlFlow, TestJumpRel) {
-    gb.PC = 0x100;
-    gb.mem[0x101] = -128;
-    gb.decode(0x18);
-
-    ASSERT_EQ(gb.PC, 128);
 }
 
 TEST(TestDecode, TestStack) {

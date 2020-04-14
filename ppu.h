@@ -32,27 +32,36 @@ constexpr auto SCREEN_WIDTH = 160;
 constexpr auto SCREEN_HEIGHT = 144;
 
 // ================================
-// Base addresses
+// PPU addresses
 // ================================
-constexpr auto BG_WIN_DATA_ADDR_0 = 0x8800;
-constexpr auto BG_WIN_DATA_ADDR_1 = 0x8000;
-constexpr auto BG_MAP_ADDR_0 = 0x9800;
-constexpr auto BG_MAP_ADDR_1 = 0x9C00;
+constexpr auto DATA_ADDR_0 = 0x8800;
+constexpr auto DATA_ADDR_1 = 0x8000;
+constexpr auto MAP_ADDR_0 = 0x9800;
+constexpr auto MAP_ADDR_1 = 0x9C00;
+constexpr auto LCDC = 0xFF40;
+constexpr auto LCD_STAT = 0xFF41;
+constexpr auto SCROLL_Y = 0xFF42;
+constexpr auto SCROLL_X = 0xFF43;
+constexpr auto LCDC_Y = 0xFF44;
+constexpr auto LY_COMP = 0xFF45;
+constexpr auto BGP = 0xFF47;
+constexpr auto OBP0 = 0xFF48;
+constexpr auto OBP1 = 0xFF49;
+constexpr auto WINDOW_Y = 0xFF4A;
+constexpr auto WINDOW_X = 0xFF4B;
+
+// ================================
+// Pixel type
+// ================================
+enum PixelType {
+    BACKGROUND, WINDOW, SPRITE
+};
 
 // ================================
 // Screen timing
 // ================================
 constexpr auto SCANLINE = 114;
 constexpr auto SCREEN_CYCLE = 17556;
-
-// ================================
-// Pixel type
-// ================================
-enum class PixelType {
-    Background,
-    Window,
-    Sprite
-};
 
 // ================================
 // Display modes
@@ -90,7 +99,7 @@ public:
     PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
     void render();
-    uint getPixelColor(unsigned char value);
+    uint getPixelColor(unsigned char value, unsigned short mapAddr);
 
     // ================================
     // LCD control functions
@@ -103,6 +112,17 @@ public:
     int spriteSize();
     int spriteEnable();
     int bgDisplayEnable();
+
+    // ================================
+    // OAM functions
+    // ================================
+    unsigned char getSpriteY(int oamAddr);
+    unsigned char getSpriteX(int oamAddr);
+    unsigned char getSpriteTileNo(int oamEntry);
+    bool spriteBehindBG(int oamEntry);
+    bool spriteFlipY(int oamEntry);
+    bool spriteFlipX(int oamEntry);
+    bool getSpritePalette(int oamEntry);
 
     // ================================
     // Interrupt functions

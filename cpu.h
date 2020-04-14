@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <Windows.h>
+#include <unordered_map>
 
 using namespace std;
 
@@ -40,14 +40,11 @@ constexpr auto WORK_RAM = 0xC000;
 constexpr auto ECHO_START = 0xE000;
 constexpr auto ECHO_END = 0xFE00;
 constexpr auto JOYPAD = 0xFF00;
-constexpr auto LCD_STAT = 0xFF41;
-constexpr auto SCROLL_Y = 0xFF42;
-constexpr auto SCROLL_X = 0xFF43;
-constexpr auto LCDC_Y = 0xFF44;
-constexpr auto LY_COMP = 0xFF45;
+constexpr auto DIVIDER = 0xFF04;
+constexpr auto COUNTER = 0xFF05;
+constexpr auto MODULO = 0xFF06;
+constexpr auto TIMER_CONTROL = 0xFF07;
 constexpr auto DMA = 0xFF46;
-constexpr auto WINDOW_Y = 0xFF4A;
-constexpr auto WINDOW_X = 0xFF4B;
 
 // ================================
 // OAM constants
@@ -57,13 +54,29 @@ constexpr auto OAM_COUNT = 40;
 constexpr auto BYTES_PER_OAM = 4;
 
 // ================================
+// Timer constants
+// ================================
+constexpr auto DIVIDER_CYCLES = 64;
+constexpr auto COUNTER_CYCLES_0 = DIVIDER_CYCLES * 4;
+constexpr auto COUNTER_CYCLES_1 = DIVIDER_CYCLES / 16;
+constexpr auto COUNTER_CYCLES_2 = DIVIDER_CYCLES / 4;
+constexpr auto COUNTER_CYCLES_3 = DIVIDER_CYCLES;
+
+// ================================
 // Control flow options
 // ================================
 enum Control {
-    JUMP,
-    JUMP_REL,
-    CALL,
-    RETURN
+    JUMP, JUMP_REL, CALL, RETURN
+};
+
+enum Joypad {
+    RIGHT, LEFT, UP, DOWN,
+    START, SELECT, BUTTON_A, BUTTON_B
+};
+
+enum BankType {
+    NONE = 0x00,
+    MBC1 = 0x01, MBC1_RAM = 0x02, MBC1_BAT_RAM = 0x03,
 };
 
 class CPU
@@ -74,13 +87,18 @@ public:
     // Instance data
     // ================================
     unsigned char A, B, C, D, E, H, L;
-    unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, NULL, &A };
+    unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, nullptr, &A };
     unsigned short PC, SP;
     bool zero, halfCarry, subtract, carry, IME;
     unsigned char* mem;
     unsigned char* cartStart;
     unsigned int clock;
+    unsigned int clockPrev;
+    unsigned int divider;
+    unsigned int counter;
     bool halted;
+    unsigned char bankType;
+    unordered_map<Joypad, bool> joypad;
 
     // ================================
     // Emulator functions
@@ -91,6 +109,7 @@ public:
     void loadCartridge(const string& dir);
     void step();
     void checkForInput();
+    void incTimers();
 
     // ================================
     // Memory access functions
@@ -109,13 +128,13 @@ public:
     void setRegPair(unsigned char regPair, unsigned short value);
     void setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond);
     void saveSP();
-    void dmaTransfer(unsigned short addr);
 
     // ================================
     // Arithmetic functions
     // ================================
     unsigned char add(unsigned char a, unsigned char b, bool withCarry);
     unsigned short add16(unsigned short a, unsigned short b);
+    unsigned short ldhl(unsigned short a, char b);
     unsigned char sub(unsigned char a, unsigned char b, bool withCarry);
     unsigned char inc(unsigned char value);
     unsigned char dec(unsigned char value);
@@ -128,7 +147,7 @@ public:
     unsigned char bitOr(unsigned char a, unsigned char b);
     unsigned char bitXor(unsigned char a, unsigned char b);
     void compBitToZero(unsigned char value, unsigned char bit);
-    unsigned char resetBit(unsigned char value, unsigned int bit);
+    static unsigned char resetBit(unsigned char value, unsigned int bit);
     unsigned char rotateLeft(unsigned char value);
     unsigned char rotateLeftCarry(unsigned char value);
     unsigned char rotateRight(unsigned char value);
@@ -137,7 +156,7 @@ public:
     unsigned char shiftRightArithmetic(unsigned char value);
     unsigned char shiftRightLogical(unsigned char value);
     unsigned char swap(unsigned char value);
-    unsigned char setBit(unsigned char value, unsigned int bit); 
+    static unsigned char setBit(unsigned char value, unsigned int bit);
 
     // ================================
     // Control flow functions

@@ -3,6 +3,8 @@
 
 #include <QWidget>
 #include <QPainter>
+#include <QDebug>
+#include <QKeyEvent>
 #include "gbthread.h"
 
 class GBWidget : public QWidget
@@ -15,6 +17,8 @@ public:
 
 public slots:
     void updateDisplay(const QImage &frame);
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -22,5 +26,8 @@ protected:
 private:
     QPixmap display;
     GBThread gbthread;
+
+signals:
+    void sendInput(Joypad button, bool pressed);
 };
 #endif // GBWIDGET_H
