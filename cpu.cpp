@@ -11,7 +11,7 @@ CPU::CPU() {
     IME = false;
     halted = false;
     mem = new unsigned char[0x10000];
-    cartStart = new unsigned char[0x100];
+    cart = new char[0x200000];
     clock = 0;
     clockPrev = 0;
     divider = 0;
@@ -23,17 +23,26 @@ CPU::CPU() {
 // Load cartridge data into memory
 // ================================
 void CPU::loadCartridge(const string& dir) {
-    char* buffer = new char[0x8000];
+
+    // read cartridge
     ifstream cartridge (dir, ios::in | ios::binary);
-    cartridge.read(buffer, 0x8000);
-    for (unsigned short index = 0; index < 0x8000; index++) {
-        if (index < 0x100) {
-            cartStart[index] = (unsigned char) buffer[index];
-        } else {
-            mem[index] = (unsigned char)buffer[index];
-        }
+    cartridge.read(cart, 0x200000);
+
+    // put first 32kb of rom into ram
+    for (unsigned short i = 0x100; i < 0x8000; i++) {
+        mem[i] = (unsigned char)cart[i];
     }
-    delete[] buffer;
+}
+
+void CPU::loadBank(unsigned short bankNo) {
+    if (bankNo == 0x00 || bankNo == 0x20 ||
+        bankNo == 0x40 || bankNo == 0x60) {
+        bankNo++;
+    }
+    unsigned int bankAddr = bankNo * BANK_SIZE;
+    for (unsigned int i = 0; i < BANK_SIZE; i++) {
+        mem[BANK_SIZE + i] = cart[bankAddr + i];
+    }
 }
 
 // ================================
@@ -56,8 +65,8 @@ void CPU::loadBootstrap() {
 // ================================
 void CPU::step() {
     if (PC == 0x100) {
-        for (int index = 0; index < 0x100; index++) {
-            mem[index] = cartStart[index];
+        for (int i = 0; i < 0x100; i++) {
+            mem[i] = cart[i];
         }
     }
     checkForInt();
@@ -68,11 +77,13 @@ void CPU::step() {
 }
 
 void CPU::incTimers() {
-    if (mem[TIMER_CONTROL] & 0x4) {
-        divider += (clock - clockPrev);
-        mem[DIVIDER] += divider / DIVIDER_CYCLES;
+    divider += (clock - clockPrev);
+    if (divider >= DIVIDER_CYCLES) {
+        mem[DIVIDER]++;
         divider %= DIVIDER_CYCLES;
+    }
 
+    if (mem[TIMER_CONTROL] & 0x4) {
         int counterMod = 0;
         switch (mem[TIMER_CONTROL] & 0b11) {
             case 0b00:
@@ -89,14 +100,17 @@ void CPU::incTimers() {
                 break;
         }
 
-        unsigned int oldCounter = mem[COUNTER];
         counter += (clock - clockPrev);
-        mem[COUNTER] += counter / counterMod;
-        counter %= counterMod;
+        if (counter >= counterMod) {
+            mem[COUNTER]++;
+            counter %= counterMod;
+        }
 
-        if (mem[COUNTER] == 0 && oldCounter == 0xFF) {
-            mem[IF] |= 0x4;
+        if (mem[COUNTER] == 0) {
             mem[COUNTER] = mem[MODULO];
+            mem[IF] |= 0x04;
+        } else {
+            mem[IF] &= 0xFB;
         }
     }
 }
@@ -239,7 +253,7 @@ void CPU::decode(unsigned char opcode) {
         // LDHL SP, e
         // Add 8-bit immediate e to SP and store result in HL
         case 0xF8:
-            setRegPair(HL, ldhl(SP, (char)getImm8()));
+            setRegPair(HL, addSPImm8((char)getImm8()));
             zero = false;
             clock += 3;
             break;
@@ -310,7 +324,7 @@ void CPU::decode(unsigned char opcode) {
         // ADD SP, e
         // Add 8-bit immediate e to SP and store result in SP
         case 0xE8:
-            SP = add16(SP, getImm8());
+            SP = addSPImm8((char)getImm8());
             zero = false;
             clock += 4;
             break;
@@ -519,7 +533,7 @@ void CPU::decode(unsigned char opcode) {
                         // Rotate register r to the right
                         case 0b001:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
+                                writeMem(getRegPair(HL), rotateRight(readMem(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
@@ -961,7 +975,7 @@ void CPU::decode(unsigned char opcode) {
 
 void CPU::checkForInput() {
     mem[JOYPAD] |= 0xCFu;
-    if (((unsigned char)(mem[JOYPAD] >> 4) & 0x1) == 0) {
+    if ((((unsigned char)(mem[JOYPAD] >> 4) & 0x1) == 0) || ((mem[JOYPAD] & 0x30) == 0x30)) {
         if (joypad[RIGHT]) {
             mem[JOYPAD] &= 0xFE;
         } else {
@@ -985,7 +999,7 @@ void CPU::checkForInput() {
         } else {
             mem[JOYPAD] |= 0x8;
         }
-    } else {
+    } else if (((unsigned char)(mem[JOYPAD] >> 5) & 0x1) == 0) {
         if (joypad[BUTTON_A]) {
             mem[JOYPAD] &= 0xFE;
         } else {
@@ -1029,6 +1043,11 @@ unsigned char CPU::readMem(unsigned short addr) {
 // Write to memory
 // ================================
 void CPU::writeMem(unsigned short addr, unsigned char value) {
+
+    // load bank
+    if (addr >= 0x2000 && addr < 0x4000) {
+        loadBank(value & 0x1F);
+    }
 
     // perform dma transfer
     if (addr == DMA) {
@@ -1223,9 +1242,13 @@ unsigned short CPU::add16(unsigned short a, unsigned short b) {
     return result;
 }
 
-unsigned short CPU::ldhl(unsigned short a, char b) {
-    unsigned int result = a + b;
-    setFlags(false, (a & 0xFFF) + (b & 0xFFF) > 0xFFF, false, result > 0xFFFF);
+unsigned short CPU::addSPImm8(char imm8) {
+    unsigned short result = SP + imm8;
+    if (imm8 >= 0) {
+        setFlags(false, (SP & 0xF) + (imm8 & 0xF) > 0xF, false, (SP & 0xFF) + imm8 > 0xFF);
+    } else {
+        setFlags(false, (result & 0xF) <= (SP & 0xF), false, (result & 0xFF) <= (SP & 0xFF));
+    }
     return result;
 }
 
@@ -1238,7 +1261,7 @@ unsigned char CPU::sub(unsigned char a, unsigned char b, bool withCarry) {
         c = 0;
     }
     unsigned short result = a - b - c;
-    setFlags(result == 0, (short)((a & 0xF) - (b  & 0xF) - c) < 0, true, (short)result < 0);
+    setFlags((result & 0xFF) == 0, ((a & 0xF) - (b  & 0xF) - c) < 0, true, (short)result < 0);
     return result;
 }
 
@@ -1545,21 +1568,21 @@ void CPU::checkForInt() {
 }
 
 bool CPU::vblankIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x1;
+    return (mem[IE] & mem[IF]) & 0x01;
 }
 
 bool CPU::lcdIntTriggered() {
-    return ((mem[IE] & mem[IF]) >> 1) & 0x1;
+    return (mem[IE] & mem[IF]) & 0x02;
 }
 
 bool CPU::timerIntTriggered() {
-    return ((mem[IE] & mem[IF]) >> 2) & 0x1;
+    return (mem[IE] & mem[IF]) & 0x04;
 }
 
 bool CPU::serialIntTriggered() {
-    return ((mem[IE] & mem[IF]) >> 3) & 0x1;
+    return (mem[IE] & mem[IF]) & 0x08;
 }
 
 bool CPU::joypadIntTriggered() {
-    return ((mem[IE] & mem[IF]) >> 4) & 0x1;
+    return (mem[IE] & mem[IF]) & 0x10;
 }

@@ -15,17 +15,19 @@ void GBThread::run() {
     PPU ppu(cpu.mem, &cpu.clock, &frame);
 
     cpu.loadBootstrap();
-    cpu.loadCartridge("D:/Roms/GB/cpu_instrs.gb");
+    cpu.loadCartridge("D:/Roms/GB/Dr. Mario.gb");
 //    cpu.loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
 
     auto cycleStart = chrono::system_clock::now();
 
     forever {
+        ppu.prevClock = cpu.clock;
         cpu.step();
+        ppu.currClock = cpu.clock;
         ppu.step();
 
         // send frame to widget
-        if (cpu.mem[LCDC_Y] > 144 && !emitted) {
+        if (cpu.mem[LY] > 143 && !emitted) {
             emitted = true;
             if (!ppu.lcdDisplayEnable()) {
                 frame.fill(0xFFFFFF);
@@ -34,7 +36,7 @@ void GBThread::run() {
             auto nextCycle = cycleStart + chrono::milliseconds(16);
             this_thread::sleep_until(nextCycle);
             cycleStart = chrono::system_clock::now();
-        } else if (cpu.mem[LCDC_Y] <= 144) {
+        } else if (cpu.mem[LY] <= 143) {
             emitted = false;
         }
     }
@@ -43,8 +45,8 @@ void GBThread::run() {
 void GBThread::processInput(Joypad button, bool pressed) {
     bool oldState = cpu.joypad[button];
     cpu.joypad[button] = pressed;
-    if (oldState != pressed) {
-        cpu.mem[IF] |= 0x8;
+    if (!oldState && cpu.joypad[button]) {
+        cpu.mem[IF] |= 0x10;
     }
 }
 

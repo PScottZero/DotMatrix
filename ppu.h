@@ -42,7 +42,7 @@ constexpr auto LCDC = 0xFF40;
 constexpr auto LCD_STAT = 0xFF41;
 constexpr auto SCROLL_Y = 0xFF42;
 constexpr auto SCROLL_X = 0xFF43;
-constexpr auto LCDC_Y = 0xFF44;
+constexpr auto LY = 0xFF44;
 constexpr auto LY_COMP = 0xFF45;
 constexpr auto BGP = 0xFF47;
 constexpr auto OBP0 = 0xFF48;
@@ -66,7 +66,7 @@ constexpr auto SCREEN_CYCLE = 17556;
 // ================================
 // Display modes
 // ================================
-enum class Mode {
+enum Mode {
     MODE_0 = 0b00,
     MODE_1 = 0b01,
     MODE_2 = 0b10,
@@ -89,9 +89,11 @@ public:
     // Instance data
     // ================================
     unsigned char* mem;
-    unsigned int* clk;
     QImage *display;
-    int currLine;
+    bool rendered;
+    unsigned int ppuCycle;
+    unsigned int prevClock;
+    unsigned int currClock;
 
     // ================================
     // Display functions
@@ -100,6 +102,7 @@ public:
     void step();
     void render();
     uint getPixelColor(unsigned char value, unsigned short mapAddr);
+    void setMode(Mode m);
 
     // ================================
     // LCD control functions
@@ -127,7 +130,7 @@ public:
     // ================================
     // Interrupt functions
     // ================================
-    void setVblankInt();
+    void triggerVBlankInt();
     void setLcdInt();
 };
 

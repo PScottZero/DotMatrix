@@ -7,6 +7,8 @@
 
 using namespace std;
 
+constexpr auto BANK_SIZE = 0x4000;
+
 // ================================
 // Registers
 // ================================
@@ -91,7 +93,7 @@ public:
     unsigned short PC, SP;
     bool zero, halfCarry, subtract, carry, IME;
     unsigned char* mem;
-    unsigned char* cartStart;
+    char* cart;
     unsigned int clock;
     unsigned int clockPrev;
     unsigned int divider;
@@ -107,6 +109,7 @@ public:
     void decode(unsigned char opcode);
     void loadBootstrap();
     void loadCartridge(const string& dir);
+    void loadBank(unsigned short bankNo);
     void step();
     void checkForInput();
     void incTimers();
@@ -134,7 +137,7 @@ public:
     // ================================
     unsigned char add(unsigned char a, unsigned char b, bool withCarry);
     unsigned short add16(unsigned short a, unsigned short b);
-    unsigned short ldhl(unsigned short a, char b);
+    unsigned short addSPImm8(char imm8);
     unsigned char sub(unsigned char a, unsigned char b, bool withCarry);
     unsigned char inc(unsigned char value);
     unsigned char dec(unsigned char value);
