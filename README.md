@@ -1,6 +1,12 @@
 # Project Status
+<h2>17 April 2020:</h2>
+<p>Both Tetris and Dr. Mario are now working correctly. Will next work on finishing video implementation</p>
+<img src="https://i.imgur.com/PsvVM2I.jpg" width="300" height="300">
+<img src="https://i.imgur.com/ZxoQYoe.jpg" width="300" height="300">
+<img src="https://i.imgur.com/xvqu7NK.jpg" width="300" height="300">
+
 <h2>16 April 2020:</h2>
-<p>Dr. Mario appears to be working. Joypad is now properly implemented. I still need to get 8x16 sprites working before Dr. Mario works perfectly.</p>
+<p>Dr. Mario appears to be working. There is a small bug that I need to fix in the game though. Joypad is also now properly implemented. </p>
 <img src="https://i.imgur.com/9WahHOS.jpg" width="300" height="300">
 <img src="https://i.imgur.com/lPqvF1v.jpg" width="300" height="300">
 
