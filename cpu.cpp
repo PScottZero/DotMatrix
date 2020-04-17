@@ -1068,7 +1068,9 @@ void CPU::writeMem(unsigned short addr, unsigned char value) {
     }
 
     // write value to address
-    mem[addr] = value;
+    if (addr > 0x7FFF) {
+        mem[addr] = value;
+    }
 
     // check for joypad input
     if (addr == JOYPAD) {

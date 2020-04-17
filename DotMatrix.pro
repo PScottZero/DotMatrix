@@ -37,3 +37,6 @@ RC_ICONS = dotmatrix.ico
 
 DISTFILES += \
     dotmatrix.ico
+
+RESOURCES += \
+    resources.qrc

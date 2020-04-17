@@ -106,9 +106,8 @@ void PPU::render() {
                     tileRowAddr = 0x9000 + (char)tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
                 }
 
-                unsigned char bit1 = (mem[tileRowAddr + 1] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
                 unsigned char bit0 = (mem[tileRowAddr] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
-
+                unsigned char bit1 = (mem[tileRowAddr + 1] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
 
                 scanline[i] = (bit1 << 1) | bit0;
                 scanlinePal[i] = BGP;
@@ -125,10 +124,10 @@ void PPU::render() {
 
             // find sprites in scanline
             for (int oamEntry = 0; oamEntry < OAM_COUNT; oamEntry++) {
+                unsigned posY = getSpriteY(oamEntry);
 
                 // 8x8 mode
                 if (!spriteSize()) {
-                    unsigned posY = getSpriteY(oamEntry);
                     if (posY <= mem[LY] + 0x10 && posY > mem[LY] + 0x8) {
                         unsigned posX = getSpriteX(oamEntry);
                         unsigned tileNo = getSpriteTileNo(oamEntry);
@@ -137,8 +136,8 @@ void PPU::render() {
                             rowNo = 7 - rowNo;
                         }
 
-                        unsigned char rowByte1 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2];
-                        unsigned char rowByte0 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2 + 1];
+                        unsigned char rowByte0 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2];
+                        unsigned char rowByte1 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2 + 1];
 
                         for (int j = 0; j < 8; j++) {
                             unsigned char scanIndex = (posX - 0x8) + j;
@@ -146,11 +145,11 @@ void PPU::render() {
                                 unsigned char bit1;
                                 unsigned char bit0;
                                 if (spriteFlipX(oamEntry)) {
-                                    bit0 = (rowByte1 >> j) & 0x1;
-                                    bit1 = (rowByte0 >> j) & 0x1;
+                                    bit0 = (rowByte0 >> j) & 0x1;
+                                    bit1 = (rowByte1 >> j) & 0x1;
                                 } else {
-                                    bit0 = (rowByte1 >> (7 - j)) & 0x1;
-                                    bit1 = (rowByte0 >> (7 - j)) & 0x1;
+                                    bit0 = (rowByte0 >> (7 - j)) & 0x1;
+                                    bit1 = (rowByte1 >> (7 - j)) & 0x1;
                                 }
                                 unsigned char pxVal = (bit1 << 1) | bit0;
                                 if (pxVal != 0) {
@@ -166,6 +165,12 @@ void PPU::render() {
                                 }
                             }
                         }
+                    }
+                } else {
+                    if (posY <= mem[LY] + 0x10 && posY > mem[LY]) {
+                        unsigned posX = getSpriteX(oamEntry);
+                        unsigned tileNo = getSpriteTileNo(oamEntry);
+                        unsigned rowNo = mem[LY] - (posY - 0x10);
                     }
                 }
             }

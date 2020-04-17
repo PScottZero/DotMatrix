@@ -3,7 +3,8 @@
 GBWidget::GBWidget(QWidget *parent)
     : QWidget(parent)
 {
-    setWindowTitle(tr("Dot Matrix v0.0.0"));
+    setWindowTitle(tr("Dot Matrix v0.1 alpha"));
+    setWindowIcon(QIcon(":/icons/dotmatrix.ico"));
     connect(this, SIGNAL(sendInput(Joypad, bool)), &gbthread, SLOT(processInput(Joypad, bool)));
     connect(&gbthread, SIGNAL(sendFrame(QImage)), this, SLOT(updateDisplay(QImage)));
     resize(640, 576);
