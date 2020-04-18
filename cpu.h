@@ -1,13 +1,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <iostream>
-#include <fstream>
-#include <unordered_map>
-
-using namespace std;
-
-constexpr auto BANK_SIZE = 0x4000;
+#include "mmu.h"
 
 // ================================
 // Registers
@@ -35,27 +29,6 @@ constexpr auto WITH_CARRY = true;
 constexpr auto NO_CARRY = false;
 
 // ================================
-// Special memory addresses
-// ================================
-constexpr auto BANK_TYPE = 0x147;
-constexpr auto WORK_RAM = 0xC000;
-constexpr auto ECHO_START = 0xE000;
-constexpr auto ECHO_END = 0xFE00;
-constexpr auto JOYPAD = 0xFF00;
-constexpr auto DIVIDER = 0xFF04;
-constexpr auto COUNTER = 0xFF05;
-constexpr auto MODULO = 0xFF06;
-constexpr auto TIMER_CONTROL = 0xFF07;
-constexpr auto DMA = 0xFF46;
-
-// ================================
-// OAM constants
-// ================================
-constexpr auto OAM_ADDR = 0xFE00;
-constexpr auto OAM_COUNT = 40;
-constexpr auto BYTES_PER_OAM = 4;
-
-// ================================
 // Timer constants
 // ================================
 constexpr auto DIVIDER_CYCLES = 64;
@@ -71,16 +44,6 @@ enum Control {
     JUMP, JUMP_REL, CALL, RETURN
 };
 
-enum Joypad {
-    RIGHT, LEFT, UP, DOWN,
-    START, SELECT, BUTTON_A, BUTTON_B
-};
-
-enum BankType {
-    NONE = 0x00,
-    MBC1 = 0x01, MBC1_RAM = 0x02, MBC1_BAT_RAM = 0x03,
-};
-
 class CPU
 {
 public:
@@ -92,24 +55,18 @@ public:
     unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, nullptr, &A };
     unsigned short PC, SP;
     bool zero, halfCarry, subtract, carry, IME;
-    unsigned char* mem;
-    char* cart;
     unsigned int clock;
     unsigned int clockPrev;
     unsigned int divider;
     unsigned int counter;
     bool halted;
-    unsigned char bankType;
-    unordered_map<Joypad, bool> joypad;
+    MMU *mmu;
 
     // ================================
     // Emulator functions
     // ================================
     CPU();
     void decode(unsigned char opcode);
-    void loadBootstrap();
-    void loadCartridge(const string& dir);
-    void loadBank(unsigned short bankNo);
     void step();
     void checkForInput();
     void incTimers();
@@ -117,14 +74,12 @@ public:
     // ================================
     // Memory access functions
     // ================================
-    unsigned char readMem(unsigned short addr);
-    void writeMem(unsigned short addr, unsigned char value);
     void pushRegPair(unsigned char regPair);
     void popRegPair(unsigned char regPair);
     void push(unsigned short value);
     unsigned short pop();
-    unsigned char getF();
-    unsigned short getRegPair(unsigned char regPair);
+    unsigned char getF() const;
+    unsigned short getRegPair(unsigned char regPair) const;
     unsigned char getImm8();
     unsigned short getImm16();
     void setF(unsigned char value);
@@ -175,11 +130,11 @@ public:
     // Interrupt functions
     // ================================
     void checkForInt();
-    bool vblankIntTriggered();
-    bool lcdIntTriggered();
-    bool timerIntTriggered();
-    bool serialIntTriggered();
-    bool joypadIntTriggered();
+    bool vblankIntTriggered() const;
+    bool lcdIntTriggered() const;
+    bool timerIntTriggered() const;
+    bool serialIntTriggered() const;
+    bool joypadIntTriggered() const;
 };
 
 #endif // CPU_H

@@ -8,17 +8,19 @@ GBThread::GBThread(QObject *parent) : QThread(parent)
     emitted = false;
 }
 
-GBThread::~GBThread() = default;
+GBThread::~GBThread() {
+    delete[] cpu.mmu->mem;
+    delete[] cpu.mmu->cart;
+};
 
 void GBThread::run() {
     QImage frame(160, 144, QImage::Format_RGB32);
-    PPU ppu(cpu.mem, &cpu.clock, &frame);
+    PPU ppu(cpu.mmu->mem, &cpu.clock, &frame);
 
-    cpu.loadBootstrap();
-    cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
-//    cpu.loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
+//    cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
+    cpu.mmu->loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
 
-    auto cycleStart = chrono::system_clock::now();
+    auto cycleStart = std::chrono::system_clock::now();
 
     bool decoding = false;
 
@@ -29,26 +31,26 @@ void GBThread::run() {
         ppu.step();
 
         // send frame to widget
-        if (cpu.mem[LY] > 143 && !emitted) {
+        if (cpu.mmu->mem[LY] > 143 && !emitted) {
             emitted = true;
             if (!ppu.lcdDisplayEnable()) {
                 frame.fill(0xFFFFFF);
             }
             emit sendFrame(frame);
-            auto nextCycle = cycleStart + chrono::milliseconds(16);
-            this_thread::sleep_until(nextCycle);
-            cycleStart = chrono::system_clock::now();
-        } else if (cpu.mem[LY] <= 143) {
+            auto nextCycle = cycleStart + std::chrono::milliseconds(16);
+            std::this_thread::sleep_until(nextCycle);
+            cycleStart = std::chrono::system_clock::now();
+        } else if (cpu.mmu->mem[LY] <= 143) {
             emitted = false;
         }
     }
 }
 
 void GBThread::processInput(Joypad button, bool pressed) {
-    bool oldState = cpu.joypad[button];
-    cpu.joypad[button] = pressed;
-    if (!oldState && cpu.joypad[button]) {
-        cpu.mem[IF] |= 0x10;
+    bool oldState = cpu.mmu->joypad[button];
+    cpu.mmu->joypad[button] = pressed;
+    if (!oldState && cpu.mmu->joypad[button]) {
+        cpu.mmu->mem[IF] |= 0x10;
     }
 }
 

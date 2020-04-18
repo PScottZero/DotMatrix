@@ -101,37 +101,37 @@ public:
     PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
     void render();
-    uint getPixelColor(unsigned char value, unsigned short mapAddr);
-    void setMode(Mode m);
+    uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
+    void setMode(Mode m) const;
 
     // ================================
     // LCD control functions
     // ================================
-    int lcdDisplayEnable();
-    int windowMapSelect();
-    int windowDisplayEnable();
-    int bgWinDataSelect();
-    int bgMapSelect();
-    int spriteSize();
-    int spriteEnable();
-    int bgDisplayEnable();
+    int lcdDisplayEnable() const;
+    int windowMapSelect() const;
+    int windowDisplayEnable() const;
+    int bgWinDataSelect() const;
+    int bgMapSelect() const;
+    int spriteSize() const;
+    int spriteEnable() const;
+    int bgDisplayEnable() const;
 
     // ================================
     // OAM functions
     // ================================
-    unsigned char getSpriteY(int oamAddr);
-    unsigned char getSpriteX(int oamAddr);
-    unsigned char getSpriteTileNo(int oamEntry);
-    bool spriteBehindBG(int oamEntry);
-    bool spriteFlipY(int oamEntry);
-    bool spriteFlipX(int oamEntry);
-    bool getSpritePalette(int oamEntry);
+    unsigned char getSpriteY(int oamAddr) const;
+    unsigned char getSpriteX(int oamAddr) const;
+    unsigned char getSpriteTileNo(int oamEntry) const;
+    bool spriteBehindBG(int oamEntry) const;
+    bool spriteFlipY(int oamEntry) const;
+    bool spriteFlipX(int oamEntry) const;
+    bool getSpritePalette(int oamEntry) const;
 
     // ================================
     // Interrupt functions
     // ================================
-    void triggerVBlankInt();
-    void setLcdInt();
+    void triggerVBlankInt() const;
+    void setLcdInt() const;
 };
 
 #endif // PPU_H

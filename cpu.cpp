@@ -1,91 +1,54 @@
-#include <QtCore/qlogging.h>
 #include "cpu.h"
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
 
 // ================================
 // Initialize cpu data
 // ================================
 CPU::CPU() {
-    A = B = C = D = E = H = L = PC = 0;
+    A = H = 0x01;
+    B = D = 0x00;
+    C = 0x13;
+    E = 0xD8;
+    L = 0x4D;
+    PC = 0x100;
     SP = 0xFFFE;
-    zero = halfCarry = subtract = carry = false;
+    zero = halfCarry = carry = true;
+    subtract = false;
     IME = false;
     halted = false;
-    mem = new unsigned char[0x10000];
-    cart = new char[0x200000];
     clock = 0;
     clockPrev = 0;
     divider = 0;
     counter = 0;
-    bankType = 0;
+    mmu = new MMU();
 }
 
 // ================================
-// Load cartridge data into memory
-// ================================
-void CPU::loadCartridge(const string& dir) {
-
-    // read cartridge
-    ifstream cartridge (dir, ios::in | ios::binary);
-    cartridge.read(cart, 0x200000);
-
-    // put first 32kb of rom into ram
-    for (unsigned short i = 0x100; i < 0x8000; i++) {
-        mem[i] = (unsigned char)cart[i];
-    }
-}
-
-void CPU::loadBank(unsigned short bankNo) {
-    if (bankNo == 0x00 || bankNo == 0x20 ||
-        bankNo == 0x40 || bankNo == 0x60) {
-        bankNo++;
-    }
-    unsigned int bankAddr = bankNo * BANK_SIZE;
-    for (unsigned int i = 0; i < BANK_SIZE; i++) {
-        mem[BANK_SIZE + i] = cart[bankAddr + i];
-    }
-}
-
-// ================================
-// Load Game Boy bootstrap
-// ================================
-void CPU::loadBootstrap() {
-    char buffer[0x100];
-    ifstream bootstrap ("D:/Roms/GB/bootstrap.bin", ios::in | ios::binary);
-//    ifstream bootstrap ("/Users/pscott/Documents/GB/bootstrap.bin", ios::in | ios::binary);
-    bootstrap.read(buffer, 0x100);
-    unsigned short index = 0;
-    for (char byte : buffer) {
-        mem[index] = byte;
-        index++;
-    }
-}
-
-// ================================
-// Run emulator
+// Step through emulator cycle
 // ================================
 void CPU::step() {
-    if (PC == 0x100) {
-        for (int i = 0; i < 0x100; i++) {
-            mem[i] = cart[i];
-        }
-    }
     checkForInt();
     if (!halted) {
-        decode(mem[PC]);
+        decode(mmu->mem[PC]);
     }
     incTimers();
 }
 
+// ================================
+// Increment timers
+// ================================
 void CPU::incTimers() {
     divider += (clock - clockPrev);
     if (divider >= DIVIDER_CYCLES) {
-        mem[DIVIDER]++;
+        mmu->mem[DIVIDER]++;
         divider %= DIVIDER_CYCLES;
     }
 
-    if (mem[TIMER_CONTROL] & 0x4) {
+    if (mmu->mem[TIMER_CONTROL] & 0x4) {
         int counterMod = 0;
-        switch (mem[TIMER_CONTROL] & 0b11) {
+        switch (mmu->mem[TIMER_CONTROL] & 0b11) {
             case 0b00:
                 counterMod = COUNTER_CYCLES_0;
                 break;
@@ -102,15 +65,15 @@ void CPU::incTimers() {
 
         counter += (clock - clockPrev);
         if (counter >= counterMod) {
-            mem[COUNTER]++;
+            mmu->mem[COUNTER]++;
             counter %= counterMod;
         }
 
-        if (mem[COUNTER] == 0) {
-            mem[COUNTER] = mem[MODULO];
-            mem[IF] |= 0x04;
+        if (mmu->mem[COUNTER] == 0) {
+            mmu->mem[COUNTER] = mmu->mem[MODULO];
+            mmu->mem[IF] |= 0x04;
         } else {
-            mem[IF] &= 0xFB;
+            mmu->mem[IF] &= 0xFB;
         }
     }
 }
@@ -122,19 +85,19 @@ void CPU::decode(unsigned char opcode) {
     clockPrev = clock;
 
     // values for single byte opcodes
-    unsigned char upperTwo = (unsigned char)(opcode >> 6u) & 0b11u;
-    unsigned char bitFive = (unsigned char)(opcode >> 5u) & 1u;
-    unsigned char cond = (unsigned char)(opcode >> 3u) & 0b11u;
-    unsigned char regDest = (unsigned char)(opcode >> 3u) & 0b111u;
-    unsigned char regSrc = opcode & 0b111u;
-    unsigned char lo = opcode & 0xFu;
-    unsigned char regPair = (unsigned char)(opcode >> 4u) & 0b11u;
+    unsigned char upperTwo = (opcode >> 6) & 0b11;
+    unsigned char bitFive = (opcode >> 5) & 0x1;
+    unsigned char cond = (opcode >> 3) & 0b11;
+    unsigned char regDest = (opcode >> 3) & 0b111;
+    unsigned char regSrc = opcode & 0b111;
+    unsigned char lo = opcode & 0xF;
+    unsigned char regPair = (opcode >> 4) & 0b11;
 
     // values for cb prefix opcode
-    unsigned char imm8 = mem[PC + 1];
-    unsigned char upperTwoCB = (unsigned char)(imm8 >> 6u) & 0b11u;
-    unsigned char regDestCB = (unsigned char)(imm8 >> 3u) & 0b111u;
-    unsigned char regSrcCB = imm8 & 0b111u;
+    unsigned char imm8 = mmu->mem[PC + 1];
+    unsigned char upperTwoCB = (imm8 >> 6) & 0b11;
+    unsigned char regDestCB = (imm8 >> 3) & 0b111;
+    unsigned char regSrcCB = imm8 & 0b111;
 
     // ======================================================================================
     // ---------------------------- OPCODES IN NON-GENERAL FORM -----------------------------
@@ -144,63 +107,63 @@ void CPU::decode(unsigned char opcode) {
         // LD A, (BC)
         // Load memory at address BC into register A
         case 0x0A:
-            A = readMem(getRegPair(BC));
+            A = mmu->read(getRegPair(BC));
             clock += 2;
             break;
 
         // LD A, (DE)
         // Load memory at address DE into register A
         case 0x1A:
-            A = readMem(getRegPair(DE));
+            A = mmu->read(getRegPair(DE));
             clock += 2;
             break;
 
         // LD A, (C)
         // Load memory at address 0xFF00 + [register C] into register A
         case 0xF2:
-            A = readMem(0xFF00 + C);
+            A = mmu->read(0xFF00 + C);
             clock += 2;
             break;
 
         // LD (C), A
         // Load register A into memory at address 0xFF00 + [register C]
         case 0xE2:
-            writeMem(0xFF00 + C, A);
+            mmu->write(0xFF00 + C, A);
             clock += 2;
             break;
 
         // LD A, (n)
         // Load memory at address 0xFF00 + [8-bit immediate n] into register A
         case 0xF0:
-            A = readMem(0xFF00 + getImm8());
+            A = mmu->read(0xFF00 + getImm8());
             clock += 3;
             break;
 
         // LD (n), A
         // Load register A into memory at address 0xFF00 + [8-bit immediate n]
         case 0xE0:
-            writeMem(0xFF00 + getImm8(), A);
+            mmu->write(0xFF00 + getImm8(), A);
             clock += 3;
             break;
 
         // LD A, (nn)
         // Load memory at address specified by 16-bit immediate nn into register A
         case 0xFA:
-            A = readMem(getImm16());
+            A = mmu->read(getImm16());
             clock += 4;
             break;
 
         // LD (nn), A
         // Load register A into memory at address specified by 16-bit immediate nn
         case 0xEA:
-            writeMem(getImm16(), A);
+            mmu->write(getImm16(), A);
             clock += 4;
             break;
 
         // LD A, (HLI)
         // Load memory at address HL into register A, then increment HL
         case 0x2A:
-            A = readMem(getRegPair(HL));
+            A = mmu->read(getRegPair(HL));
             setRegPair(HL, getRegPair(HL) + 1);
             clock += 2;
             break;
@@ -208,7 +171,7 @@ void CPU::decode(unsigned char opcode) {
         // LD A, (HLD)
         // Load memory at address HL into register A, then decrement HL
         case 0x3A:
-            A = readMem(getRegPair(HL));
+            A = mmu->read(getRegPair(HL));
             setRegPair(HL, getRegPair(HL) - 1);
             clock += 2;
             break;
@@ -216,21 +179,21 @@ void CPU::decode(unsigned char opcode) {
         // LD (BC), A
         // Load register A into memory at address BC
         case 0x02:
-            writeMem(getRegPair(BC), A);
+            mmu->write(getRegPair(BC), A);
             clock += 2;
             break;
 
         // LD (DE), A
         // Load register A into memory at address DE
         case 0x12:
-            writeMem(getRegPair(DE), A);
+            mmu->write(getRegPair(DE), A);
             clock += 2;
             break;
 
         // LD (HLI), A
         // Load register A into memory at address HL, then increment HL
         case 0x22:
-            writeMem(getRegPair(HL), A);
+            mmu->write(getRegPair(HL), A);
             setRegPair(HL, getRegPair(HL) + 1);
             clock += 2;
             break;
@@ -238,7 +201,7 @@ void CPU::decode(unsigned char opcode) {
         // LD (HLD), A
         // Load register A into memory at address HL, then decrement HL
         case 0x32:
-            writeMem(getRegPair(HL), A);
+            mmu->write(getRegPair(HL), A);
             setRegPair(HL, getRegPair(HL) - 1);
             clock += 2;
             break;
@@ -521,7 +484,7 @@ void CPU::decode(unsigned char opcode) {
                         // Rotate register r to the left
                         case 0b000:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), rotateLeft(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), rotateLeft(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateLeft(*(regArr[regSrcCB]));
@@ -533,7 +496,7 @@ void CPU::decode(unsigned char opcode) {
                         // Rotate register r to the right
                         case 0b001:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), rotateRight(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), rotateRight(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
@@ -545,7 +508,7 @@ void CPU::decode(unsigned char opcode) {
                         // Rotate register r to the left through carry flag
                         case 0b010:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), rotateLeftCarry(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), rotateLeftCarry(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateLeftCarry(*(regArr[regSrcCB]));
@@ -557,7 +520,7 @@ void CPU::decode(unsigned char opcode) {
                         // Rotate register r to the right through carry flag
                         case 0b011:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), rotateRightCarry(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), rotateRightCarry(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateRightCarry(*(regArr[regSrcCB]));
@@ -569,7 +532,7 @@ void CPU::decode(unsigned char opcode) {
                         // Shift register r to the left
                         case 0b100:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), shiftLeft(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), shiftLeft(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftLeft(*(regArr[regSrcCB]));
@@ -581,7 +544,7 @@ void CPU::decode(unsigned char opcode) {
                         // Shift register r to the right
                         case 0b101:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), shiftRightArithmetic(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), shiftRightArithmetic(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftRightArithmetic(*(regArr[regSrcCB]));
@@ -593,7 +556,7 @@ void CPU::decode(unsigned char opcode) {
                         // Swap upper and lower nibbles of register r
                         case 0b110:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), swap(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), swap(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = swap(*(regArr[regSrcCB]));
@@ -605,7 +568,7 @@ void CPU::decode(unsigned char opcode) {
                         // Shift register r to the right logically
                         case 0b111:
                             if (regSrcCB == MEM) {
-                                writeMem(getRegPair(HL), shiftRightLogical(readMem(getRegPair(HL))));
+                                mmu->write(getRegPair(HL), shiftRightLogical(mmu->read(getRegPair(HL))));
                                 clock += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftRightLogical(*(regArr[regSrcCB]));
@@ -626,7 +589,7 @@ void CPU::decode(unsigned char opcode) {
                     // BIT b, (HL)
                     // Copies complement of specified bit b of memory at HL to Z flag
                     if (regSrcCB == MEM) {
-                        compBitToZero(readMem(getRegPair(HL)), regDestCB);
+                        compBitToZero(mmu->read(getRegPair(HL)), regDestCB);
                         clock += 3;
                     }
 
@@ -646,7 +609,7 @@ void CPU::decode(unsigned char opcode) {
                     // RES b, (HL)
                     // Reset bit b in memory at HL to 0
                     if (regSrcCB == MEM) {
-                        writeMem(getRegPair(HL), resetBit(readMem(getRegPair(HL)), regDestCB));
+                        mmu->write(getRegPair(HL), resetBit(mmu->read(getRegPair(HL)), regDestCB));
                         clock += 4;
                     }
 
@@ -666,7 +629,7 @@ void CPU::decode(unsigned char opcode) {
                     // SET b, (HL)
                     // Sets bit b in memory at HL to 1
                     if (regSrcCB == MEM) {
-                        writeMem(getRegPair(HL), setBit(readMem(getRegPair(HL)), regDestCB));
+                        mmu->write(getRegPair(HL), setBit(mmu->read(getRegPair(HL)), regDestCB));
                         clock += 4;
                     }
 
@@ -713,7 +676,7 @@ void CPU::decode(unsigned char opcode) {
                 // Increment register r
                 case 0b100:
                     if (regDest == MEM) {
-                        writeMem(getRegPair(HL), inc(readMem(getRegPair(HL))));
+                        mmu->write(getRegPair(HL), inc(mmu->read(getRegPair(HL))));
                         clock += 3;
                     } else {
                         *(regArr[regDest]) = inc(*(regArr[regDest]));
@@ -725,7 +688,7 @@ void CPU::decode(unsigned char opcode) {
                 // Decrement register r
                 case 0b101:
                     if (regDest == MEM) {
-                        writeMem(getRegPair(HL), dec(readMem(getRegPair(HL))));
+                        mmu->write(getRegPair(HL), dec(mmu->read(getRegPair(HL))));
                         clock += 3;
                     } else {
                         *(regArr[regDest]) = dec(*(regArr[regDest]));
@@ -737,7 +700,7 @@ void CPU::decode(unsigned char opcode) {
                 // Load 8-bit immediate n into register r
                 case 0b110:
                     if (regDest == MEM) {
-                        writeMem(getRegPair(HL), getImm8());
+                        mmu->write(getRegPair(HL), getImm8());
                         clock += 3;
                     } else {
                         *regArr[regDest] = getImm8();
@@ -800,7 +763,7 @@ void CPU::decode(unsigned char opcode) {
                 // LD r, (HL)
                 // Load memory at register pair HL into register r
                 else {
-                    *(regArr[regDest]) = readMem(getRegPair(HL));
+                    *(regArr[regDest]) = mmu->read(getRegPair(HL));
                     clock += 2;
                 }
             }
@@ -809,7 +772,7 @@ void CPU::decode(unsigned char opcode) {
             // Load contents of register r into memory location
             // specified by register pair HL
             else if (regDest == MEM) {
-                writeMem(getRegPair(HL), *(regArr[regSrc]));
+                mmu->write(getRegPair(HL), *(regArr[regSrc]));
                 clock += 2;
             }
 
@@ -832,7 +795,7 @@ void CPU::decode(unsigned char opcode) {
                 // Add register r to register A and store result in A
                 case 0b000:
                     if (regSrc == MEM) {
-                        A = add(A, readMem(getRegPair(HL)), NO_CARRY);
+                        A = add(A, mmu->read(getRegPair(HL)), NO_CARRY);
                         clock += 2;
                         break;
                     } else {
@@ -846,7 +809,7 @@ void CPU::decode(unsigned char opcode) {
                 // and store result in A
                 case 0b001:
                     if (regSrc == MEM) {
-                        A = add(A, readMem(getRegPair(HL)), WITH_CARRY);
+                        A = add(A, mmu->read(getRegPair(HL)), WITH_CARRY);
                         clock += 2;
                     } else {
                         A = add(A, *(regArr[regSrc]), WITH_CARRY);
@@ -858,7 +821,7 @@ void CPU::decode(unsigned char opcode) {
                 // Subtract register r from register A and store result in A
                 case 0b010:
                     if (regSrc == MEM) {
-                        A = sub(A, readMem(getRegPair(HL)), NO_CARRY);
+                        A = sub(A, mmu->read(getRegPair(HL)), NO_CARRY);
                         clock += 2;
                     } else {
                         A = sub(A, *(regArr[regSrc]), NO_CARRY);
@@ -871,7 +834,7 @@ void CPU::decode(unsigned char opcode) {
                 // register A and store result in A
                 case 0b011:
                     if (regSrc == MEM) {
-                        A = sub(A, readMem(getRegPair(HL)), WITH_CARRY);
+                        A = sub(A, mmu->read(getRegPair(HL)), WITH_CARRY);
                         clock += 2;
                     } else {
                         A = sub(A, *(regArr[regSrc]), WITH_CARRY);
@@ -883,7 +846,7 @@ void CPU::decode(unsigned char opcode) {
                 // And register A and register r together and store result in A
                 case 0b100:
                     if (regSrc == MEM) {
-                        A = bitAnd(A, readMem(getRegPair(HL)));
+                        A = bitAnd(A, mmu->read(getRegPair(HL)));
                         clock += 2;
                     } else {
                         A = bitAnd(A, *(regArr[regSrc]));
@@ -895,7 +858,7 @@ void CPU::decode(unsigned char opcode) {
                 // Xor register A and register r together and store result in A
                 case 0b101:
                     if (regSrc == MEM) {
-                        A = bitXor(A, readMem(getRegPair(HL)));
+                        A = bitXor(A, mmu->read(getRegPair(HL)));
                         clock += 2;
                     } else {
                         A = bitXor(A, *(regArr[regSrc]));
@@ -907,7 +870,7 @@ void CPU::decode(unsigned char opcode) {
                 // Or register A and register r together and store result in A
                 case 0b110:
                     if (regSrc == MEM) {
-                        A = bitOr(A, readMem(getRegPair(HL)));
+                        A = bitOr(A, mmu->read(getRegPair(HL)));
                         clock += 2;
                     } else {
                         A = bitOr(A, *(regArr[regSrc]));
@@ -919,7 +882,7 @@ void CPU::decode(unsigned char opcode) {
                 // Compare register A and register R
                 case 0b111:
                     if (regSrc == MEM) {
-                        sub(A, readMem(getRegPair(HL)), NO_CARRY);
+                        sub(A, mmu->read(getRegPair(HL)), NO_CARRY);
                         clock += 2;
                     } else {
                         sub(A, *(regArr[regSrc]), NO_CARRY);
@@ -973,110 +936,11 @@ void CPU::decode(unsigned char opcode) {
     PC++;
 }
 
-void CPU::checkForInput() {
-    mem[JOYPAD] |= 0xCFu;
-    if ((((unsigned char)(mem[JOYPAD] >> 4) & 0x1) == 0) || ((mem[JOYPAD] & 0x30) == 0x30)) {
-        if (joypad[RIGHT]) {
-            mem[JOYPAD] &= 0xFE;
-        } else {
-            mem[JOYPAD] |= 0x1;
-        }
-
-        if (joypad[LEFT]) {
-            mem[JOYPAD] &= 0xFD;
-        } else {
-            mem[JOYPAD] |= 0x2;
-        }
-
-        if (joypad[UP]) {
-            mem[JOYPAD] &= 0xFB;
-        } else {
-            mem[JOYPAD] |= 0x4;
-        }
-
-        if (joypad[DOWN]) {
-            mem[JOYPAD] &= 0xF7;
-        } else {
-            mem[JOYPAD] |= 0x8;
-        }
-    } else if (((unsigned char)(mem[JOYPAD] >> 5) & 0x1) == 0) {
-        if (joypad[BUTTON_A]) {
-            mem[JOYPAD] &= 0xFE;
-        } else {
-            mem[JOYPAD] |= 0x1;
-        }
-
-        if (joypad[BUTTON_B]) {
-            mem[JOYPAD] &= 0xFD;
-        } else {
-            mem[JOYPAD] |= 0x2;
-        }
-
-        if (joypad[SELECT]) {
-            mem[JOYPAD] &= 0xFB;
-        } else {
-            mem[JOYPAD] |= 0x4;
-        }
-
-        if (joypad[START]) {
-            mem[JOYPAD] &= 0xF7;
-        } else {
-            mem[JOYPAD] |= 0x8;
-        }
-    }
-}
-
 
 
 // ======================================================================================
 // ------------------------------ MEMORY ACCESS FUNCTIONS -------------------------------
 // ======================================================================================
-
-// ================================
-// Read from memory
-// ================================
-unsigned char CPU::readMem(unsigned short addr) {
-    return mem[addr];
-}
-
-// ================================
-// Write to memory
-// ================================
-void CPU::writeMem(unsigned short addr, unsigned char value) {
-
-    // load bank
-    if (addr >= 0x2000 && addr < 0x4000) {
-        loadBank(value & 0x1F);
-    }
-
-    // perform dma transfer
-    if (addr == DMA) {
-        unsigned short oamDataAddr = value << 8;
-        for (int i = 0; i < OAM_COUNT * BYTES_PER_OAM; i++) {
-            writeMem(OAM_ADDR + i, readMem(oamDataAddr + i));
-        }
-    }
-
-    // echo ram
-    else if (addr >= ECHO_START && addr < ECHO_END) {
-        mem[WORK_RAM + addr - ECHO_START] = value;
-    }
-
-    // reset timer
-    else if (addr == DIVIDER) {
-        value = 0;
-    }
-
-    // write value to address
-    if (addr > 0x7FFF) {
-        mem[addr] = value;
-    }
-
-    // check for joypad input
-    if (addr == JOYPAD) {
-        checkForInput();
-    }
-}
 
 // ================================
 // Push given register pair
@@ -1117,7 +981,7 @@ void CPU::setF(unsigned char value) {
 // ================================
 // Return flag register
 // ================================
-unsigned char CPU::getF() {
+unsigned char CPU::getF() const {
     return (zero << 7) | (subtract << 6) | (halfCarry << 5) | (carry << 4);
 }
 
@@ -1125,15 +989,15 @@ unsigned char CPU::getF() {
 // Return 8-bit immediate value
 // ================================
 unsigned char CPU::getImm8() {
-    return readMem(++PC);
+    return mmu->read(++PC);
 }
 
 // ================================
 // Return 16-bit immediate value
 // ================================
 unsigned short CPU::getImm16() {
-    unsigned short imm16 = readMem(++PC);
-    return imm16 | (readMem(++PC) << 8);
+    unsigned short imm16 = mmu->read(++PC);
+    return imm16 | (mmu->read(++PC) << 8);
 }
 
 // ================================
@@ -1165,7 +1029,7 @@ void CPU::setRegPair(unsigned char regPair, unsigned short value) {
 // ================================
 // Return specified register pair
 // ================================
-unsigned short CPU::getRegPair(unsigned char regPair) {
+unsigned short CPU::getRegPair(unsigned char regPair) const {
     switch (regPair) {
         case BC:
             return (B << 8) | C;
@@ -1185,16 +1049,16 @@ unsigned short CPU::getRegPair(unsigned char regPair) {
 // Push value onto stack
 // ================================
 void CPU::push(unsigned short value) {
-    writeMem(--SP, value >> 8);
-    writeMem(--SP, value);
+    mmu->write(--SP, value >> 8);
+    mmu->write(--SP, value);
 }
 
 // ================================
 // Pop value from stack
 // ================================
 unsigned short CPU::pop() {
-    unsigned char lo = readMem(SP++);
-    return (readMem(SP++) << 8) | lo;
+    unsigned char lo = mmu->read(SP++);
+    return (mmu->read(SP++) << 8) | lo;
 }
 
 // ================================
@@ -1212,8 +1076,8 @@ void CPU::setFlags(bool zeroCond, bool halfCond, bool subCond, bool carryCond) {
 // ================================
 void CPU::saveSP() {
     unsigned short imm16 = getImm16();
-    writeMem(imm16, SP);
-    writeMem(imm16 + 1, SP >> 8);
+    mmu->write(imm16, SP);
+    mmu->write(imm16 + 1, SP >> 8);
 }
 
 
@@ -1536,7 +1400,7 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 // ======================================================================================
 
 void CPU::checkForInt() {
-    if (halted && (mem[IF] & mem[IE]) != 0) {
+    if (halted && (mmu->mem[IF] & mmu->mem[IE]) != 0) {
         halted = false;
     }
 
@@ -1545,19 +1409,19 @@ void CPU::checkForInt() {
 
         if (vblankIntTriggered()) {
             intAddr = 0x40;
-            mem[IF] &= 0xFE;
+            mmu->mem[IF] &= 0xFE;
         } else if (lcdIntTriggered()) {
             intAddr = 0x48;
-            mem[IF] &= 0xFD;
+            mmu->mem[IF] &= 0xFD;
         } else if (timerIntTriggered()) {
             intAddr = 0x50;
-            mem[IF] &= 0xFB;
+            mmu->mem[IF] &= 0xFB;
         } else if (serialIntTriggered()) {
             intAddr = 0x58;
-            mem[IF] &= 0xF7;
+            mmu->mem[IF] &= 0xF7;
         } else if (joypadIntTriggered()) {
             intAddr = 0x60;
-            mem[IF] &= 0xEF;
+            mmu->mem[IF] &= 0xEF;
         }
 
         if (intAddr != 0) {
@@ -1569,22 +1433,24 @@ void CPU::checkForInt() {
     }
 }
 
-bool CPU::vblankIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x01;
+bool CPU::vblankIntTriggered() const {
+    return (mmu->mem[IE] & mmu->mem[IF]) & 0x01;
 }
 
-bool CPU::lcdIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x02;
+bool CPU::lcdIntTriggered() const {
+    return (mmu->mem[IE] & mmu->mem[IF]) & 0x02;
 }
 
-bool CPU::timerIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x04;
+bool CPU::timerIntTriggered() const {
+    return (mmu->mem[IE] & mmu->mem[IF]) & 0x04;
 }
 
-bool CPU::serialIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x08;
+bool CPU::serialIntTriggered() const {
+    return (mmu->mem[IE] & mmu->mem[IF]) & 0x08;
 }
 
-bool CPU::joypadIntTriggered() {
-    return (mem[IE] & mem[IF]) & 0x10;
+bool CPU::joypadIntTriggered() const {
+    return (mmu->mem[IE] & mmu->mem[IF]) & 0x10;
 }
+
+#pragma clang diagnostic pop

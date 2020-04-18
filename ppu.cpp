@@ -57,7 +57,7 @@ void PPU::step() {
     }
 }
 
-void PPU::setMode(Mode m) {
+void PPU::setMode(Mode m) const {
     mem[LCD_STAT] &= 0xFC;
     mem[LCD_STAT] |= (unsigned char)m;
 }
@@ -193,7 +193,7 @@ void PPU::render() {
 // Get pixel color based on
 // palette map
 // ================================
-uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) {
+uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) const {
     unsigned char color = 0;
 
     // get map of color value
@@ -236,35 +236,35 @@ uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) {
 // ------------------------------ LCD CONTROL FUNCTIONS ---------------------------------
 // ======================================================================================
 
-int PPU::lcdDisplayEnable() {
+int PPU::lcdDisplayEnable() const {
     return (mem[LCDC] >> 7) & 1;
 }
 
-int PPU::windowMapSelect() {
+int PPU::windowMapSelect() const {
     return (mem[LCDC] >> 6) & 1;
 }
 
-int PPU::windowDisplayEnable() {
+int PPU::windowDisplayEnable() const {
     return (mem[LCDC] >> 5) & 1;
 }
 
-int PPU::bgWinDataSelect() {
+int PPU::bgWinDataSelect() const {
     return (mem[LCDC] >> 4) & 1;
 }
 
-int PPU::bgMapSelect() {
+int PPU::bgMapSelect() const {
     return (mem[LCDC] >> 3) & 1;
 }
 
-int PPU::spriteSize() {
+int PPU::spriteSize() const {
     return (mem[LCDC] >> 2) & 1;
 }
 
-int PPU::spriteEnable() {
+int PPU::spriteEnable() const {
     return (mem[LCDC] >> 1) & 1;
 }
 
-int PPU::bgDisplayEnable() {
+int PPU::bgDisplayEnable() const {
     return mem[LCDC] & 1;
 }
 
@@ -274,31 +274,31 @@ int PPU::bgDisplayEnable() {
 // ---------------------------------- OAM FUNCTIONS -------------------------------------
 // ======================================================================================
 
-unsigned char PPU::getSpriteY(int oamEntry) {
+unsigned char PPU::getSpriteY(int oamEntry) const {
     return mem[OAM_ADDR + 4 * oamEntry];
 }
 
-unsigned char PPU::getSpriteX(int oamEntry) {
+unsigned char PPU::getSpriteX(int oamEntry) const {
     return mem[OAM_ADDR + 4 * oamEntry + 1];
 }
 
-unsigned char PPU::getSpriteTileNo(int oamEntry) {
+unsigned char PPU::getSpriteTileNo(int oamEntry) const {
     return mem[OAM_ADDR + 4 * oamEntry + 2];
 }
 
-bool PPU::spriteBehindBG(int oamEntry) {
+bool PPU::spriteBehindBG(int oamEntry) const {
     return (mem[OAM_ADDR + 4 * oamEntry + 3] >> 7) & 1;
 }
 
-bool PPU::spriteFlipY(int oamEntry) {
+bool PPU::spriteFlipY(int oamEntry) const {
     return (mem[OAM_ADDR + 4 * oamEntry + 3] >> 6) & 1;
 }
 
-bool PPU::spriteFlipX(int oamEntry) {
+bool PPU::spriteFlipX(int oamEntry) const {
     return (mem[OAM_ADDR + 4 * oamEntry + 3] >> 5) & 1;
 }
 
-bool PPU::getSpritePalette(int oamEntry) {
+bool PPU::getSpritePalette(int oamEntry) const {
     return (mem[OAM_ADDR + 4 * oamEntry + 3] >> 4) & 1;
 }
 
@@ -308,7 +308,7 @@ bool PPU::getSpritePalette(int oamEntry) {
 // ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
 // ======================================================================================
 
-void PPU::setLcdInt() {
+void PPU::setLcdInt() const {
     if (((mem[LY] == mem[LY_COMP]) && (mem[LCD_STAT] & 0x40)) ||
         (((mem[LCD_STAT] & 0x03) == 0) && (mem[LCD_STAT] & 0x08)) ||
         (((mem[LCD_STAT] & 0x03) == 2) && (mem[LCD_STAT] & 0x20)) ||
@@ -317,7 +317,7 @@ void PPU::setLcdInt() {
     }
 }
 
-void PPU::triggerVBlankInt() {
+void PPU::triggerVBlankInt() const {
     mem[IF] |= 0b01;
 }
 
