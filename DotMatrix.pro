@@ -19,24 +19,25 @@ HEADERS += \
     cpu.h \
     gbthread.h \
     gbwidget.h \
-    ppu.h
+    ppu.h \
+    mmu.h \
+    dmwindow.h
 
 SOURCES += \
     cpu.cpp \
     gbthread.cpp \
     gbwidget.cpp \
     main.cpp \
-    ppu.cpp
+    ppu.cpp \
+    mmu.cpp \
+    dmwindow.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-RC_ICONS = dotmatrix.ico
-
-DISTFILES += \
-    dotmatrix.ico
+RC_ICONS = img/dm_icon.ico
 
 RESOURCES += \
-    resources.qrc
+    resource.qrc

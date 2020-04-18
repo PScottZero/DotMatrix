@@ -51,13 +51,6 @@ constexpr auto WINDOW_Y = 0xFF4A;
 constexpr auto WINDOW_X = 0xFF4B;
 
 // ================================
-// Pixel type
-// ================================
-enum PixelType {
-    BACKGROUND, WINDOW, SPRITE
-};
-
-// ================================
 // Screen timing
 // ================================
 constexpr auto SCANLINE = 114;
@@ -71,15 +64,6 @@ enum Mode {
     MODE_1 = 0b01,
     MODE_2 = 0b10,
     MODE_3 = 0b11,
-};
-
-// ================================
-// Pixel structure
-// ================================
-struct pixel {
-    unsigned char value;
-    unsigned char palette;
-    PixelType type;
 };
 
 class PPU {
@@ -101,31 +85,31 @@ public:
     PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
     void render();
-    uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
+    [[nodiscard]] uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
     void setMode(Mode m) const;
 
     // ================================
     // LCD control functions
     // ================================
-    int lcdDisplayEnable() const;
-    int windowMapSelect() const;
-    int windowDisplayEnable() const;
-    int bgWinDataSelect() const;
-    int bgMapSelect() const;
-    int spriteSize() const;
-    int spriteEnable() const;
-    int bgDisplayEnable() const;
+    [[nodiscard]] int lcdDisplayEnable() const;
+    [[nodiscard]] int windowMapSelect() const;
+    [[nodiscard]] int windowDisplayEnable() const;
+    [[nodiscard]] int bgWinDataSelect() const;
+    [[nodiscard]] int bgMapSelect() const;
+    [[nodiscard]] int spriteSize() const;
+    [[nodiscard]] int spriteEnable() const;
+    [[nodiscard]] int bgDisplayEnable() const;
 
     // ================================
     // OAM functions
     // ================================
-    unsigned char getSpriteY(int oamAddr) const;
-    unsigned char getSpriteX(int oamAddr) const;
-    unsigned char getSpriteTileNo(int oamEntry) const;
-    bool spriteBehindBG(int oamEntry) const;
-    bool spriteFlipY(int oamEntry) const;
-    bool spriteFlipX(int oamEntry) const;
-    bool getSpritePalette(int oamEntry) const;
+    [[nodiscard]] unsigned char getSpriteY(int oamAddr) const;
+    [[nodiscard]] unsigned char getSpriteX(int oamAddr) const;
+    [[nodiscard]] unsigned char getSpriteTileNo(int oamEntry) const;
+    [[nodiscard]] bool spriteBehindBG(int oamEntry) const;
+    [[nodiscard]] bool spriteFlipY(int oamEntry) const;
+    [[nodiscard]] bool spriteFlipX(int oamEntry) const;
+    [[nodiscard]] bool getSpritePalette(int oamEntry) const;
 
     // ================================
     // Interrupt functions

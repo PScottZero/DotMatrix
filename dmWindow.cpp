@@ -1,35 +1,51 @@
-#include "gbwidget.h"
+#include "dmWindow.h"
+#include <QApplication>
+#include <QFileDialog>
 
-GBWidget::GBWidget(QWidget *parent)
-    : QWidget(parent)
-{
+DMWindow::DMWindow() : QMainWindow() {
     setWindowTitle(tr("Dot Matrix v0.1 alpha"));
-    setWindowIcon(QIcon(":/icons/dotmatrix.ico"));
-    connect(this, SIGNAL(sendInput(Joypad, bool)), &gbthread, SLOT(processInput(Joypad, bool)));
-    connect(&gbthread, SIGNAL(sendFrame(QImage)), this, SLOT(updateDisplay(QImage)));
-    resize(640, 576);
-    gbthread.start();
+    setWindowIcon(QIcon(":/img/dm_icon.ico"));
+    setFixedSize(640, 602);
+
+    setStyleSheet("QMainWindow {border-image: url(:/img/background.png) 0 0 0 0 stretch stretch}");
+
+    display = new DisplayWidget(this);
+    gbthread = new GBThread(this);
+
+    connect(this, SIGNAL(sendInput(Joypad, bool)), gbthread, SLOT(processInput(Joypad, bool)));
+    connect(gbthread, SIGNAL(sendFrame(QImage)), display, SLOT(updateDisplay(QImage)));
+
+    setCentralWidget(display);
+    createMenuBar();
 }
 
-GBWidget::~GBWidget()
-{
-    gbthread.exit();
+void DMWindow::createMenuBar() {
+    auto *menu = new QMenuBar();
+
+    // file menu
+    QMenu *fileMenu = menu->addMenu(tr("&File"));
+
+    QAction *load = fileMenu->addAction(tr("&Load ROM"));
+    load->setShortcut(QKeySequence("Ctrl+L"));
+    connect(load, &QAction::triggered, this, &DMWindow::loadRom);
+
+    fileMenu->addSeparator();
+
+    QAction *quit = fileMenu->addAction(tr("&Quit"));
+    quit->setShortcut(QKeySequence("Ctrl+Q"));
+    connect(quit, &QAction::triggered, this, &QApplication::quit);
+
+    setMenuBar(menu);
 }
 
-void GBWidget::paintEvent(QPaintEvent *) {
-    QPainter painter(this);
-    painter.scale(4, 4);
-    if (!display.isNull()) {
-        painter.drawPixmap(0, 0, display);
-    }
+void DMWindow::loadRom() {
+    gbthread->terminate();
+    QString rom = QFileDialog::getOpenFileName(this, tr("Load Rom"), nullptr, tr("Game Boy Rom (*.gb)"));
+    gbthread->setRom(rom.toStdString());
+    gbthread->start();
 }
 
-void GBWidget::updateDisplay(const QImage &frame) {
-    display = QPixmap::fromImage(frame);
-    update();
-}
-
-void GBWidget::keyPressEvent(QKeyEvent *event) {
+void DMWindow::keyPressEvent(QKeyEvent *event) {
     switch (event->key()) {
         case KEYCODE_M:
             emit sendInput(START, true);
@@ -58,7 +74,7 @@ void GBWidget::keyPressEvent(QKeyEvent *event) {
     }
 }
 
-void GBWidget::keyReleaseEvent(QKeyEvent *event) {
+void DMWindow::keyReleaseEvent(QKeyEvent *event) {
     switch (event->key()) {
         case KEYCODE_M:
             emit sendInput(START, false);

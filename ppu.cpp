@@ -217,13 +217,13 @@ uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) const {
     // get color value
     switch (color) {
         case PX_ZERO:
-            return 0xFFFFFF;
+            return 0xe0f0e8;
         case PX_ONE:
-            return 0xAAAAAA;
+            return 0xa8c0b0;
         case PX_TWO:
-            return 0x555555;
+            return 0x507868;
         case PX_THREE:
-            return 0x000000;
+            return 0x183030;
         default:
             break;
     }

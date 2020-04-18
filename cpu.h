@@ -51,15 +51,15 @@ public:
     // ================================
     // Instance data
     // ================================
-    unsigned char A, B, C, D, E, H, L;
+    unsigned char A{}, B{}, C{}, D{}, E{}, H{}, L{};
     unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, nullptr, &A };
-    unsigned short PC, SP;
-    bool zero, halfCarry, subtract, carry, IME;
-    unsigned int clock;
-    unsigned int clockPrev;
-    unsigned int divider;
-    unsigned int counter;
-    bool halted;
+    unsigned short PC{}, SP{};
+    bool zero{}, halfCarry{}, subtract{}, carry{}, IME{};
+    unsigned int clock{};
+    unsigned int clockPrev{};
+    unsigned int divider{};
+    unsigned int counter{};
+    bool halted{};
     MMU *mmu;
 
     // ================================
@@ -68,8 +68,8 @@ public:
     CPU();
     void decode(unsigned char opcode);
     void step();
-    void checkForInput();
     void incTimers();
+    void reset();
 
     // ================================
     // Memory access functions
@@ -78,8 +78,8 @@ public:
     void popRegPair(unsigned char regPair);
     void push(unsigned short value);
     unsigned short pop();
-    unsigned char getF() const;
-    unsigned short getRegPair(unsigned char regPair) const;
+    [[nodiscard]] unsigned char getF() const;
+    [[nodiscard]] unsigned short getRegPair(unsigned char regPair) const;
     unsigned char getImm8();
     unsigned short getImm16();
     void setF(unsigned char value);

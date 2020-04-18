@@ -7,6 +7,11 @@
 // Initialize cpu data
 // ================================
 CPU::CPU() {
+    reset();
+    mmu = new MMU();
+}
+
+void CPU::reset() {
     A = H = 0x01;
     B = D = 0x00;
     C = 0x13;
@@ -22,7 +27,6 @@ CPU::CPU() {
     clockPrev = 0;
     divider = 0;
     counter = 0;
-    mmu = new MMU();
 }
 
 // ================================

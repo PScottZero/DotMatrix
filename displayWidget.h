@@ -5,29 +5,24 @@
 #include <QPainter>
 #include <QDebug>
 #include <QKeyEvent>
-#include "gbthread.h"
+#include "gbThread.h"
 
-class GBWidget : public QWidget
+class DisplayWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    GBWidget(QWidget *parent = nullptr);
-    ~GBWidget();
+    GBThread gbthread;
+    explicit DisplayWidget(QWidget *parent = nullptr);
+    ~DisplayWidget() override;
 
 public slots:
     void updateDisplay(const QImage &frame);
-    void keyPressEvent(QKeyEvent *event);
-    void keyReleaseEvent(QKeyEvent *event);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
     QPixmap display;
-    GBThread gbthread;
-
-signals:
-    void sendInput(Joypad button, bool pressed);
 };
 #endif // GBWIDGET_H

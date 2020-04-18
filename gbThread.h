@@ -19,8 +19,10 @@ class GBThread: public QThread
     Q_OBJECT
 
 public:
-    GBThread(QObject *parent = nullptr);
-    ~GBThread();
+    std::string rom;
+    explicit GBThread(QObject *parent = nullptr);
+    ~GBThread() override;
+    void setRom(std::string dir);
 
 public slots:
     void processInput(Joypad button, bool pressed);

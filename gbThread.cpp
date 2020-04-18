@@ -1,28 +1,34 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
-#include "gbthread.h"
+#include "gbThread.h"
 #include <thread>
+#include <utility>
 
 GBThread::GBThread(QObject *parent) : QThread(parent)
 {
+    rom = "";
     emitted = false;
 }
 
 GBThread::~GBThread() {
     delete[] cpu.mmu->mem;
     delete[] cpu.mmu->cart;
-};
+    terminate();
+    wait();
+}
+
+void GBThread::setRom(std::string dir) {
+    rom = std::move(dir);
+}
 
 void GBThread::run() {
+    cpu.reset();
     QImage frame(160, 144, QImage::Format_RGB32);
     PPU ppu(cpu.mmu->mem, &cpu.clock, &frame);
 
-//    cpu.loadCartridge("D:/Roms/GB/Tetris.gb");
-    cpu.mmu->loadCartridge("/Users/pscott/Documents/GB/Tetris.gb");
+    cpu.mmu->loadCartridge(rom);
 
     auto cycleStart = std::chrono::system_clock::now();
-
-    bool decoding = false;
 
     forever {
         ppu.prevClock = cpu.clock;
@@ -34,7 +40,7 @@ void GBThread::run() {
         if (cpu.mmu->mem[LY] > 143 && !emitted) {
             emitted = true;
             if (!ppu.lcdDisplayEnable()) {
-                frame.fill(0xFFFFFF);
+                frame.fill(0xe0f0e8);
             }
             emit sendFrame(frame);
             auto nextCycle = cycleStart + std::chrono::milliseconds(16);
