@@ -6,9 +6,8 @@
 // ================================
 // Initialize ppu data
 // ================================
-PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
+PPU::PPU(unsigned char *cpuMem, QImage *frame) {
     mem = cpuMem;
-    mem[LY] = 0;
     display = frame;
     ppuCycle = 0;
     prevClock = 0;
@@ -147,6 +146,36 @@ void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
 
     if (bgMapSelect()) {
         winMapAddr = MAP_ADDR_1;
+    }
+
+    int winRow = mem[LY] - mem[WINDOW_Y];
+    if (winRow >= 0) {
+        for (int i = 0; i < SCREEN_TILE_WIDTH; i++) {
+            bool outOfBounds = false;
+            auto tileNo = mem[winMapAddr + winRow * SCREEN_TILE_WIDTH + i];
+            auto tileRowAddr = winDataAddr + tileNo * BYTES_PER_TILE + (winRow % TILE_PX_DIM) * 2;
+            unsigned char byte0 = mem[tileRowAddr];
+            unsigned char byte1 = mem[tileRowAddr + 1];
+
+            for (int j = 0; j < TILE_PX_DIM; j++) {
+                int dispX = (mem[WINDOW_X] - 7) + i * TILE_PX_DIM + j;
+                if (dispX >= 0 && dispX < 160) {
+                    unsigned char bit0 = (byte0 >> (7 - j)) & 0x1;
+                    unsigned char bit1 = (byte1 >> (7 - j)) & 0x1;
+                    scanline[dispX] = (bit1 << 1) | bit0;
+                    palette[dispX] = BGP;
+                }
+
+                if (dispX >= 160) {
+                    outOfBounds = true;
+                    break;
+                }
+            }
+
+            if (outOfBounds) {
+                break;
+            }
+        }
     }
 }
 

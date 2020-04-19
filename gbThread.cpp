@@ -24,7 +24,7 @@ void GBThread::setRom(std::string dir) {
 void GBThread::run() {
     cpu.reset();
     QImage frame(160, 144, QImage::Format_RGB32);
-    PPU ppu(cpu.mmu->mem, &cpu.clock, &frame);
+    PPU ppu(cpu.mmu->mem, &frame);
 
     cpu.mmu->loadCartridge(rom);
 

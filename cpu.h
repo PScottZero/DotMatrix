@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include "mmu.h"
+#include "ppu.h"
 
 // ================================
 // Registers
@@ -51,15 +52,15 @@ public:
     // ================================
     // Instance data
     // ================================
-    unsigned char A{}, B{}, C{}, D{}, E{}, H{}, L{};
+    unsigned char A, B, C, D, E, H, L;
     unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, nullptr, &A };
-    unsigned short PC{}, SP{};
-    bool zero{}, halfCarry{}, subtract{}, carry{}, IME{};
-    unsigned int clock{};
-    unsigned int clockPrev{};
-    unsigned int divider{};
-    unsigned int counter{};
-    bool halted{};
+    unsigned short PC, SP;
+    bool zero, halfCarry, subtract, carry, IME;
+    unsigned int clock;
+    unsigned int clockPrev;
+    unsigned int internalDivider;
+    unsigned int internalCounter;
+    bool halted;
     MMU *mmu;
 
     // ================================

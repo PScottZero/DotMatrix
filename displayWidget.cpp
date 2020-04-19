@@ -1,15 +1,10 @@
 #include "displayWidget.h"
 
-DisplayWidget::DisplayWidget(QWidget *parent)
-    : QWidget(parent)
-{
+DisplayWidget::DisplayWidget(QWidget *parent) : QWidget(parent) {
     setFixedSize(640, 576);
 }
 
-DisplayWidget::~DisplayWidget()
-{
-    gbthread.exit();
-}
+DisplayWidget::~DisplayWidget() = default;
 
 void DisplayWidget::paintEvent(QPaintEvent *) {
     QPainter painter(this);

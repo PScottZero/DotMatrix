@@ -30,6 +30,8 @@ constexpr auto BG_TILE_COUNT = BG_TILE_DIM * BG_TILE_DIM;
 // ================================
 constexpr auto SCREEN_WIDTH = 160;
 constexpr auto SCREEN_HEIGHT = 144;
+constexpr auto SCREEN_TILE_WIDTH = 20;
+constexpr auto SCREEN_TILE_HEIGHT = 18;
 
 // ================================
 // PPU addresses
@@ -82,7 +84,7 @@ public:
     // ================================
     // Display functions
     // ================================
-    PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
+    PPU(unsigned char *cpuMem, QImage *frame);
     void step();
     void drawScanline();
     [[nodiscard]] uint getPixelColor(unsigned char value, unsigned short mapAddr) const;

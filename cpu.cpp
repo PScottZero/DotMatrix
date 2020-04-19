@@ -7,8 +7,8 @@
 // Initialize cpu data
 // ================================
 CPU::CPU() {
-    reset();
     mmu = new MMU();
+    reset();
 }
 
 void CPU::reset() {
@@ -25,8 +25,13 @@ void CPU::reset() {
     halted = false;
     clock = 0;
     clockPrev = 0;
-    divider = 0;
-    counter = 0;
+    internalDivider = 0;
+    internalCounter = 0;
+    mmu->mem[LY] = 0;
+    mmu->mem[LCDC] = 0x91;
+    mmu->mem[LCD_STAT] = 0x85;
+    mmu->mem[IE] = 0;
+    mmu->mem[IF] = 0xE1;
 }
 
 // ================================
@@ -47,9 +52,10 @@ void CPU::step() {
 // Increment timers
 // ================================
 void CPU::incTimers() {
-    if (divider >= DIVIDER_CYCLES) {
+    internalDivider += (clock - clockPrev);
+    while (internalDivider >= DIVIDER_CYCLES) {
         mmu->mem[DIVIDER]++;
-        divider %= DIVIDER_CYCLES;
+        internalDivider -= DIVIDER_CYCLES;
     }
 
     if (mmu->mem[TIMER_CONTROL] & 0x4) {
@@ -69,17 +75,17 @@ void CPU::incTimers() {
                 break;
         }
 
-        counter += (clock - clockPrev);
-        if (counter >= counterMod) {
+        internalCounter += (clock - clockPrev);
+        while (internalCounter >= counterMod) {
             mmu->mem[COUNTER]++;
-            counter %= counterMod;
-        }
+            internalCounter -= counterMod;
 
-        if (mmu->mem[COUNTER] == 0) {
-            mmu->mem[COUNTER] = mmu->mem[MODULO];
-            mmu->mem[IF] |= 0x04;
-        } else {
-            mmu->mem[IF] &= 0xFB;
+            if (mmu->mem[COUNTER] == 0) {
+                mmu->mem[COUNTER] = mmu->mem[MODULO];
+                mmu->mem[IF] |= 0x04;
+            } else {
+                mmu->mem[IF] &= 0xFB;
+            }
         }
     }
 }
@@ -762,7 +768,9 @@ void CPU::decode(unsigned char opcode) {
                 // HALT
                 // stop system clock
                 if (regDest == MEM) {
-                    halted = true;
+                    if (IME || ((mmu->mem[IE] & mmu->mem[IF]) & 0x1F) == 0) {
+                        halted = true;
+                    }
                     clock += 1;
                 }
 

@@ -12,7 +12,6 @@ class DisplayWidget : public QWidget
     Q_OBJECT
 
 public:
-    GBThread gbthread;
     explicit DisplayWidget(QWidget *parent = nullptr);
     ~DisplayWidget() override;
 
