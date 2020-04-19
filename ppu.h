@@ -23,20 +23,16 @@ constexpr auto BYTES_PER_TILE = 16;
 // ================================
 constexpr auto BG_TILE_DIM = 32;
 constexpr auto BG_PX_DIM = BG_TILE_DIM * TILE_PX_DIM;
-constexpr auto BG_TILE_COUNT = BG_TILE_DIM * BG_TILE_DIM;
 
 // ================================
 // Screen sizing
 // ================================
 constexpr auto SCREEN_WIDTH = 160;
-constexpr auto SCREEN_HEIGHT = 144;
-constexpr auto SCREEN_TILE_WIDTH = 20;
-constexpr auto SCREEN_TILE_HEIGHT = 18;
 
 // ================================
 // PPU addresses
 // ================================
-constexpr auto DATA_ADDR_0 = 0x8800;
+constexpr auto DATA_ADDR_0 = 0x9000;
 constexpr auto DATA_ADDR_1 = 0x8000;
 constexpr auto MAP_ADDR_0 = 0x9800;
 constexpr auto MAP_ADDR_1 = 0x9C00;

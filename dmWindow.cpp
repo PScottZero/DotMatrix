@@ -36,6 +36,17 @@ void DMWindow::createMenuBar() {
     quit->setShortcut(QKeySequence("Ctrl+Q"));
     connect(quit, &QAction::triggered, this, &QApplication::quit);
 
+
+
+    // option menu
+    QMenu *optionsMenu = menu->addMenu(tr("&Options"));
+
+    QMenu *palette = optionsMenu->addMenu("&Palette");
+    palette->addAction("Default");
+    palette->addAction("Game Boy Pocket");
+    palette->addAction("Game Boy Original");
+    palette->addAction("Platinum (By WildLeoKnight)");
+
     setMenuBar(menu);
 }
 

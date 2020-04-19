@@ -125,7 +125,7 @@ void PPU::drawBackground(unsigned char *scanline, unsigned short *palette) const
         unsigned char tileNo = mem[bgMapAddr + tileMapOffset];
         unsigned short tileRowAddr = bgDataAddr + tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
         if (!bgWinDataSelect()) {
-            tileRowAddr = 0x9000 + (char)tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
+            tileRowAddr = bgDataAddr + (char)tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
         }
 
         unsigned char bit0 = (mem[tileRowAddr] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
@@ -140,20 +140,23 @@ void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
     unsigned short winDataAddr = DATA_ADDR_0;
     unsigned short winMapAddr = MAP_ADDR_0;
 
-    if (windowMapSelect()) {
+    if (bgWinDataSelect()) {
         winDataAddr = DATA_ADDR_1;
     }
 
-    if (bgMapSelect()) {
+    if (windowMapSelect()) {
         winMapAddr = MAP_ADDR_1;
     }
 
     int winRow = mem[LY] - mem[WINDOW_Y];
-    if (winRow >= 0) {
-        for (int i = 0; i < SCREEN_TILE_WIDTH; i++) {
+    if (winRow >= 0 && winRow < 144) {
+        for (int i = 0; i < BG_TILE_DIM; i++) {
             bool outOfBounds = false;
-            auto tileNo = mem[winMapAddr + winRow * SCREEN_TILE_WIDTH + i];
+            auto tileNo = mem[winMapAddr + (winRow / TILE_PX_DIM) * BG_TILE_DIM + i];
             auto tileRowAddr = winDataAddr + tileNo * BYTES_PER_TILE + (winRow % TILE_PX_DIM) * 2;
+            if (!bgWinDataSelect()) {
+                tileRowAddr = winDataAddr + (char)tileNo * BYTES_PER_TILE + (winRow % TILE_PX_DIM) * 2;
+            }
             unsigned char byte0 = mem[tileRowAddr];
             unsigned char byte1 = mem[tileRowAddr + 1];
 
@@ -168,7 +171,6 @@ void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
 
                 if (dispX >= 160) {
                     outOfBounds = true;
-                    break;
                 }
             }
 
