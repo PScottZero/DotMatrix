@@ -3,5 +3,6 @@ packages/
 build-Dot\ Matrix-Desktop_Qt_5_12_6_MinGW_64_bit-Debug/
 DotMatrix.pro.user
 cmake-build-debug/
+cmake-build-release/
 testing/cmake-build-debug/
 testing/googletest/

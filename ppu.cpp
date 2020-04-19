@@ -26,7 +26,7 @@ PPU::PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame) {
 // Step through one display cycle
 // ================================
 void PPU::step() {
-    if (lcdDisplayEnable()) {
+    if (lcdEnable()) {
         ppuCycle += currClock - prevClock;
         ppuCycle %= SCREEN_CYCLE;
         mem[LY] = (ppuCycle / SCANLINE) % 154;
@@ -38,7 +38,7 @@ void PPU::step() {
             } else if (ppuCycle % SCANLINE <= 63) {
                 setMode(MODE_3);
                 if (!rendered) {
-                    render();
+                    drawScanline();
                 }
             } else {
                 rendered = false;
@@ -63,130 +63,161 @@ void PPU::setMode(Mode m) const {
 }
 
 // ================================
-// Render display cycle
+// Draw scanline on display
 // ================================
-void PPU::render() {
+void PPU::drawScanline() {
     rendered = true;
-    switch (mem[LCD_STAT] & 0x3) {
+    auto *scanline = new unsigned char[160];
+    auto *palette = new unsigned short[160];
+
+    // draw background
+    if (bgEnable()) {
+        drawBackground(scanline, palette);
+    } else {
+        for (int i = 0; i < SCREEN_WIDTH; i++) {
+            scanline[i] = 0;
+            palette[i] = BGP;
+        }
+    }
+
+    // draw window
+    if (windowEnable()) {
+        drawWindow(scanline, palette);
+    }
 
     // draw sprites
-    case MODE_2:
-        break;
+    if (spriteEnable()) {
+        drawSprites(scanline, palette);
+    }
 
-    case MODE_3:
-        auto *scanline = new unsigned char[160];
-        auto *scanlinePal = new unsigned short[160];
+    // transfer scanline to display
+    for (int i = 0; i < SCREEN_WIDTH; i++) {
+        uint color = getPixelColor(scanline[i], palette[i]);
+        if (palette[i] == BGP && !bgEnable()) {
+            color = 0xFFFFFF;
+        }
+        display->setPixel(i, mem[LY], color);
+    }
 
-        // draw background
-        if (bgDisplayEnable()) {
+    setLcdInt();
+}
 
-            // background addresses
-            unsigned short bgDataAddr = DATA_ADDR_0;
-            unsigned short bgMapAddr = MAP_ADDR_0;
+// ================================
+// Draw row of background
+// ================================
+void PPU::drawBackground(unsigned char *scanline, unsigned short *palette) const {
+    unsigned short bgDataAddr = DATA_ADDR_0;
+    unsigned short bgMapAddr = MAP_ADDR_0;
 
-            if (bgWinDataSelect() == 1) {
-                bgDataAddr = DATA_ADDR_1;
-            }
+    if (bgWinDataSelect()) {
+        bgDataAddr = DATA_ADDR_1;
+    }
 
-            if (bgMapSelect() == 1) {
-                bgMapAddr = MAP_ADDR_1;
-            }
+    if (bgMapSelect()) {
+        bgMapAddr = MAP_ADDR_1;
+    }
 
-            // render line
-            for (int i = 0; i < SCREEN_WIDTH; i++) {
-                unsigned short tileX = (mem[SCROLL_X] + i) % BG_PX_DIM;
-                unsigned short tileY = (mem[SCROLL_Y] + mem[LY]) % BG_PX_DIM;
+    // drawScanline line
+    for (int i = 0; i < SCREEN_WIDTH; i++) {
+        unsigned short tileX = (mem[SCROLL_X] + i) % BG_PX_DIM;
+        unsigned short tileY = (mem[SCROLL_Y] + mem[LY]) % BG_PX_DIM;
 
-                unsigned short tileMapOffset = tileX / TILE_PX_DIM + (tileY / TILE_PX_DIM) * BG_TILE_DIM;
-                unsigned char tileNo = mem[bgMapAddr + tileMapOffset];
-                unsigned short tileRowAddr;
-                if (bgWinDataSelect() == 1) {
-                    tileRowAddr = bgDataAddr + tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
-                } else {
-                    tileRowAddr = 0x9000 + (char)tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
+        unsigned short tileMapOffset = tileX / TILE_PX_DIM + (tileY / TILE_PX_DIM) * BG_TILE_DIM;
+        unsigned char tileNo = mem[bgMapAddr + tileMapOffset];
+        unsigned short tileRowAddr = bgDataAddr + tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
+        if (!bgWinDataSelect()) {
+            tileRowAddr = 0x9000 + (char)tileNo * BYTES_PER_TILE + (tileY % TILE_PX_DIM) * 2;
+        }
+
+        unsigned char bit0 = (mem[tileRowAddr] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
+        unsigned char bit1 = (mem[tileRowAddr + 1] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
+
+        scanline[i] = (bit1 << 1) | bit0;
+        palette[i] = BGP;
+    }
+}
+
+void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
+    unsigned short winDataAddr = DATA_ADDR_0;
+    unsigned short winMapAddr = MAP_ADDR_0;
+
+    if (windowMapSelect()) {
+        winDataAddr = DATA_ADDR_1;
+    }
+
+    if (bgMapSelect()) {
+        winMapAddr = MAP_ADDR_1;
+    }
+}
+
+// ================================
+// Draw row of sprites
+// ================================
+void PPU::drawSprites(unsigned char* scanline, unsigned short* palette) const {
+
+    // find sprites in scanline
+    for (int oamEntry = 0; oamEntry < OAM_COUNT; oamEntry++) {
+        unsigned posY = getSpriteY(oamEntry);
+        unsigned posX = getSpriteX(oamEntry);
+        unsigned tileNo = 0;
+        unsigned rowNo = 0;
+        bool inScanline = false;
+
+        // 8x8 mode
+        if (!spriteSize()) {
+            if (posY <= mem[LY] + 0x10 && posY > mem[LY] + 0x8) {
+                inScanline = true;
+                tileNo = getSpriteTileNo(oamEntry);
+                rowNo = mem[LY] - (posY - 0x10);
+                if (spriteFlipY(oamEntry)) {
+                    rowNo = 7 - rowNo;
                 }
-
-                unsigned char bit0 = (mem[tileRowAddr] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
-                unsigned char bit1 = (mem[tileRowAddr + 1] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
-
-                scanline[i] = (bit1 << 1) | bit0;
-                scanlinePal[i] = BGP;
             }
         } else {
-            for (int i = 0; i < SCREEN_WIDTH; i++) {
-                scanline[i] = 0;
-                scanlinePal[i] = BGP;
+            if (posY <= mem[LY] + 0x10 && posY > mem[LY]) {
+                inScanline = true;
+                tileNo = getSpriteTileNo(oamEntry) & 0xFE;
+                rowNo = mem[LY] - (posY - 0x10);
+
+                if (spriteFlipY(oamEntry)) {
+                    rowNo = 0xF - rowNo;
+                }
             }
         }
 
-        // draw sprites
-        if (spriteEnable()) {
+        // draw sprite
+        if (inScanline) {
+            unsigned char rowByte0 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2];
+            unsigned char rowByte1 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2 + 1];
 
-            // find sprites in scanline
-            for (int oamEntry = 0; oamEntry < OAM_COUNT; oamEntry++) {
-                unsigned posY = getSpriteY(oamEntry);
-
-                // 8x8 mode
-                if (!spriteSize()) {
-                    if (posY <= mem[LY] + 0x10 && posY > mem[LY] + 0x8) {
-                        unsigned posX = getSpriteX(oamEntry);
-                        unsigned tileNo = getSpriteTileNo(oamEntry);
-                        unsigned rowNo = mem[LY] - (posY - 0x10);
-                        if (spriteFlipY(oamEntry)) {
-                            rowNo = 7 - rowNo;
-                        }
-
-                        unsigned char rowByte0 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2];
-                        unsigned char rowByte1 = mem[DATA_ADDR_1 + tileNo * BYTES_PER_TILE + rowNo * 2 + 1];
-
-                        for (int j = 0; j < 8; j++) {
-                            unsigned char scanIndex = (posX - 0x8) + j;
-                            if (scanIndex >= 0 && scanIndex < SCREEN_WIDTH) {
-                                unsigned char bit1;
-                                unsigned char bit0;
-                                if (spriteFlipX(oamEntry)) {
-                                    bit0 = (rowByte0 >> j) & 0x1;
-                                    bit1 = (rowByte1 >> j) & 0x1;
-                                } else {
-                                    bit0 = (rowByte0 >> (7 - j)) & 0x1;
-                                    bit1 = (rowByte1 >> (7 - j)) & 0x1;
-                                }
-                                unsigned char pxVal = (bit1 << 1) | bit0;
-                                if (pxVal != 0) {
-                                    if (!spriteBehindBG(oamEntry) ||
-                                        (scanline[scanIndex] == 0 && scanlinePal[scanIndex] == BGP)) {
-                                        scanline[scanIndex] = pxVal;
-                                        if (getSpritePalette(oamEntry)) {
-                                            scanlinePal[scanIndex] = OBP1;
-                                        } else {
-                                            scanlinePal[scanIndex] = OBP0;
-                                        }
-                                    }
-                                }
+            for (int j = 0; j < 8; j++) {
+                unsigned char scanIndex = (posX - 0x8) + j;
+                if (scanIndex >= 0 && scanIndex < SCREEN_WIDTH) {
+                    unsigned char bit1;
+                    unsigned char bit0;
+                    if (spriteFlipX(oamEntry)) {
+                        bit0 = (rowByte0 >> j) & 0x1;
+                        bit1 = (rowByte1 >> j) & 0x1;
+                    } else {
+                        bit0 = (rowByte0 >> (7 - j)) & 0x1;
+                        bit1 = (rowByte1 >> (7 - j)) & 0x1;
+                    }
+                    unsigned char pxVal = (bit1 << 1) | bit0;
+                    if (pxVal != 0) {
+                        if (!spriteBehindBG(oamEntry) ||
+                            (scanline[scanIndex] == 0 && palette[scanIndex] == BGP)) {
+                            scanline[scanIndex] = pxVal;
+                            if (getSpritePalette(oamEntry)) {
+                                palette[scanIndex] = OBP1;
+                            } else {
+                                palette[scanIndex] = OBP0;
                             }
                         }
                     }
-                } else {
-                    if (posY <= mem[LY] + 0x10 && posY > mem[LY]) {
-                        unsigned posX = getSpriteX(oamEntry);
-                        unsigned tileNo = getSpriteTileNo(oamEntry);
-                        unsigned rowNo = mem[LY] - (posY - 0x10);
-                    }
                 }
             }
         }
-
-        // transfer scanline to display
-        for (int i = 0; i < SCREEN_WIDTH; i++) {
-            uint color = getPixelColor(scanline[i], scanlinePal[i]);
-            if (scanlinePal[i] == BGP && !bgDisplayEnable()) {
-                color = 0xFFFFFF;
-            }
-            display->setPixel(i, mem[LY], color);
-        }
-        break;
     }
-    setLcdInt();
 }
 
 // ================================
@@ -217,13 +248,13 @@ uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) const {
     // get color value
     switch (color) {
         case PX_ZERO:
-            return 0xe0f0e8;
+            return 0xc5dffa;
         case PX_ONE:
-            return 0xa8c0b0;
+            return 0x5c88b8;
         case PX_TWO:
-            return 0x507868;
+            return 0x1a4778;
         case PX_THREE:
-            return 0x183030;
+            return 0x00234a;
         default:
             break;
     }
@@ -236,36 +267,36 @@ uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) const {
 // ------------------------------ LCD CONTROL FUNCTIONS ---------------------------------
 // ======================================================================================
 
-int PPU::lcdDisplayEnable() const {
-    return (mem[LCDC] >> 7) & 1;
+bool PPU::lcdEnable() const {
+    return mem[LCDC] & 0x80;
 }
 
-int PPU::windowMapSelect() const {
-    return (mem[LCDC] >> 6) & 1;
+bool PPU::windowMapSelect() const {
+    return mem[LCDC] & 0x40;
 }
 
-int PPU::windowDisplayEnable() const {
-    return (mem[LCDC] >> 5) & 1;
+bool PPU::windowEnable() const {
+    return mem[LCDC] & 0x20;
 }
 
-int PPU::bgWinDataSelect() const {
-    return (mem[LCDC] >> 4) & 1;
+bool PPU::bgWinDataSelect() const {
+    return mem[LCDC] & 0x10;
 }
 
-int PPU::bgMapSelect() const {
-    return (mem[LCDC] >> 3) & 1;
+bool PPU::bgMapSelect() const {
+    return mem[LCDC] & 0x08;
 }
 
-int PPU::spriteSize() const {
-    return (mem[LCDC] >> 2) & 1;
+bool PPU::spriteSize() const {
+    return mem[LCDC] & 0x04;
 }
 
-int PPU::spriteEnable() const {
-    return (mem[LCDC] >> 1) & 1;
+bool PPU::spriteEnable() const {
+    return mem[LCDC] & 0x02;
 }
 
-int PPU::bgDisplayEnable() const {
-    return mem[LCDC] & 1;
+bool PPU::bgEnable() const {
+    return mem[LCDC] & 0x01;
 }
 
 

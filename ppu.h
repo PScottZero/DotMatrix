@@ -84,21 +84,24 @@ public:
     // ================================
     PPU(unsigned char *cpuMem, unsigned int *cpuClock, QImage *frame);
     void step();
-    void render();
+    void drawScanline();
     [[nodiscard]] uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
     void setMode(Mode m) const;
+    void drawSprites(unsigned char*, unsigned short*) const;
+    void drawBackground(unsigned char*, unsigned short*) const;
+    void drawWindow(unsigned char*, unsigned short*) const;
 
     // ================================
     // LCD control functions
     // ================================
-    [[nodiscard]] int lcdDisplayEnable() const;
-    [[nodiscard]] int windowMapSelect() const;
-    [[nodiscard]] int windowDisplayEnable() const;
-    [[nodiscard]] int bgWinDataSelect() const;
-    [[nodiscard]] int bgMapSelect() const;
-    [[nodiscard]] int spriteSize() const;
-    [[nodiscard]] int spriteEnable() const;
-    [[nodiscard]] int bgDisplayEnable() const;
+    [[nodiscard]] bool lcdEnable() const;
+    [[nodiscard]] bool windowMapSelect() const;
+    [[nodiscard]] bool windowEnable() const;
+    [[nodiscard]] bool bgWinDataSelect() const;
+    [[nodiscard]] bool bgMapSelect() const;
+    [[nodiscard]] bool spriteSize() const;
+    [[nodiscard]] bool spriteEnable() const;
+    [[nodiscard]] bool bgEnable() const;
 
     // ================================
     // OAM functions

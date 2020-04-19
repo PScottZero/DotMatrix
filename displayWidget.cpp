@@ -3,8 +3,7 @@
 DisplayWidget::DisplayWidget(QWidget *parent)
     : QWidget(parent)
 {
-    resize(640, 576);
-    gbthread.start();
+    setFixedSize(640, 576);
 }
 
 DisplayWidget::~DisplayWidget()

@@ -5,7 +5,6 @@
 DMWindow::DMWindow() : QMainWindow() {
     setWindowTitle(tr("Dot Matrix v0.1 alpha"));
     setWindowIcon(QIcon(":/img/dm_icon.ico"));
-    setFixedSize(640, 602);
 
     setStyleSheet("QMainWindow {border-image: url(:/img/background.png) 0 0 0 0 stretch stretch}");
 
@@ -17,6 +16,8 @@ DMWindow::DMWindow() : QMainWindow() {
 
     setCentralWidget(display);
     createMenuBar();
+    adjustSize();
+    setFixedSize(size());
 }
 
 void DMWindow::createMenuBar() {
@@ -40,7 +41,7 @@ void DMWindow::createMenuBar() {
 
 void DMWindow::loadRom() {
     gbthread->terminate();
-    QString rom = QFileDialog::getOpenFileName(this, tr("Load Rom"), nullptr, tr("Game Boy Rom (*.gb)"));
+    QString rom = QFileDialog::getOpenFileName(this, tr("Load Rom"), "/", tr("Game Boy Rom (*.gb)"));
     gbthread->setRom(rom.toStdString());
     gbthread->start();
 }

@@ -1,5 +1,5 @@
-#ifndef GBWIDGET_H
-#define GBWIDGET_H
+#ifndef DISPLAYWIDGET_H
+#define DISPLAYWIDGET_H
 
 #include <QWidget>
 #include <QPainter>

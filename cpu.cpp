@@ -36,6 +36,9 @@ void CPU::step() {
     checkForInt();
     if (!halted) {
         decode(mmu->mem[PC]);
+    } else {
+        clockPrev = clock;
+        clock += 1;
     }
     incTimers();
 }
@@ -44,7 +47,6 @@ void CPU::step() {
 // Increment timers
 // ================================
 void CPU::incTimers() {
-    divider += (clock - clockPrev);
     if (divider >= DIVIDER_CYCLES) {
         mmu->mem[DIVIDER]++;
         divider %= DIVIDER_CYCLES;

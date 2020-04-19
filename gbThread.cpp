@@ -39,7 +39,7 @@ void GBThread::run() {
         // send frame to widget
         if (cpu.mmu->mem[LY] > 143 && !emitted) {
             emitted = true;
-            if (!ppu.lcdDisplayEnable()) {
+            if (!ppu.lcdEnable()) {
                 frame.fill(0xe0f0e8);
             }
             emit sendFrame(frame);
