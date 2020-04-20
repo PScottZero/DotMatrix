@@ -35,4 +35,4 @@
 <img src="https://i.imgur.com/GmHoigL.jpg" width="300" height="300">
 
 # About
-This emulator is written in C++ and uses the Qt library for its UI. I am using CLion to write the code. Right now, I am working on finishing the video implementation. This project is probably about 80%, and I hope to get it finished soon!
+This emulator is written in C++ and uses the Qt library for its UI. I am using CLion to write the code. Right now, I am working on fixing a few bugs and adding banking support. This project is about 90%, and I hope to get it finished soon!
