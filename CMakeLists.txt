@@ -14,5 +14,5 @@ set(CMAKE_AUTORCC ON)
 
 qt5_add_resources(resource.qrc)
 
-add_executable(dotmatrix cpu.cpp ppu.cpp gbThread.cpp displayWidget.cpp main.cpp mmu.cpp mmu.h dmWindow.cpp dmWindow.h resource.qrc palettes.h)
+add_executable(dotmatrix cpu.cpp ppu.cpp gbThread.cpp displayWidget.cpp main.cpp mmu.cpp mmu.h dmWindow.cpp dmWindow.h resource.qrc)
 target_link_libraries(dotmatrix Qt5::Widgets)

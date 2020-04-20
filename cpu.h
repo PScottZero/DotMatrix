@@ -56,8 +56,7 @@ public:
     unsigned char* regArr[8] = { &B, &C, &D, &E, &H, &L, nullptr, &A };
     unsigned short PC, SP;
     bool zero, halfCarry, subtract, carry, IME;
-    unsigned int clock;
-    unsigned int clockPrev;
+    unsigned int cycleCount;
     unsigned int internalDivider;
     unsigned int internalCounter;
     bool halted;

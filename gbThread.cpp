@@ -24,16 +24,14 @@ void GBThread::setRom(std::string dir) {
 void GBThread::run() {
     cpu.reset();
     QImage frame(160, 144, QImage::Format_RGB32);
-    PPU ppu(cpu.mmu->mem, &frame);
+    PPU ppu(cpu.mmu->mem, &cpu.cycleCount, &frame);
 
     cpu.mmu->loadCartridge(rom);
 
     auto cycleStart = std::chrono::system_clock::now();
 
     forever {
-        ppu.prevClock = cpu.clock;
         cpu.step();
-        ppu.currClock = cpu.clock;
         ppu.step();
 
         // send frame to widget

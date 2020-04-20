@@ -3,9 +3,10 @@
 
 #include "displayWidget.h"
 #include "gbThread.h"
-#include "palettes.h"
 #include <QMainWindow>
 #include <QMenuBar>
+#include <QApplication>
+#include <QFileDialog>
 
 class DMWindow : public QMainWindow {
 Q_OBJECT

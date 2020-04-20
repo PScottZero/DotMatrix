@@ -1,6 +1,5 @@
 #include "dmWindow.h"
-#include <QApplication>
-#include <QFileDialog>
+
 
 DMWindow::DMWindow() : QMainWindow() {
     setWindowTitle(tr("Dot Matrix v0.1 alpha"));
@@ -24,33 +23,33 @@ void DMWindow::createMenuBar() {
     auto *menu = new QMenuBar();
 
     // file menu
-    QMenu *fileMenu = menu->addMenu(tr("&File"));
+    QMenu *fileMenu = menu->addMenu(tr("File"));
 
-    QAction *load = fileMenu->addAction(tr("&Load ROM"));
+    QAction *load = fileMenu->addAction(tr("Load ROM"));
     load->setShortcut(QKeySequence("Ctrl+L"));
     connect(load, &QAction::triggered, this, &DMWindow::loadRom);
 
     fileMenu->addSeparator();
 
-    QAction *quit = fileMenu->addAction(tr("&Quit"));
+    QAction *quit = fileMenu->addAction(tr("Quit"));
     quit->setShortcut(QKeySequence("Ctrl+Q"));
     connect(quit, &QAction::triggered, this, &QApplication::quit);
 
 
 
     // option menu
-    QMenu *optionsMenu = menu->addMenu(tr("&Options"));
+    QMenu *optionsMenu = menu->addMenu(tr("Options"));
 
-    QMenu *palette = optionsMenu->addMenu("&Palette");
+    QMenu *palette = optionsMenu->addMenu("Palette");
     palette->addAction("Cobalt (Default)");
-    palette->addAction("Game Boy Pocket");
-    palette->addAction("Game Boy Original");
-    palette->addAction("BGB");
-    palette->addAction("Platinum (By WildLeoKnight)");
-    palette->addAction("Wish GB (By Kerrie Lake)");
-    palette->addAction("Bicycle (By Braquen)");
-    palette->addAction("GB Chocolate (By GrafxKid)");
-    palette->addAction("Kirby");
+//    palette->addAction("Game Boy Pocket");
+//    palette->addAction("Game Boy Original");
+//    palette->addAction("BGB");
+//    palette->addAction("Platinum (By WildLeoKnight)");
+//    palette->addAction("Wish GB (By Kerrie Lake)");
+//    palette->addAction("Bicycle (By Braquen)");
+//    palette->addAction("GB Chocolate (By GrafxKid)");
+//    palette->addAction("Kirby");
 
     setMenuBar(menu);
 }

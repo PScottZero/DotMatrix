@@ -6,12 +6,11 @@
 // ================================
 // Initialize ppu data
 // ================================
-PPU::PPU(unsigned char *cpuMem, QImage *frame) {
+PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount, QImage *frame) {
     mem = cpuMem;
     display = frame;
     ppuCycle = 0;
-    prevClock = 0;
-    currClock = 0;
+    cycleCount = cpuCycleCount;
     rendered = false;
 }
 
@@ -26,7 +25,7 @@ PPU::PPU(unsigned char *cpuMem, QImage *frame) {
 // ================================
 void PPU::step() {
     if (lcdEnable()) {
-        ppuCycle += currClock - prevClock;
+        ppuCycle += *cycleCount;
         ppuCycle %= SCREEN_CYCLE;
         mem[LY] = (ppuCycle / SCANLINE) % 154;
         if (ppuCycle / SCANLINE < 144) {
@@ -52,13 +51,13 @@ void PPU::step() {
         }
     } else {
         mem[LY] = 0;
-        mem[LCD_STAT] &= 0xFC;
+        mem[STAT] &= 0xFC;
     }
 }
 
 void PPU::setMode(Mode m) const {
-    mem[LCD_STAT] &= 0xFC;
-    mem[LCD_STAT] |= (unsigned char)m;
+    mem[STAT] &= 0xFC;
+    mem[STAT] |= (unsigned char)m;
 }
 
 // ================================
@@ -98,6 +97,8 @@ void PPU::drawScanline() {
         display->setPixel(i, mem[LY], color);
     }
 
+    delete[] scanline;
+    delete[] palette;
     setLcdInt();
 }
 
@@ -370,17 +371,25 @@ bool PPU::getSpritePalette(int oamEntry) const {
 // ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
 // ======================================================================================
 
-void PPU::setLcdInt() const {
-    if (((mem[LY] == mem[LY_COMP]) && (mem[LCD_STAT] & 0x40)) ||
-        (((mem[LCD_STAT] & 0x03) == 0) && (mem[LCD_STAT] & 0x08)) ||
-        (((mem[LCD_STAT] & 0x03) == 2) && (mem[LCD_STAT] & 0x20)) ||
-        (((mem[LCD_STAT] & 0x03) == 3) && (mem[LCD_STAT] & 0x10) && (mem[LCD_STAT] & 0x20))) {
+void PPU::setLcdInt() {
+    if (compareCheck() ||
+        modeCheck(MODE_0, 0x8) ||
+        modeCheck(MODE_1, 0x10) ||
+        modeCheck(MODE_2, 0x20)) {
         mem[IF] |= 0b10;
     }
 }
 
 void PPU::triggerVBlankInt() const {
     mem[IF] |= 0b01;
+}
+
+bool PPU::compareCheck() {
+    return (mem[LY] == mem[LY_COMP]) && (mem[STAT] & 0x40);
+}
+
+bool PPU::modeCheck(Mode mode, unsigned char mask) {
+    return ((mem[STAT] & 0x3) == mode) && (mem[STAT] & mask);
 }
 
 #pragma clang diagnostic pop

@@ -37,7 +37,7 @@ constexpr auto DATA_ADDR_1 = 0x8000;
 constexpr auto MAP_ADDR_0 = 0x9800;
 constexpr auto MAP_ADDR_1 = 0x9C00;
 constexpr auto LCDC = 0xFF40;
-constexpr auto LCD_STAT = 0xFF41;
+constexpr auto STAT = 0xFF41;
 constexpr auto SCROLL_Y = 0xFF42;
 constexpr auto SCROLL_X = 0xFF43;
 constexpr auto LY = 0xFF44;
@@ -74,13 +74,12 @@ public:
     QImage *display;
     bool rendered;
     unsigned int ppuCycle;
-    unsigned int prevClock;
-    unsigned int currClock;
+    unsigned int *cycleCount;
 
     // ================================
     // Display functions
     // ================================
-    PPU(unsigned char *cpuMem, QImage *frame);
+    PPU(unsigned char *cpuMem, unsigned int *cpuCycleCount, QImage *frame);
     void step();
     void drawScanline();
     [[nodiscard]] uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
@@ -116,7 +115,9 @@ public:
     // Interrupt functions
     // ================================
     void triggerVBlankInt() const;
-    void setLcdInt() const;
+    void setLcdInt();
+    bool compareCheck();
+    bool modeCheck(Mode, unsigned char);
 };
 
 #endif // PPU_H

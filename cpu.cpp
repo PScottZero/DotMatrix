@@ -23,27 +23,27 @@ void CPU::reset() {
     subtract = false;
     IME = false;
     halted = false;
-    clock = 0;
-    clockPrev = 0;
+    cycleCount = 0;
     internalDivider = 0;
     internalCounter = 0;
     mmu->mem[LY] = 0;
     mmu->mem[LCDC] = 0x91;
-    mmu->mem[LCD_STAT] = 0x85;
+    mmu->mem[STAT] = 0x85;
     mmu->mem[IE] = 0;
     mmu->mem[IF] = 0xE1;
+    mmu->mem[JOYPAD] = 0xFF;
 }
 
 // ================================
 // Step through emulator cycle
 // ================================
 void CPU::step() {
+    cycleCount = 0;
     checkForInt();
     if (!halted) {
         decode(mmu->mem[PC]);
     } else {
-        clockPrev = clock;
-        clock += 1;
+        cycleCount = 1;
     }
     incTimers();
 }
@@ -52,7 +52,7 @@ void CPU::step() {
 // Increment timers
 // ================================
 void CPU::incTimers() {
-    internalDivider += (clock - clockPrev);
+    internalDivider += cycleCount;
     while (internalDivider >= DIVIDER_CYCLES) {
         mmu->mem[DIVIDER]++;
         internalDivider -= DIVIDER_CYCLES;
@@ -75,7 +75,7 @@ void CPU::incTimers() {
                 break;
         }
 
-        internalCounter += (clock - clockPrev);
+        internalCounter += cycleCount;
         while (internalCounter >= counterMod) {
             mmu->mem[COUNTER]++;
             internalCounter -= counterMod;
@@ -83,8 +83,6 @@ void CPU::incTimers() {
             if (mmu->mem[COUNTER] == 0) {
                 mmu->mem[COUNTER] = mmu->mem[MODULO];
                 mmu->mem[IF] |= 0x04;
-            } else {
-                mmu->mem[IF] &= 0xFB;
             }
         }
     }
@@ -94,7 +92,6 @@ void CPU::incTimers() {
 // Decode instruction
 // ================================
 void CPU::decode(unsigned char opcode) {
-    clockPrev = clock;
 
     // values for single byte opcodes
     unsigned char upperTwo = (opcode >> 6) & 0b11;
@@ -120,56 +117,56 @@ void CPU::decode(unsigned char opcode) {
         // Load memory at address BC into register A
         case 0x0A:
             A = mmu->read(getRegPair(BC));
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD A, (DE)
         // Load memory at address DE into register A
         case 0x1A:
             A = mmu->read(getRegPair(DE));
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD A, (C)
         // Load memory at address 0xFF00 + [register C] into register A
         case 0xF2:
             A = mmu->read(0xFF00 + C);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD (C), A
         // Load register A into memory at address 0xFF00 + [register C]
         case 0xE2:
             mmu->write(0xFF00 + C, A);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD A, (n)
         // Load memory at address 0xFF00 + [8-bit immediate n] into register A
         case 0xF0:
             A = mmu->read(0xFF00 + getImm8());
-            clock += 3;
+            cycleCount += 3;
             break;
 
         // LD (n), A
         // Load register A into memory at address 0xFF00 + [8-bit immediate n]
         case 0xE0:
             mmu->write(0xFF00 + getImm8(), A);
-            clock += 3;
+            cycleCount += 3;
             break;
 
         // LD A, (nn)
         // Load memory at address specified by 16-bit immediate nn into register A
         case 0xFA:
             A = mmu->read(getImm16());
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // LD (nn), A
         // Load register A into memory at address specified by 16-bit immediate nn
         case 0xEA:
             mmu->write(getImm16(), A);
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // LD A, (HLI)
@@ -177,7 +174,7 @@ void CPU::decode(unsigned char opcode) {
         case 0x2A:
             A = mmu->read(getRegPair(HL));
             setRegPair(HL, getRegPair(HL) + 1);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD A, (HLD)
@@ -185,21 +182,21 @@ void CPU::decode(unsigned char opcode) {
         case 0x3A:
             A = mmu->read(getRegPair(HL));
             setRegPair(HL, getRegPair(HL) - 1);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD (BC), A
         // Load register A into memory at address BC
         case 0x02:
             mmu->write(getRegPair(BC), A);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD (DE), A
         // Load register A into memory at address DE
         case 0x12:
             mmu->write(getRegPair(DE), A);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD (HLI), A
@@ -207,7 +204,7 @@ void CPU::decode(unsigned char opcode) {
         case 0x22:
             mmu->write(getRegPair(HL), A);
             setRegPair(HL, getRegPair(HL) + 1);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD (HLD), A
@@ -215,14 +212,14 @@ void CPU::decode(unsigned char opcode) {
         case 0x32:
             mmu->write(getRegPair(HL), A);
             setRegPair(HL, getRegPair(HL) - 1);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LD SP, HL
         // Load register HL into SP
         case 0xF9:
             SP = getRegPair(HL);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // LDHL SP, e
@@ -230,70 +227,70 @@ void CPU::decode(unsigned char opcode) {
         case 0xF8:
             setRegPair(HL, addSPImm8((char)getImm8()));
             zero = false;
-            clock += 3;
+            cycleCount += 3;
             break;
 
         // LD (nn), SP
         // Load stack pointer into memory at address specified by 16-bit immediate nn
         case 0x08:
             saveSP();
-            clock += 5;
+            cycleCount += 5;
             break;
 
         // ADD A, n
         // Add 8-bit immediate n with register A and store result in A
         case 0xC6:
             A = add(A, getImm8(), NO_CARRY);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // ADC A, n
         // Add A, 8-bit immediate n, and carry flag together and store result in A
         case 0xCE:
             A = add(A, getImm8(), WITH_CARRY);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // SUB n
         // Subtract 8-bit immediate n from register A and store result in A
         case 0xD6:
             A = sub(A, getImm8(), NO_CARRY);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // SBC A, n
         // Subtract 8-bit immediate n and carry flag from register A and store result in A
         case 0xDE:
             A = sub(A, getImm8(), WITH_CARRY);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // AND n
         // And register A and 8-bit immediate n together and store result in A
         case 0xE6:
             A = bitAnd(A, getImm8());
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // OR n
         // Or register A and 8-bit immediate n together and store result in A
         case 0xF6:
             A = bitOr(A, getImm8());
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // XOR n
         // Xor register A and 8-bit immediate n together and store result in A
         case 0xEE:
             A = bitXor(A, getImm8());
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // CP n
         // Compare register A and 8-bit immediate n
         case 0xFE:
             sub(A, getImm8(), NO_CARRY);
-            clock += 2;
+            cycleCount += 2;
             break;
 
         // ADD SP, e
@@ -301,7 +298,7 @@ void CPU::decode(unsigned char opcode) {
         case 0xE8:
             SP = addSPImm8((char)getImm8());
             zero = false;
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // RLCA
@@ -309,7 +306,7 @@ void CPU::decode(unsigned char opcode) {
         case 0x07:
             A = rotateLeft(A);
             zero = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // RLA
@@ -317,7 +314,7 @@ void CPU::decode(unsigned char opcode) {
         case 0x17:
             A = rotateLeftCarry(A);
             zero = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // RRCA
@@ -325,7 +322,7 @@ void CPU::decode(unsigned char opcode) {
         case 0x0F:
             A = rotateRight(A);
             zero = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // RRA
@@ -333,49 +330,49 @@ void CPU::decode(unsigned char opcode) {
         case 0x1F:
             A = rotateRightCarry(A);
             zero = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // JP nn
         // Jump to address specified by 16 bit immediate
         case 0xC3:
             jump(getImm16());
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // JR e
         // Jump to PC + (signed) e
         case 0x18:
             jumpRel((char)getImm8());
-            clock += 3;
+            cycleCount += 3;
             break;
 
         // JP (HL)
         // Jump to address specified by register HL
         case 0xE9:
             jump(getRegPair(HL));
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // CALL nn
         // Push current address onto stack and jump to address specified by 16 bit immediate
         case 0xCD:
             call(getImm16());
-            clock += 6;
+            cycleCount += 6;
             break;
 
         // RET
         // Pop stack and return to popped address
         case 0xC9:
             ret();
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // RETI
         // Return from interrupt routine
         case 0xD9:
             ret();
-            clock += 4;
+            cycleCount += 4;
             IME = true;
             break;
 
@@ -383,42 +380,42 @@ void CPU::decode(unsigned char opcode) {
         // Load zero page memory address specified by t into PC
         case 0xC7:
             call(0x00);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xCF:
             call(0x08);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xD7:
             call(0x10);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xDF:
             call(0x18);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xE7:
             call(0x20);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xEF:
             call(0x28);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xF7:
             call(0x30);
-            clock += 4;
+            cycleCount += 4;
             break;
         case 0xFF:
             call(0x38);
-            clock += 4;
+            cycleCount += 4;
             break;
 
         // DAA
         // Decimal adjust accumulator
         case 0x27:
             decimalAdjustAcc();
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // CPL
@@ -427,13 +424,13 @@ void CPU::decode(unsigned char opcode) {
             A = ~A;
             halfCarry = true;
             subtract = true;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // NOP
         // No operation
         case 0x00:
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // CCF
@@ -442,7 +439,7 @@ void CPU::decode(unsigned char opcode) {
             carry = !carry;
             halfCarry = false;
             subtract = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // SCF
@@ -451,28 +448,28 @@ void CPU::decode(unsigned char opcode) {
             carry = true;
             halfCarry = false;
             subtract = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // DI
         // Reset interrupt master enable flag
         case 0xF3:
             IME = false;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // EI
         // Set interrupt master enable flag
         case 0xFB:
             IME = true;
-            clock += 1;
+            cycleCount += 1;
             break;
 
         // STOP
         // Stop system clock and oscillator circuit
         // TODO: implement stop instruction
         case 0x10:
-            clock += 1;
+            cycleCount += 1;
             break;
 
 
@@ -497,10 +494,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b000:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), rotateLeft(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateLeft(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -509,10 +506,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b001:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), rotateRight(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateRight(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -521,10 +518,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b010:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), rotateLeftCarry(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateLeftCarry(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -533,10 +530,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b011:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), rotateRightCarry(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = rotateRightCarry(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -545,10 +542,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b100:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), shiftLeft(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftLeft(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -557,10 +554,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b101:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), shiftRightArithmetic(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftRightArithmetic(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -569,10 +566,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b110:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), swap(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = swap(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -581,10 +578,10 @@ void CPU::decode(unsigned char opcode) {
                         case 0b111:
                             if (regSrcCB == MEM) {
                                 mmu->write(getRegPair(HL), shiftRightLogical(mmu->read(getRegPair(HL))));
-                                clock += 4;
+                                cycleCount += 4;
                             } else {
                                 *(regArr[regSrcCB]) = shiftRightLogical(*(regArr[regSrcCB]));
-                                clock += 2;
+                                cycleCount += 2;
                             }
                             break;
 
@@ -602,14 +599,14 @@ void CPU::decode(unsigned char opcode) {
                     // Copies complement of specified bit b of memory at HL to Z flag
                     if (regSrcCB == MEM) {
                         compBitToZero(mmu->read(getRegPair(HL)), regDestCB);
-                        clock += 3;
+                        cycleCount += 3;
                     }
 
                     // BIT b, r
                     // Copies complement of specified bit b of register r to Z flag
                     else {
                         compBitToZero(*(regArr[regSrcCB]), regDestCB);
-                        clock += 2;
+                        cycleCount += 2;
                     }
                     break;
 
@@ -622,14 +619,14 @@ void CPU::decode(unsigned char opcode) {
                     // Reset bit b in memory at HL to 0
                     if (regSrcCB == MEM) {
                         mmu->write(getRegPair(HL), resetBit(mmu->read(getRegPair(HL)), regDestCB));
-                        clock += 4;
+                        cycleCount += 4;
                     }
 
                     // RES b, r
                     // Set bit b in register r to 0
                     else {
                         *(regArr[regSrcCB]) = resetBit(*(regArr[regSrcCB]), regDestCB);
-                        clock += 2;
+                        cycleCount += 2;
                     }
                     break;
 
@@ -642,14 +639,14 @@ void CPU::decode(unsigned char opcode) {
                     // Sets bit b in memory at HL to 1
                     if (regSrcCB == MEM) {
                         mmu->write(getRegPair(HL), setBit(mmu->read(getRegPair(HL)), regDestCB));
-                        clock += 4;
+                        cycleCount += 4;
                     }
 
                     // SET b, r
                     // Sets bit b in register r to 1
                     else {
                         *(regArr[regSrcCB]) = setBit(*(regArr[regSrcCB]), regDestCB);
-                        clock += 2;
+                        cycleCount += 2;
                     }
                     break;
 
@@ -689,10 +686,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b100:
                     if (regDest == MEM) {
                         mmu->write(getRegPair(HL), inc(mmu->read(getRegPair(HL))));
-                        clock += 3;
+                        cycleCount += 3;
                     } else {
                         *(regArr[regDest]) = inc(*(regArr[regDest]));
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -701,10 +698,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b101:
                     if (regDest == MEM) {
                         mmu->write(getRegPair(HL), dec(mmu->read(getRegPair(HL))));
-                        clock += 3;
+                        cycleCount += 3;
                     } else {
                         *(regArr[regDest]) = dec(*(regArr[regDest]));
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -713,10 +710,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b110:
                     if (regDest == MEM) {
                         mmu->write(getRegPair(HL), getImm8());
-                        clock += 3;
+                        cycleCount += 3;
                     } else {
                         *regArr[regDest] = getImm8();
-                        clock += 2;
+                        cycleCount += 2;
                     }
                     break;
 
@@ -733,28 +730,28 @@ void CPU::decode(unsigned char opcode) {
                 // Load 16-bit immediate nn into register pair dd
                 case 0x1:
                     setRegPair(regPair, getImm16());
-                    clock += 3;
+                    cycleCount += 3;
                     break;
 
                 // INC ss
                 // Increment register ss
                 case 0x3:
                     setRegPair(regPair, getRegPair(regPair) + 1);
-                    clock += 2;
+                    cycleCount += 2;
                     break;
 
                 // ADD HL, ss
                 // Add register HL and register ss and store store result in HL
                 case 0x9:
                     setRegPair(HL, add16(getRegPair(HL), getRegPair(regPair)));
-                    clock += 2;
+                    cycleCount += 2;
                     break;
 
                 // DEC ss
                 // Decrement register ss
                 case 0xB:
                     setRegPair(regPair, getRegPair(regPair) - 1);
-                    clock += 2;
+                    cycleCount += 2;
                     break;
 
                 default:
@@ -771,14 +768,14 @@ void CPU::decode(unsigned char opcode) {
                     if (IME || ((mmu->mem[IE] & mmu->mem[IF]) & 0x1F) == 0) {
                         halted = true;
                     }
-                    clock += 1;
+                    cycleCount += 1;
                 }
 
                 // LD r, (HL)
                 // Load memory at register pair HL into register r
                 else {
                     *(regArr[regDest]) = mmu->read(getRegPair(HL));
-                    clock += 2;
+                    cycleCount += 2;
                 }
             }
 
@@ -787,14 +784,14 @@ void CPU::decode(unsigned char opcode) {
             // specified by register pair HL
             else if (regDest == MEM) {
                 mmu->write(getRegPair(HL), *(regArr[regSrc]));
-                clock += 2;
+                cycleCount += 2;
             }
 
             // LD r, r'
             // Load contents of register r' into register r
             else {
                 *(regArr[regDest]) = *(regArr[regSrc]);
-                clock += 1;
+                cycleCount += 1;
             }
             break;
 
@@ -810,11 +807,11 @@ void CPU::decode(unsigned char opcode) {
                 case 0b000:
                     if (regSrc == MEM) {
                         A = add(A, mmu->read(getRegPair(HL)), NO_CARRY);
-                        clock += 2;
+                        cycleCount += 2;
                         break;
                     } else {
                         A = add(A, *(regArr[regSrc]), NO_CARRY);
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -824,10 +821,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b001:
                     if (regSrc == MEM) {
                         A = add(A, mmu->read(getRegPair(HL)), WITH_CARRY);
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = add(A, *(regArr[regSrc]), WITH_CARRY);
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -836,10 +833,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b010:
                     if (regSrc == MEM) {
                         A = sub(A, mmu->read(getRegPair(HL)), NO_CARRY);
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = sub(A, *(regArr[regSrc]), NO_CARRY);
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -849,10 +846,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b011:
                     if (regSrc == MEM) {
                         A = sub(A, mmu->read(getRegPair(HL)), WITH_CARRY);
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = sub(A, *(regArr[regSrc]), WITH_CARRY);
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -861,10 +858,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b100:
                     if (regSrc == MEM) {
                         A = bitAnd(A, mmu->read(getRegPair(HL)));
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = bitAnd(A, *(regArr[regSrc]));
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -873,10 +870,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b101:
                     if (regSrc == MEM) {
                         A = bitXor(A, mmu->read(getRegPair(HL)));
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = bitXor(A, *(regArr[regSrc]));
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -885,10 +882,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b110:
                     if (regSrc == MEM) {
                         A = bitOr(A, mmu->read(getRegPair(HL)));
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         A = bitOr(A, *(regArr[regSrc]));
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -897,10 +894,10 @@ void CPU::decode(unsigned char opcode) {
                 case 0b111:
                     if (regSrc == MEM) {
                         sub(A, mmu->read(getRegPair(HL)), NO_CARRY);
-                        clock += 2;
+                        cycleCount += 2;
                     } else {
                         sub(A, *(regArr[regSrc]), NO_CARRY);
-                        clock += 1;
+                        cycleCount += 1;
                     }
                     break;
 
@@ -915,14 +912,14 @@ void CPU::decode(unsigned char opcode) {
             // Push register pair qq onto stack
             if (lo == 0x5) {
                 pushRegPair(regPair);
-                clock += 4;
+                cycleCount += 4;
             }
 
             // POP qq
             // Pop contents of stack into register pair qq
             else if (lo == 0x1) {
                 popRegPair(regPair);
-                clock += 3;
+                cycleCount += 3;
             }
 
             // RET cc
@@ -1401,9 +1398,9 @@ void CPU::condition(Control condFunc, unsigned char condValue,
                 ret();
                 break;
         }
-        clock += clockSuccess;
+        cycleCount += clockSuccess;
     } else {
-        clock += clockFail;
+        cycleCount += clockFail;
     }
 }
 
@@ -1416,6 +1413,7 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 void CPU::checkForInt() {
     if (halted && (mmu->mem[IF] & mmu->mem[IE]) != 0) {
         halted = false;
+        cycleCount += 1;
     }
 
     if (IME) {
@@ -1442,7 +1440,7 @@ void CPU::checkForInt() {
             IME = false;
             push(PC);
             PC = intAddr;
-            clock += 3;
+            cycleCount += 5;
         }
     }
 }
