@@ -8,6 +8,7 @@ GBThread::GBThread(QObject *parent) : QThread(parent)
 {
     rom = "";
     emitted = false;
+    ppu = new PPU(cpu.mmu->mem, &cpu.cycleCount);
 }
 
 GBThread::~GBThread() {
@@ -24,20 +25,20 @@ void GBThread::setRom(std::string dir) {
 void GBThread::run() {
     cpu.reset();
     QImage frame(160, 144, QImage::Format_RGB32);
-    PPU ppu(cpu.mmu->mem, &cpu.cycleCount, &frame);
 
     cpu.mmu->loadCartridge(rom);
+    ppu->setDisplay(&frame);
 
     auto cycleStart = std::chrono::system_clock::now();
 
     forever {
         cpu.step();
-        ppu.step();
+        ppu->step();
 
         // send frame to widget
         if (cpu.mmu->mem[LY] > 143 && !emitted) {
             emitted = true;
-            if (!ppu.lcdEnable()) {
+            if (!ppu->lcdEnable()) {
                 frame.fill(0xe0f0e8);
             }
             emit sendFrame(frame);

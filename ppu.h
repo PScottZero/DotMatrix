@@ -2,15 +2,8 @@
 #define PPU_H
 
 #include "cpu.h"
+#include "palette.h"
 #include <QtWidgets/QMainWindow>
-
-// ================================
-// Pixel color values
-// ================================
-constexpr unsigned char PX_ZERO = 0b00;
-constexpr unsigned char PX_ONE = 0b01;
-constexpr unsigned char PX_TWO = 0b10;
-constexpr unsigned char PX_THREE = 0b11;
 
 // ================================
 // Tile sizing
@@ -72,6 +65,7 @@ public:
     // ================================
     unsigned char* mem;
     QImage *display;
+    Palette *palette;
     bool rendered;
     unsigned int ppuCycle;
     unsigned int *cycleCount;
@@ -79,7 +73,9 @@ public:
     // ================================
     // Display functions
     // ================================
-    PPU(unsigned char *cpuMem, unsigned int *cpuCycleCount, QImage *frame);
+    PPU(unsigned char *cpuMem, unsigned int *cpuCycleCount);
+    void setPalette(Palette* pal);
+    void setDisplay(QImage *disp);
     void step();
     void drawScanline();
     [[nodiscard]] uint getPixelColor(unsigned char value, unsigned short mapAddr) const;
@@ -116,8 +112,8 @@ public:
     // ================================
     void triggerVBlankInt() const;
     void setLcdInt();
-    bool compareCheck();
-    bool modeCheck(Mode, unsigned char);
+    bool compareCheck() const;
+    bool modeCheck(Mode, unsigned char) const;
 };
 
 #endif // PPU_H

@@ -6,9 +6,10 @@
 // ================================
 // Initialize ppu data
 // ================================
-PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount, QImage *frame) {
+PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount) {
     mem = cpuMem;
-    display = frame;
+    display = nullptr;
+    palette = new Palette(0xC5DFFA, 0x5C88B8, 0x1A4778, 0x00234A);
     ppuCycle = 0;
     cycleCount = cpuCycleCount;
     rendered = false;
@@ -252,6 +253,14 @@ void PPU::drawSprites(unsigned char* scanline, unsigned short* palette) const {
     }
 }
 
+void PPU::setDisplay(QImage *disp) {
+    display = disp;
+}
+
+void PPU::setPalette(Palette* pal) {
+    palette = pal;
+}
+
 // ================================
 // Get pixel color based on
 // palette map
@@ -276,21 +285,7 @@ uint PPU::getPixelColor(unsigned char value, unsigned short mapAddr) const {
         default:
             break;
     }
-
-    // get color value
-    switch (color) {
-        case PX_ZERO:
-            return 0xc5dffa;
-        case PX_ONE:
-            return 0x5c88b8;
-        case PX_TWO:
-            return 0x1a4778;
-        case PX_THREE:
-            return 0x00234a;
-        default:
-            break;
-    }
-    return 0;
+    return palette->getColor(color);
 }
 
 
@@ -384,11 +379,11 @@ void PPU::triggerVBlankInt() const {
     mem[IF] |= 0b01;
 }
 
-bool PPU::compareCheck() {
+bool PPU::compareCheck() const {
     return (mem[LY] == mem[LY_COMP]) && (mem[STAT] & 0x40);
 }
 
-bool PPU::modeCheck(Mode mode, unsigned char mask) {
+bool PPU::modeCheck(Mode mode, unsigned char mask) const {
     return ((mem[STAT] & 0x3) == mode) && (mem[STAT] & mask);
 }
 

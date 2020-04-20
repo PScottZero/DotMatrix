@@ -1,6 +1,5 @@
 #include "dmWindow.h"
 
-
 DMWindow::DMWindow() : QMainWindow() {
     setWindowTitle(tr("Dot Matrix v0.1 alpha"));
     setWindowIcon(QIcon(":/img/dm_icon.ico"));
@@ -41,17 +40,30 @@ void DMWindow::createMenuBar() {
     QMenu *optionsMenu = menu->addMenu(tr("Options"));
 
     QMenu *palette = optionsMenu->addMenu("Palette");
-    palette->addAction("Cobalt (Default)");
-//    palette->addAction("Game Boy Pocket");
-//    palette->addAction("Game Boy Original");
-//    palette->addAction("BGB");
-//    palette->addAction("Platinum (By WildLeoKnight)");
-//    palette->addAction("Wish GB (By Kerrie Lake)");
-//    palette->addAction("Bicycle (By Braquen)");
-//    palette->addAction("GB Chocolate (By GrafxKid)");
-//    palette->addAction("Kirby");
+    auto *paletteSignal = new QSignalMapper(this);
+    addPalette(palette, paletteSignal, "Cobalt (Default)", palCobalt);
+    addPalette(palette, paletteSignal, "Game Boy Pocket", palGBP);
+    addPalette(palette, paletteSignal, "Game Boy Original", palDMG);
+    addPalette(palette, paletteSignal, "BGB", palBGB);
+    addPalette(palette, paletteSignal, "Platinum (By WildLeoKnight)", palPlatinum);
+    addPalette(palette, paletteSignal, "Wish GB (By Kerrie Lake)", palWish);
+    addPalette(palette, paletteSignal, "Bicycle (By Braquen)", palBicycle);
+    addPalette(palette, paletteSignal, "GB Chocolate (By GrafxKid)", palChocolate);
+    addPalette(palette, paletteSignal, "Kirby", palKirby);
+
+    connect(paletteSignal, SIGNAL(mapped(QObject*)), this, SLOT(setPalette(QObject*)));
 
     setMenuBar(menu);
+}
+
+void DMWindow::setPalette(QObject* pal) const {
+    gbthread->ppu->setPalette(qobject_cast<Palette*>(pal));
+}
+
+void DMWindow::addPalette(QMenu* palMenu, QSignalMapper *sigMap, const std::string& name, Palette* pal) {
+    QAction *palette = palMenu->addAction(name.c_str());
+    connect(palette, SIGNAL(triggered()), sigMap, SLOT(map()));
+    sigMap->setMapping(palette, pal);
 }
 
 void DMWindow::loadRom() {

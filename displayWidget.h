@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QDebug>
 #include <QKeyEvent>
+#include <QSignalMapper>
 #include "gbThread.h"
 
 class DisplayWidget : public QWidget

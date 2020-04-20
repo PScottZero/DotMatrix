@@ -19,6 +19,9 @@ class GBThread: public QThread
     Q_OBJECT
 
 public:
+    bool emitted;
+    CPU cpu;
+    PPU *ppu;
     std::string rom;
     explicit GBThread(QObject *parent = nullptr);
     ~GBThread() override;
@@ -29,10 +32,6 @@ public slots:
 
 protected:
     void run() override;
-
-private:
-    bool emitted;
-    CPU cpu;
 
 signals:
     void sendFrame(const QImage &frame);
