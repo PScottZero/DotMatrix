@@ -42,10 +42,15 @@ void DMWindow::createMenuBar() {
     QMenu *optionsMenu = menu->addMenu(tr("&Options"));
 
     QMenu *palette = optionsMenu->addMenu("&Palette");
-    palette->addAction("Default");
+    palette->addAction("Cobalt (Default)");
     palette->addAction("Game Boy Pocket");
     palette->addAction("Game Boy Original");
+    palette->addAction("BGB");
     palette->addAction("Platinum (By WildLeoKnight)");
+    palette->addAction("Wish GB (By Kerrie Lake)");
+    palette->addAction("Bicycle (By Braquen)");
+    palette->addAction("GB Chocolate (By GrafxKid)");
+    palette->addAction("Kirby");
 
     setMenuBar(menu);
 }

@@ -3,6 +3,7 @@
 
 #include "displayWidget.h"
 #include "gbThread.h"
+#include "palettes.h"
 #include <QMainWindow>
 #include <QMenuBar>
 
