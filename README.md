@@ -7,6 +7,7 @@
   <img src="https://i.imgur.com/5JQEbvG.jpg" width="300" height="300">
   <img src="https://i.imgur.com/pLyBYOD.jpg" width="300" height="300">
   <img src="https://i.imgur.com/vNTUa0q.jpg" width="300" height="300">
+  <img src="https://i.imgur.com/x4Oyvvv.jpg" width="300" height="300">
 </div>
 
 <h2>17 April 2020:</h2>
