@@ -58,5 +58,4 @@ public:
     void checkForInput();
 };
 
-
 #endif //DOTMATRIX_MMU_H

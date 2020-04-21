@@ -39,7 +39,7 @@ void GBThread::run() {
         if (cpu.mmu->mem[LY] > 143 && !emitted) {
             emitted = true;
             if (!ppu->lcdEnable()) {
-                frame.fill(0xe0f0e8);
+                frame.fill(ppu->palette->getColor(PX_ZERO));
             }
             emit sendFrame(frame);
             auto nextCycle = cycleStart + std::chrono::milliseconds(16);

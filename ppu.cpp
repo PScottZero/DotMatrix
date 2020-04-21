@@ -30,7 +30,6 @@ void PPU::step() {
         ppuCycle %= SCREEN_CYCLE;
         mem[LY] = (ppuCycle / SCANLINE) % 154;
         if (ppuCycle / SCANLINE < 144) {
-            mem[IF] &= 0xFE;
             if (ppuCycle % SCANLINE <= 20) {
                 rendered = false;
                 setMode(MODE_2);
@@ -67,46 +66,46 @@ void PPU::setMode(Mode m) const {
 void PPU::drawScanline() {
     rendered = true;
     auto *scanline = new unsigned char[160];
-    auto *palette = new unsigned short[160];
+    auto *scanPal = new unsigned short[160];
 
     // draw background
     if (bgEnable()) {
-        drawBackground(scanline, palette);
+        drawBackground(scanline, scanPal);
     } else {
         for (int i = 0; i < SCREEN_WIDTH; i++) {
             scanline[i] = 0;
-            palette[i] = BGP;
+            scanPal[i] = BGP;
         }
     }
 
     // draw window
     if (windowEnable()) {
-        drawWindow(scanline, palette);
+        drawWindow(scanline, scanPal);
     }
 
     // draw sprites
     if (spriteEnable()) {
-        drawSprites(scanline, palette);
+        drawSprites(scanline, scanPal);
     }
 
     // transfer scanline to display
     for (int i = 0; i < SCREEN_WIDTH; i++) {
-        uint color = getPixelColor(scanline[i], palette[i]);
-        if (palette[i] == BGP && !bgEnable()) {
-            color = 0xFFFFFF;
+        uint color = getPixelColor(scanline[i], scanPal[i]);
+        if (scanPal[i] == BGP && !bgEnable()) {
+            color = palette->getColor(PX_ZERO);
         }
         display->setPixel(i, mem[LY], color);
     }
 
     delete[] scanline;
-    delete[] palette;
+    delete[] scanPal;
     setLcdInt();
 }
 
 // ================================
 // Draw row of background
 // ================================
-void PPU::drawBackground(unsigned char *scanline, unsigned short *palette) const {
+void PPU::drawBackground(unsigned char *scanline, unsigned short *scanPal) const {
     unsigned short bgDataAddr = DATA_ADDR_0;
     unsigned short bgMapAddr = MAP_ADDR_0;
 
@@ -134,11 +133,11 @@ void PPU::drawBackground(unsigned char *scanline, unsigned short *palette) const
         unsigned char bit1 = (mem[tileRowAddr + 1] >> (7 - ((mem[SCROLL_X] + i) % TILE_PX_DIM))) & 1;
 
         scanline[i] = (bit1 << 1) | bit0;
-        palette[i] = BGP;
+        scanPal[i] = BGP;
     }
 }
 
-void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
+void PPU::drawWindow(unsigned char* scanline, unsigned short* scanPal) const {
     unsigned short winDataAddr = DATA_ADDR_0;
     unsigned short winMapAddr = MAP_ADDR_0;
 
@@ -168,7 +167,7 @@ void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
                     unsigned char bit0 = (byte0 >> (7 - j)) & 0x1;
                     unsigned char bit1 = (byte1 >> (7 - j)) & 0x1;
                     scanline[dispX] = (bit1 << 1) | bit0;
-                    palette[dispX] = BGP;
+                    scanPal[dispX] = BGP;
                 }
 
                 if (dispX >= 160) {
@@ -186,7 +185,7 @@ void PPU::drawWindow(unsigned char* scanline, unsigned short* palette) const {
 // ================================
 // Draw row of sprites
 // ================================
-void PPU::drawSprites(unsigned char* scanline, unsigned short* palette) const {
+void PPU::drawSprites(unsigned char* scanline, unsigned short* scanPal) const {
 
     // find sprites in scanline
     for (int oamEntry = 0; oamEntry < OAM_COUNT; oamEntry++) {
@@ -238,12 +237,12 @@ void PPU::drawSprites(unsigned char* scanline, unsigned short* palette) const {
                     unsigned char pxVal = (bit1 << 1) | bit0;
                     if (pxVal != 0) {
                         if (!spriteBehindBG(oamEntry) ||
-                            (scanline[scanIndex] == 0 && palette[scanIndex] == BGP)) {
+                            (scanline[scanIndex] == 0 && scanPal[scanIndex] == BGP)) {
                             scanline[scanIndex] = pxVal;
                             if (getSpritePalette(oamEntry)) {
-                                palette[scanIndex] = OBP1;
+                                scanPal[scanIndex] = OBP1;
                             } else {
-                                palette[scanIndex] = OBP0;
+                                scanPal[scanIndex] = OBP0;
                             }
                         }
                     }
