@@ -27,6 +27,7 @@ void GBThread::run() {
     QImage frame(160, 144, QImage::Format_RGB32);
 
     cpu.mmu->loadCartridge(rom);
+    checkBankType();
     ppu->setDisplay(&frame);
 
     auto cycleStart = std::chrono::system_clock::now();
@@ -48,6 +49,18 @@ void GBThread::run() {
         } else if (cpu.mmu->mem[LY] <= 143) {
             emitted = false;
         }
+    }
+}
+
+void GBThread::checkBankType() {
+    unsigned char bankType = cpu.mmu->mem[BANK_TYPE];
+    if (bankType >= 0x0 && bankType <= 0x3 ||
+        bankType >= 0x5 && bankType <= 0x6) {
+        cpu.mmu->bankType = (BankType)bankType;
+    } else {
+        emit sendBankError(bankType);
+        terminate();
+        wait();
     }
 }
 

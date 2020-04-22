@@ -33,8 +33,12 @@ public slots:
 protected:
     void run() override;
 
+private:
+    void checkBankType();
+
 signals:
     void sendFrame(const QImage &frame);
+    void sendBankError(unsigned char);
 };
 
 #endif // GBTHREAD_H

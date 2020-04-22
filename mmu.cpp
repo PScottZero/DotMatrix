@@ -3,6 +3,7 @@
 MMU::MMU() {
     mem = new unsigned char[0x10000];
     cart = new char[0x200000];
+    ramEnabled = false;
 
     // zero memory from 0x8000 to 0x9FFF
     for (int i = 0x8000; i < 0xA000; i++) {
@@ -24,7 +25,7 @@ void MMU::write(unsigned short addr, unsigned char value) {
 
     // load bank
     if (addr >= 0x2000 && addr < 0x4000) {
-        loadBank(value & 0x1F);
+        loadROMBank(value & 0x1F);
     }
 
     // perform dma transfer
@@ -46,7 +47,9 @@ void MMU::write(unsigned short addr, unsigned char value) {
     }
 
     // write value to address
-    if (addr > 0x7FFF) {
+    if ((addr >= 0x8000 && addr < 0xA000) ||
+        (addr >= 0xC000) ||
+        (addr >= 0xA000 && addr < 0xC000 && ramEnabled)) {
         mem[addr] = value;
     }
 
@@ -74,14 +77,24 @@ void MMU::loadCartridge(const std::string& dir) const {
 // ================================
 // Load cartridge bank
 // ================================
-void MMU::loadBank(unsigned char bankNo) const {
-    if (bankNo == 0x00 || bankNo == 0x20 ||
-        bankNo == 0x40 || bankNo == 0x60) {
-        bankNo++;
-    }
-    unsigned int bankAddr = bankNo * BANK_SIZE;
-    for (unsigned int i = 0; i < BANK_SIZE; i++) {
-        mem[BANK_SIZE + i] = cart[bankAddr + i];
+void MMU::loadROMBank(unsigned char bankNo) const {
+    if (bankType >= 0 && bankType <= 3) {
+        if (bankNo == 0) {
+            bankNo = 1;
+        }
+        if (bankNo >= 0x20) {
+            bankNo--;
+        }
+        if (bankNo >= 0x40) {
+            bankNo--;
+        }
+        if (bankNo >= 0x60) {
+            bankNo--;
+        }
+        unsigned int bankAddr = bankNo * BANK_SIZE;
+        for (unsigned int i = 0; i < BANK_SIZE; i++) {
+            mem[BANK_SIZE + i] = cart[bankAddr + i];
+        }
     }
 }
 

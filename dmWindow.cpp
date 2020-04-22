@@ -1,3 +1,4 @@
+#include <QtWidgets/QMessageBox>
 #include "dmWindow.h"
 
 DMWindow::DMWindow() : QMainWindow() {
@@ -11,6 +12,7 @@ DMWindow::DMWindow() : QMainWindow() {
 
     connect(this, SIGNAL(sendInput(Joypad, bool)), gbthread, SLOT(processInput(Joypad, bool)));
     connect(gbthread, SIGNAL(sendFrame(QImage)), display, SLOT(updateDisplay(QImage)));
+    connect(gbthread, SIGNAL(sendBankError(unsigned char)), this, SLOT(bankError(unsigned char)));
 
     setCentralWidget(display);
     createMenuBar();
@@ -68,9 +70,19 @@ void DMWindow::addPalette(QMenu* palMenu, QSignalMapper *sigMap, const std::stri
 
 void DMWindow::loadRom() {
     gbthread->terminate();
+    gbthread->wait();
     QString rom = QFileDialog::getOpenFileName(this, tr("Load Rom"), "/", tr("Game Boy Rom (*.gb)"));
-    gbthread->setRom(rom.toStdString());
-    gbthread->start();
+    if (!rom.isEmpty()) {
+        gbthread->setRom(rom.toStdString());
+        gbthread->start();
+    }
+}
+
+void DMWindow::bankError(unsigned char bankType) {
+    QMessageBox bankError;
+    std::string err = "Error: Unsupported Bank Type " + std::to_string(bankType);
+    bankError.setText(err.c_str());
+    bankError.exec();
 }
 
 void DMWindow::keyPressEvent(QKeyEvent *event) {

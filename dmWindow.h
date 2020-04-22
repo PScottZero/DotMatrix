@@ -34,6 +34,7 @@ public:
 
 public slots:
     void setPalette(QObject *pal) const;
+    void bankError(unsigned char);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
