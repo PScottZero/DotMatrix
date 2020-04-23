@@ -45,6 +45,10 @@ enum Control {
     JUMP, JUMP_REL, CALL, RETURN
 };
 
+enum Interrupt {
+    VBLANK, LCD_STAT, TIMER_OVERFLOW, SERIAL_LINK, JOYPAD_PRESSED
+};
+
 class CPU
 {
 public:
@@ -129,6 +133,8 @@ public:
     // ================================
     // Interrupt functions
     // ================================
+    void setInt(Interrupt i) const;
+    void resetInt(Interrupt i) const;
     void checkForInt();
     bool vblankIntTriggered() const;
     bool lcdIntTriggered() const;

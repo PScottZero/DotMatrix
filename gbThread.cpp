@@ -37,7 +37,7 @@ void GBThread::run() {
         ppu->step();
 
         // send frame to widget
-        if (cpu.mmu->mem[LY] > 143 && !emitted) {
+        if (cpu.mmu->read(LY) > 143 && !emitted) {
             emitted = true;
             if (!ppu->lcdEnable()) {
                 frame.fill(ppu->palette->getColor(PX_ZERO));
@@ -46,21 +46,23 @@ void GBThread::run() {
             auto nextCycle = cycleStart + std::chrono::milliseconds(16);
             std::this_thread::sleep_until(nextCycle);
             cycleStart = std::chrono::system_clock::now();
-        } else if (cpu.mmu->mem[LY] <= 143) {
+        } else if (cpu.mmu->read(LY) <= 143) {
             emitted = false;
         }
     }
 }
 
 void GBThread::checkBankType() {
-    unsigned char bankType = cpu.mmu->mem[BANK_TYPE];
-    if (bankType >= 0x0 && bankType <= 0x3 ||
-        bankType >= 0x5 && bankType <= 0x6) {
-        cpu.mmu->bankType = (BankType)bankType;
+    unsigned char bankType = cpu.mmu->read(BANK_TYPE);
+    if (bankType == 0x0) {
+        cpu.mmu->bankType = NONE;
+    } else if (bankType >= 0x1 && bankType <= 0x3) {
+        cpu.mmu->bankType = MBC1;
+    } else if (bankType == 0x5 || bankType == 0x6) {
+        cpu.mmu->bankType = MBC2;
     } else {
         emit sendBankError(bankType);
         terminate();
-        wait();
     }
 }
 
@@ -68,7 +70,7 @@ void GBThread::processInput(Joypad button, bool pressed) {
     bool oldState = cpu.mmu->joypad[button];
     cpu.mmu->joypad[button] = pressed;
     if (!oldState && cpu.mmu->joypad[button]) {
-        cpu.mmu->mem[IF] |= 0x10;
+        cpu.setInt(JOYPAD_PRESSED);
     }
 }
 

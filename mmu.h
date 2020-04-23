@@ -32,9 +32,7 @@ constexpr auto BYTES_PER_OAM = 4;
 // ROM banking types
 // ================================
 enum BankType {
-    NONE = 0x0,
-    MBC1 = 0x1, MBC1_RAM = 0x2, MBC1_RAM_BAT = 0x3,
-    MBC2_RAM = 0x5, MBC2_RAM_BAT = 0x6
+    NONE, MBC1, MBC2, MBC3, MBC5
 };
 
 // ================================
@@ -50,15 +48,22 @@ public:
     unsigned char* mem;
     char* cart;
     bool ramEnabled;
+    bool bankMode;
+    unsigned int bankUpperBits;
+    unsigned int bankLowerBits;
     BankType bankType;
     std::unordered_map<Joypad, bool> joypad;
 
     MMU();
-    [[nodiscard]] unsigned char read(unsigned short) const;
+    unsigned char read(unsigned short) const;
     void write(unsigned short, unsigned char);
     void loadCartridge(const std::string&) const;
     void loadROMBank(unsigned char) const;
+    void loadRAMBank(unsigned char) const;
     void checkForInput();
+    void checkForMBCRequest(unsigned short addr, unsigned char value);
+    void checkForDMATransfer(unsigned short addr, unsigned char value);
+    void checkForEcho(unsigned short addr, unsigned char value) const;
 };
 
 #endif //DOTMATRIX_MMU_H

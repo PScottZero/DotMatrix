@@ -4,6 +4,10 @@ MMU::MMU() {
     mem = new unsigned char[0x10000];
     cart = new char[0x200000];
     ramEnabled = false;
+    bankMode = true;
+    bankType = NONE;
+    bankUpperBits = 0;
+    bankLowerBits = 0;
 
     // zero memory from 0x8000 to 0x9FFF
     for (int i = 0x8000; i < 0xA000; i++) {
@@ -15,47 +19,76 @@ MMU::MMU() {
 // Read from memory
 // ================================
 unsigned char MMU::read(unsigned short addr) const {
-    return mem[addr];
+    if (addr >= 0x0000 && addr < 0x4000) {
+        return cart[addr];
+    } else if (addr >= 0x4000 && addr < 0x8000) {
+        if (bankType == NONE) {
+            return cart[addr];
+        } else {
+            return cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+        }
+    } else {
+        return mem[addr];
+    }
 }
 
 // ================================
 // Write to memory
 // ================================
 void MMU::write(unsigned short addr, unsigned char value) {
-
-    // load bank
-    if (addr >= 0x2000 && addr < 0x4000) {
-        loadROMBank(value & 0x1F);
+    if (addr == DIVIDER) {
+        printf("yes\n");
     }
 
-    // perform dma transfer
-    if (addr == DMA) {
-        unsigned short oamDataAddr = value << 8;
-        for (int i = 0; i < OAM_COUNT * BYTES_PER_OAM; i++) {
-            write(OAM_ADDR + i, read(oamDataAddr + i));
-        }
-    }
+    checkForMBCRequest(addr, value);
+    checkForDMATransfer(addr, value);
+    checkForEcho(addr, value);
 
-        // echo ram
-    else if (addr >= ECHO_START && addr < ECHO_END) {
-        mem[WORK_RAM + addr - ECHO_START] = value;
-    }
-
-        // reset timer
-    else if (addr == DIVIDER) {
+    // reset timer
+    if (addr == DIVIDER) {
         value = 0;
     }
 
     // write value to address
-    if ((addr >= 0x8000 && addr < 0xA000) ||
-        (addr >= 0xC000) ||
-        (addr >= 0xA000 && addr < 0xC000 && ramEnabled)) {
+    if (addr >= 0x8000) {
         mem[addr] = value;
     }
 
     // check for joypad input
     if (addr == JOYPAD) {
         checkForInput();
+    }
+}
+
+void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
+    if (bankType == MBC1) {
+        if (addr >= 0x0000 && addr < 0x2000) {
+            ramEnabled = (value & 0xF) == 0xA;
+        } else if (addr >= 0x2000 && addr < 0x4000) {
+            bankLowerBits = (value & 0x1F) << 14;
+            if (bankLowerBits == 0) {
+                bankLowerBits = 0x4000;
+            }
+        } else if (addr >= 0x4000 && addr < 0x6000) {
+            bankUpperBits = (value & 0x3) << 19;
+        } else if (addr >= 0x6000 && addr < 0x8000) {
+            bankMode = value & 0x1;
+        }
+    }
+}
+
+void MMU::checkForDMATransfer(unsigned short addr, unsigned char value) {
+    if (addr == DMA) {
+        unsigned short oamDataAddr = value << 8;
+        for (int i = 0; i < OAM_COUNT * BYTES_PER_OAM; i++) {
+            write(OAM_ADDR + i, read(oamDataAddr + i));
+        }
+    }
+}
+
+void MMU::checkForEcho(unsigned short addr, unsigned char value) const {
+    if (addr >= 0xC000 && addr < 0xDE00) {
+        mem[addr + 0x2000] = value;
     }
 }
 
@@ -77,25 +110,21 @@ void MMU::loadCartridge(const std::string& dir) const {
 // ================================
 // Load cartridge bank
 // ================================
-void MMU::loadROMBank(unsigned char bankNo) const {
-    if (bankType >= 0 && bankType <= 3) {
-        if (bankNo == 0) {
-            bankNo = 1;
-        }
-        if (bankNo >= 0x20) {
-            bankNo--;
-        }
-        if (bankNo >= 0x40) {
-            bankNo--;
-        }
-        if (bankNo >= 0x60) {
-            bankNo--;
-        }
-        unsigned int bankAddr = bankNo * BANK_SIZE;
-        for (unsigned int i = 0; i < BANK_SIZE; i++) {
-            mem[BANK_SIZE + i] = cart[bankAddr + i];
+void MMU::loadROMBank(unsigned char bankLowerBits) const {
+    if (bankType == MBC1) {
+        if (bankLowerBits == 0x0) {
+            bankLowerBits = 0x1;
         }
     }
+    unsigned char bankNo = bankUpperBits | bankLowerBits;
+    unsigned int bankAddr = bankNo * BANK_SIZE;
+    for (unsigned int i = 0; i < BANK_SIZE; i++) {
+        mem[BANK_SIZE + i] = cart[bankAddr + i];
+    }
+}
+
+void MMU::loadRAMBank(unsigned char) const {
+    std::cout << "RAM BANKING NOT IMPLEMENTED YET" << std::endl;
 }
 
 void MMU::checkForInput() {

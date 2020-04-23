@@ -26,12 +26,14 @@ void CPU::reset() {
     cycleCount = 0;
     internalDivider = 0;
     internalCounter = 0;
-    mmu->mem[LY] = 0;
-    mmu->mem[LCDC] = 0x91;
-    mmu->mem[STAT] = 0x85;
-    mmu->mem[IE] = 0;
-    mmu->mem[IF] = 0xE1;
-    mmu->mem[JOYPAD] = 0xFF;
+    mmu->bankLowerBits = 0;
+    mmu->bankUpperBits = 0;
+    mmu->write(LY, 0);
+    mmu->write(LCDC, 0x91);
+    mmu->write(STAT, 0x85);
+    mmu->write(IE, 0);
+    mmu->write(IF, 0xE1);
+    mmu->write(JOYPAD, 0xFF);
 }
 
 // ================================
@@ -41,7 +43,7 @@ void CPU::step() {
     cycleCount = 0;
     checkForInt();
     if (!halted) {
-        decode(mmu->mem[PC]);
+        decode(mmu->read(PC));
     } else {
         cycleCount = 1;
     }
@@ -58,9 +60,9 @@ void CPU::incTimers() {
         internalDivider -= DIVIDER_CYCLES;
     }
 
-    if (mmu->mem[TIMER_CONTROL] & 0x4) {
+    if (mmu->read(TIMER_CONTROL) & 0x4) {
         int counterMod = 0;
-        switch (mmu->mem[TIMER_CONTROL] & 0b11) {
+        switch (mmu->read(TIMER_CONTROL) & 0b11) {
             case 0b00:
                 counterMod = COUNTER_CYCLES_0;
                 break;
@@ -77,12 +79,12 @@ void CPU::incTimers() {
 
         internalCounter += cycleCount;
         while (internalCounter >= counterMod) {
-            mmu->mem[COUNTER]++;
+            mmu->write(COUNTER, mmu->read(COUNTER) + 1);
             internalCounter -= counterMod;
 
-            if (mmu->mem[COUNTER] == 0) {
-                mmu->mem[COUNTER] = mmu->mem[MODULO];
-                mmu->mem[IF] |= 0x04;
+            if (mmu->read(COUNTER) == 0) {
+                mmu->write(COUNTER, mmu->read(MODULO));
+                setInt(TIMER_OVERFLOW);
             }
         }
     }
@@ -103,7 +105,7 @@ void CPU::decode(unsigned char opcode) {
     unsigned char regPair = (opcode >> 4) & 0b11;
 
     // values for cb prefix opcode
-    unsigned char imm8 = mmu->mem[PC + 1];
+    unsigned char imm8 = mmu->read(PC + 1);
     unsigned char upperTwoCB = (imm8 >> 6) & 0b11;
     unsigned char regDestCB = (imm8 >> 3) & 0b111;
     unsigned char regSrcCB = imm8 & 0b111;
@@ -765,8 +767,10 @@ void CPU::decode(unsigned char opcode) {
                 // HALT
                 // stop system clock
                 if (regDest == MEM) {
-                    if (IME || ((mmu->mem[IE] & mmu->mem[IF]) & 0x1F) == 0) {
+                    if (IME || ((mmu->read(IE) & mmu->read(IF)) & 0x1F) == 0) {
                         halted = true;
+                    } else {
+                        printf("HALT BUG");
                     }
                     cycleCount += 1;
                 }
@@ -1410,8 +1414,48 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 // ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
 // ======================================================================================
 
+void CPU::setInt(Interrupt i) const {
+    switch (i) {
+        case VBLANK:
+            mmu->write(IF, mmu->read(IF) | 0x01);
+            break;
+        case LCD_STAT:
+            mmu->write(IF, mmu->read(IF) | 0x02);
+            break;
+        case TIMER_OVERFLOW:
+            mmu->write(IF, mmu->read(IF) | 0x04);
+            break;
+        case SERIAL_LINK:
+            mmu->write(IF, mmu->read(IF) | 0x08);
+            break;
+        case JOYPAD_PRESSED:
+            mmu->write(IF, mmu->read(IF) | 0x10);
+            break;
+    }
+}
+
+void CPU::resetInt(Interrupt i) const {
+    switch(i) {
+        case VBLANK:
+            mmu->write(IF, mmu->read(IF) & 0xFE);
+            break;
+        case LCD_STAT:
+            mmu->write(IF, mmu->read(IF) & 0xFD);
+            break;
+        case TIMER_OVERFLOW:
+            mmu->write(IF, mmu->read(IF) & 0xFB);
+            break;
+        case SERIAL_LINK:
+            mmu->write(IF, mmu->read(IF) & 0xF7);
+            break;
+        case JOYPAD_PRESSED:
+            mmu->write(IF, mmu->read(IF) & 0xEF);
+            break;
+    }
+}
+
 void CPU::checkForInt() {
-    if (halted && (mmu->mem[IF] & mmu->mem[IE]) != 0) {
+    if (halted && (mmu->read(IF) & mmu->read(IE) & 0x1F) != 0) {
         halted = false;
         cycleCount += 1;
     }
@@ -1421,19 +1465,19 @@ void CPU::checkForInt() {
 
         if (vblankIntTriggered()) {
             intAddr = 0x40;
-            mmu->mem[IF] &= 0xFE;
+            resetInt(VBLANK);
         } else if (lcdIntTriggered()) {
             intAddr = 0x48;
-            mmu->mem[IF] &= 0xFD;
+            resetInt(LCD_STAT);
         } else if (timerIntTriggered()) {
             intAddr = 0x50;
-            mmu->mem[IF] &= 0xFB;
+            resetInt(TIMER_OVERFLOW);
         } else if (serialIntTriggered()) {
             intAddr = 0x58;
-            mmu->mem[IF] &= 0xF7;
+            resetInt(SERIAL_LINK);
         } else if (joypadIntTriggered()) {
             intAddr = 0x60;
-            mmu->mem[IF] &= 0xEF;
+            resetInt(JOYPAD_PRESSED);
         }
 
         if (intAddr != 0) {
@@ -1446,23 +1490,23 @@ void CPU::checkForInt() {
 }
 
 bool CPU::vblankIntTriggered() const {
-    return (mmu->mem[IE] & mmu->mem[IF]) & 0x01;
+    return mmu->read(IE) & mmu->read(IF) & 0x01;
 }
 
 bool CPU::lcdIntTriggered() const {
-    return (mmu->mem[IE] & mmu->mem[IF]) & 0x02;
+    return mmu->read(IE) & mmu->read(IF) & 0x02;
 }
 
 bool CPU::timerIntTriggered() const {
-    return (mmu->mem[IE] & mmu->mem[IF]) & 0x04;
+    return mmu->read(IE) & mmu->read(IF) & 0x04;
 }
 
 bool CPU::serialIntTriggered() const {
-    return (mmu->mem[IE] & mmu->mem[IF]) & 0x08;
+    return mmu->read(IE) & mmu->read(IF) & 0x08;
 }
 
 bool CPU::joypadIntTriggered() const {
-    return (mmu->mem[IE] & mmu->mem[IF]) & 0x10;
+    return mmu->read(IE) & mmu->read(IF) & 0x10;
 }
 
 #pragma clang diagnostic pop
