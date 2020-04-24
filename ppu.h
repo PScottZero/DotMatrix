@@ -112,7 +112,7 @@ public:
     // ================================
     void triggerVBlankInt() const;
     void setLcdInt();
-    bool compareCheck() const;
+    bool coincidenceCheck() const;
     bool modeCheck(Mode, unsigned char) const;
 };
 

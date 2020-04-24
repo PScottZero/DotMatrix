@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "ppu.h"
 
 MMU::MMU() {
     mem = new unsigned char[0x10000];
@@ -36,10 +37,6 @@ unsigned char MMU::read(unsigned short addr) const {
 // Write to memory
 // ================================
 void MMU::write(unsigned short addr, unsigned char value) {
-    if (addr == DIVIDER) {
-        printf("yes\n");
-    }
-
     checkForMBCRequest(addr, value);
     checkForDMATransfer(addr, value);
     checkForEcho(addr, value);
@@ -51,6 +48,9 @@ void MMU::write(unsigned short addr, unsigned char value) {
 
     // write value to address
     if (addr >= 0x8000) {
+        if (addr == STAT) {
+            mem[addr] = value & 0x78;
+        }
         mem[addr] = value;
     }
 

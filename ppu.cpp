@@ -29,6 +29,11 @@ void PPU::step() {
         ppuCycle += *cycleCount;
         ppuCycle %= SCREEN_CYCLE;
         mem[LY] = (ppuCycle / SCANLINE) % 154;
+        if (mem[LY] == mem[LY_COMP]) {
+            mem[STAT] |= 0x04;
+        } else {
+            mem[STAT] &= 0xFB;
+        }
         if (ppuCycle / SCANLINE < 144) {
             if (ppuCycle % SCANLINE <= 20) {
                 rendered = false;
@@ -51,7 +56,7 @@ void PPU::step() {
         }
     } else {
         mem[LY] = 0;
-        mem[STAT] &= 0xFC;
+        setMode(MODE_2);
     }
 }
 
@@ -366,7 +371,7 @@ bool PPU::getSpritePalette(int oamEntry) const {
 // ======================================================================================
 
 void PPU::setLcdInt() {
-    if (compareCheck() ||
+    if (coincidenceCheck() ||
         modeCheck(MODE_0, 0x8) ||
         modeCheck(MODE_1, 0x10) ||
         modeCheck(MODE_2, 0x20)) {
@@ -378,8 +383,8 @@ void PPU::triggerVBlankInt() const {
     mem[IF] |= 0b01;
 }
 
-bool PPU::compareCheck() const {
-    return (mem[LY] == mem[LY_COMP]) && (mem[STAT] & 0x40);
+bool PPU::coincidenceCheck() const {
+    return (mem[STAT] & 0x04) && (mem[STAT] & 0x40);
 }
 
 bool PPU::modeCheck(Mode mode, unsigned char mask) const {
