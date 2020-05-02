@@ -34,7 +34,7 @@ protected:
     void run() override;
 
 private:
-    void checkBankType();
+    bool checkBankType();
 
 signals:
     void sendFrame(const QImage &frame);

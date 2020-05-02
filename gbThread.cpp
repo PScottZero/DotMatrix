@@ -27,42 +27,46 @@ void GBThread::run() {
     QImage frame(160, 144, QImage::Format_RGB32);
 
     cpu.mmu->loadCartridge(rom);
-    checkBankType();
-    ppu->setDisplay(&frame);
+    if (checkBankType()) {
+        ppu->setDisplay(&frame);
 
-    auto cycleStart = std::chrono::system_clock::now();
+        auto cycleStart = std::chrono::system_clock::now();
 
-    forever {
-        cpu.step();
-        ppu->step();
+        forever {
+            cpu.step();
+            ppu->step();
 
-        // send frame to widget
-        if (cpu.mmu->read(LY) > 143 && !emitted) {
-            emitted = true;
-            if (!ppu->lcdEnable()) {
-                frame.fill(ppu->palette->getColor(PX_ZERO));
+            // send frame to widget
+            if (cpu.mmu->read(LY) > 143 && !emitted) {
+                emitted = true;
+                if (!ppu->lcdEnable()) {
+                    frame.fill(ppu->palette->getColor(PX_ZERO));
+                }
+                emit sendFrame(frame);
+                auto nextCycle = cycleStart + std::chrono::milliseconds(16);
+                std::this_thread::sleep_until(nextCycle);
+                cycleStart = std::chrono::system_clock::now();
+            } else if (cpu.mmu->read(LY) <= 143) {
+                emitted = false;
             }
-            emit sendFrame(frame);
-            auto nextCycle = cycleStart + std::chrono::milliseconds(16);
-            std::this_thread::sleep_until(nextCycle);
-            cycleStart = std::chrono::system_clock::now();
-        } else if (cpu.mmu->read(LY) <= 143) {
-            emitted = false;
         }
     }
 }
 
-void GBThread::checkBankType() {
+bool GBThread::checkBankType() {
     unsigned char bankType = cpu.mmu->read(BANK_TYPE);
     if (bankType == 0x0) {
         cpu.mmu->bankType = NONE;
+        return true;
     } else if (bankType >= 0x1 && bankType <= 0x3) {
         cpu.mmu->bankType = MBC1;
+        return true;
     } else if (bankType == 0x5 || bankType == 0x6) {
         cpu.mmu->bankType = MBC2;
+        return true;
     } else {
         emit sendBankError(bankType);
-        terminate();
+        return false;
     }
 }
 
