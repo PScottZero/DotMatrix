@@ -20,17 +20,27 @@ MMU::MMU() {
 // Read from memory
 // ================================
 unsigned char MMU::read(unsigned short addr) const {
-    if (addr >= 0x0000 && addr < 0x4000) {
-        return cart[addr];
-    } else if (addr >= 0x4000 && addr < 0x8000) {
-        if (bankType == NONE) {
-            return cart[addr];
+
+    // no banking
+    if (bankType == NONE) {
+        if (addr < 0x8000) {
+            return (unsigned char)cart[addr];
         } else {
-            return cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+            return mem[addr];
         }
-    } else {
-        return mem[addr];
     }
+
+    // MBC1
+    else if (bankType == MBC1) {
+        if (addr >= 0x0000 && addr < 0x4000) {
+            return (unsigned char)cart[addr];
+        } else if (addr >= 0x4000 && addr < 0x8000) {
+            return (unsigned char)cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+        } else {
+            return mem[addr];
+        }
+    }
+    return 0;
 }
 
 // ================================
@@ -41,17 +51,15 @@ void MMU::write(unsigned short addr, unsigned char value) {
     checkForDMATransfer(addr, value);
     checkForEcho(addr, value);
 
-    // reset timer
-    if (addr == DIVIDER) {
-        value = 0;
-    }
-
     // write value to address
     if (addr >= 0x8000) {
         if (addr == STAT) {
-            mem[addr] = value & 0x78;
+            mem[addr] = (mem[addr] & 0x87) | (value & 0x78);
+        } else if (addr == DIVIDER) {
+            mem[addr] = 0;
+        } else {
+            mem[addr] = value;
         }
-        mem[addr] = value;
     }
 
     // check for joypad input
@@ -100,31 +108,6 @@ void MMU::loadCartridge(const std::string& dir) const {
     // read cartridge
     std::ifstream cartridge (dir, std::ios::in | std::ios::binary);
     cartridge.read(cart, 0x200000);
-
-    // put first 32kb of rom into ram
-    for (unsigned short i = 0; i < 0x8000; i++) {
-        mem[i] = (unsigned char)cart[i];
-    }
-}
-
-// ================================
-// Load cartridge bank
-// ================================
-void MMU::loadROMBank(unsigned char bankLowerBits) const {
-    if (bankType == MBC1) {
-        if (bankLowerBits == 0x0) {
-            bankLowerBits = 0x1;
-        }
-    }
-    unsigned char bankNo = bankUpperBits | bankLowerBits;
-    unsigned int bankAddr = bankNo * BANK_SIZE;
-    for (unsigned int i = 0; i < BANK_SIZE; i++) {
-        mem[BANK_SIZE + i] = cart[bankAddr + i];
-    }
-}
-
-void MMU::loadRAMBank(unsigned char) const {
-    std::cout << "RAM BANKING NOT IMPLEMENTED YET" << std::endl;
 }
 
 void MMU::checkForInput() {

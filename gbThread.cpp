@@ -4,8 +4,7 @@
 #include <thread>
 #include <utility>
 
-GBThread::GBThread(QObject *parent) : QThread(parent)
-{
+GBThread::GBThread(QObject *parent) : QThread(parent) {
     rom = "";
     emitted = false;
     ppu = new PPU(cpu.mmu->mem, &cpu.cycleCount);
@@ -57,17 +56,15 @@ bool GBThread::checkBankType() {
     unsigned char bankType = cpu.mmu->read(BANK_TYPE);
     if (bankType == 0x0) {
         cpu.mmu->bankType = NONE;
-        return true;
     } else if (bankType >= 0x1 && bankType <= 0x3) {
         cpu.mmu->bankType = MBC1;
-        return true;
     } else if (bankType == 0x5 || bankType == 0x6) {
         cpu.mmu->bankType = MBC2;
-        return true;
     } else {
         emit sendBankError(bankType);
         return false;
     }
+    return true;
 }
 
 void GBThread::processInput(Joypad button, bool pressed) {
