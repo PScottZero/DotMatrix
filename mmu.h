@@ -55,11 +55,9 @@ public:
     std::unordered_map<Joypad, bool> joypad;
 
     MMU();
-    unsigned char read(unsigned short) const;
+    [[nodiscard]] unsigned char read(unsigned short) const;
     void write(unsigned short, unsigned char);
     void loadCartridge(const std::string&) const;
-    void loadROMBank(unsigned char) const;
-    void loadRAMBank(unsigned char) const;
     void checkForInput();
     void checkForMBCRequest(unsigned short addr, unsigned char value);
     void checkForDMATransfer(unsigned short addr, unsigned char value);
