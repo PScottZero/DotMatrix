@@ -1,7 +1,6 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "ppu.h"
-#include <qpainter.h>
 
 // ================================
 // Initialize ppu data
@@ -9,7 +8,7 @@
 PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount) {
     mem = cpuMem;
     display = nullptr;
-    palette = new Palette(0xC5DFFA, 0x5C88B8, 0x1A4778, 0x00234A);
+    palette = new Palette(0xffffff, 0xA9A9A9, 0x545454, 0x000000);
     ppuCycle = 0;
     cycleCount = cpuCycleCount;
     rendered = false;
@@ -56,7 +55,7 @@ void PPU::step() {
         }
     } else {
         mem[LY] = 0;
-        setMode(MODE_2);
+        setMode(MODE_0);
     }
 }
 

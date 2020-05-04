@@ -1,8 +1,6 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "gbThread.h"
-#include <thread>
-#include <utility>
 
 GBThread::GBThread(QObject *parent) : QThread(parent) {
     rom = "";

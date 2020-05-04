@@ -4,6 +4,7 @@
 #include "cpu.h"
 #include "palette.h"
 #include <QtWidgets/QMainWindow>
+#include <qpainter.h>
 
 // ================================
 // Tile sizing

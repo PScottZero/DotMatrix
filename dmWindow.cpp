@@ -1,4 +1,3 @@
-#include <QtWidgets/QMessageBox>
 #include "dmWindow.h"
 
 DMWindow::DMWindow() : QMainWindow() {
@@ -43,15 +42,16 @@ void DMWindow::createMenuBar() {
 
     QMenu *palette = optionsMenu->addMenu("Palette");
     auto *paletteSignal = new QSignalMapper(this);
-    addPalette(palette, paletteSignal, "Cobalt (Default)", palCobalt);
-    addPalette(palette, paletteSignal, "Game Boy Pocket", palGBP);
-    addPalette(palette, paletteSignal, "Game Boy Original", palDMG);
     addPalette(palette, paletteSignal, "BGB", palBGB);
+    addPalette(palette, paletteSignal, "Bicycle (By Braquen)", palBicycle);
+    addPalette(palette, paletteSignal, "Chocolate (By GrafxKid)", palChocolate);
+    addPalette(palette, paletteSignal, "Cobalt", palCobalt);
+    addPalette(palette, paletteSignal, "Game Boy Original", palDMG);
+    addPalette(palette, paletteSignal, "Game Boy Pocket (Default)", palGBP);
+    addPalette(palette, paletteSignal, "Inverted", palInvert);
+    addPalette(palette, paletteSignal, "Kirby", palKirby);
     addPalette(palette, paletteSignal, "Platinum (By WildLeoKnight)", palPlatinum);
     addPalette(palette, paletteSignal, "Wish GB (By Kerrie Lake)", palWish);
-    addPalette(palette, paletteSignal, "Bicycle (By Braquen)", palBicycle);
-    addPalette(palette, paletteSignal, "GB Chocolate (By GrafxKid)", palChocolate);
-    addPalette(palette, paletteSignal, "Kirby", palKirby);
 
     connect(paletteSignal, SIGNAL(mapped(QObject*)), this, SLOT(setPalette(QObject*)));
 
