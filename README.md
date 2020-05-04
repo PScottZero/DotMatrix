@@ -2,8 +2,8 @@
 <h2>4 May 2020:</h2>
 <p>Changed UI background and icon. Small revisions have also been made under the hood. Plan to finish implementing MBC1 and other banking methods next.</p>
 <div>
-  <img src="https://i.imgur.com/ufT8EFg.png" width="300" height="300">
   <img src="https://i.imgur.com/swtB4DR.png" width="150" height="150">
+  <img src="https://i.imgur.com/ufT8EFg.png" width="300" height="300">
 </div>
 
 <h2>20 April 2020:</h2>
