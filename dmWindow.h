@@ -26,6 +26,7 @@ public:
     Palette *palChocolate = new Palette(0xFFE4C2, 0xDCA456, 0xA9604C, 0x422936);
     Palette *palKirby = new Palette(0xF7BEF7, 0xE78686, 0x7732E7, 0x2D2B96);
     Palette *palInvert = new Palette(0x000000, 0x545454, 0xA9A9A9, 0xFFFFFF);
+    Palette *palPokemon = new Palette(0xFFEFFF, 0xF7B58C, 0x84739C, 0x181010);
 
     DMWindow();
     void createMenuBar();

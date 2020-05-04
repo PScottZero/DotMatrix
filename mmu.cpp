@@ -30,8 +30,8 @@ unsigned char MMU::read(unsigned short addr) const {
         }
     }
 
-    // MBC1
-    else if (bankType == MBC1) {
+    // MBC1 and MBC3
+    else {
         if (addr >= 0x0000 && addr < 0x4000) {
             return (unsigned char)cart[addr];
         } else if (addr >= 0x4000 && addr < 0x8000) {
@@ -40,7 +40,6 @@ unsigned char MMU::read(unsigned short addr) const {
             return mem[addr];
         }
     }
-    return 0;
 }
 
 // ================================
@@ -81,6 +80,20 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
             bankUpperBits = (value & 0x3) << 19;
         } else if (addr >= 0x6000 && addr < 0x8000) {
             bankMode = value & 0x1;
+        }
+    } else if (bankType == MBC3) {
+        if (addr >= 0x0000 && addr < 0x2000) {
+            ramEnabled = (value & 0xF) == 0xA;
+        } else if (addr >= 0x2000 && addr < 0x4000) {
+            bankUpperBits = (value & 0x60) << 14;
+            bankLowerBits = (value & 0x1F) << 14;
+            if (value == 0) {
+                bankLowerBits = 0x4000;
+            }
+        } else if (addr >= 0x4000 && addr < 0x6000) {
+            printf("MBC3: RAM BANK NO. NOT IMPLEMENTED\n");
+        } else if (addr >= 0x6000 && addr < 0x8000) {
+            printf("MBC3: LATCH CLOCK DATA NOT IMPLEMENTED\n");
         }
     }
 }

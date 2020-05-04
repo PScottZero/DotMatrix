@@ -49,8 +49,9 @@ void DMWindow::createMenuBar() {
     addPalette(palette, paletteSignal, "Game Boy Original", palDMG);
     addPalette(palette, paletteSignal, "Game Boy Pocket (Default)", palGBP);
     addPalette(palette, paletteSignal, "Inverted", palInvert);
-    addPalette(palette, paletteSignal, "Kirby", palKirby);
+    addPalette(palette, paletteSignal, "Kirby (Super Game Boy)", palKirby);
     addPalette(palette, paletteSignal, "Platinum (By WildLeoKnight)", palPlatinum);
+    addPalette(palette, paletteSignal, "Pokemon (Super Game Boy)", palPokemon);
     addPalette(palette, paletteSignal, "Wish GB (By Kerrie Lake)", palWish);
 
     connect(paletteSignal, SIGNAL(mapped(QObject*)), this, SLOT(setPalette(QObject*)));
