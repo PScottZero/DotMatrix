@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
+    <generated>
+      <config projectName="gbtest" targetName="gtest" />
+      <config projectName="gbtest" targetName="gtest_main" />
+      <config projectName="gbtest" targetName="gbtest" />
+    </generated>
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="3b4a1323-651b-4d4c-bfbe-cac763d33923" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../.idea/dictionaries/8psco.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/dictionaries/8psco.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cpu.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../cpu.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../cpu.h" beforeDir="false" afterPath="$PROJECT_DIR$/../cpu.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../gbthread.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../gbthread.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../gbthread.h" beforeDir="false" afterPath="$PROJECT_DIR$/../gbthread.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../gbwidget.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../gbwidget.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../gbwidget.h" beforeDir="false" afterPath="$PROJECT_DIR$/../gbwidget.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ppu.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../ppu.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ppu.h" beforeDir="false" afterPath="$PROJECT_DIR$/../ppu.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cpu_test.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/cpu_test.cpp" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="IgnoredFileRootStore">
+    <option name="generatedRoots">
+      <set>
+        <option value="C:\Users\8psco\Documents\GitHub\DotMatrix\dotmatrix_test\.idea" />
+      </set>
+    </option>
+  </component>
+  <component name="ProjectId" id="1aGcI13iidEbrdKSbOX0VxzQWa3" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="RunManager" selected="Google Test.TestOpcodes.TestSwitch">
+    <configuration name="All in cpu_test.cpp" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" temporary="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest" TEST_PATTERN="all-tests(file://$PROJECT_DIR$/cpu_test.cpp)" TEST_MODE="PATTERN">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestArithmetic.TestAdd" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" temporary="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest" TEST_CLASS="TestArithmetic" TEST_METHOD="TestAdd" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestControlFlow.TestJumpRel" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" temporary="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest" TEST_CLASS="TestControlFlow" TEST_METHOD="TestJumpRel" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestLogical.TestRotateLeftCarry" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" temporary="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest" TEST_CLASS="TestLogical" TEST_METHOD="TestRotateLeftCarry" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="TestOpcodes.TestSwitch" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" temporary="true" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest" TEST_CLASS="TestOpcodes" TEST_METHOD="TestSwitch" TEST_MODE="SUITE_TEST">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+        <option name="BeforeTestRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="gbtest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gbtest" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="gbtest" RUN_TARGET_NAME="gbtest">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="gtest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gtest" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="gtest_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="gbtest" TARGET_NAME="gtest_main" CONFIG_NAME="Debug">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="CMake Application.gbtest" />
+      <item itemvalue="CMake Application.gtest" />
+      <item itemvalue="CMake Application.gtest_main" />
+      <item itemvalue="Google Test.TestLogical.TestRotateLeftCarry" />
+      <item itemvalue="Google Test.All in cpu_test.cpp" />
+      <item itemvalue="Google Test.TestArithmetic.TestAdd" />
+      <item itemvalue="Google Test.TestControlFlow.TestJumpRel" />
+      <item itemvalue="Google Test.TestOpcodes.TestSwitch" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Google Test.TestOpcodes.TestSwitch" />
+        <item itemvalue="Google Test.All in cpu_test.cpp" />
+        <item itemvalue="Google Test.TestArithmetic.TestAdd" />
+        <item itemvalue="Google Test.TestControlFlow.TestJumpRel" />
+        <item itemvalue="Google Test.TestLogical.TestRotateLeftCarry" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="3b4a1323-651b-4d4c-bfbe-cac763d33923" name="Default Changelist" comment="" />
+      <created>1586365287388</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1586365287388</updated>
+      <workItem from="1586365288639" duration="1544000" />
+      <workItem from="1586366944930" duration="769000" />
+      <workItem from="1586456034556" duration="1648000" />
+      <workItem from="1586789164509" duration="96000" />
+      <workItem from="1586795933157" duration="664000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="805" y="311" key="FileChooserDialogImpl" timestamp="1586796596916">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state x="-1755" y="311" key="FileChooserDialogImpl/0.0.2048.1112/-2560.0.2048.1112@-2560.0.2048.1112" timestamp="1586457687857" />
+    <state x="805" y="311" key="FileChooserDialogImpl/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586796596916" />
+    <state width="2005" height="392" key="GridCell.Tab.0.bottom" timestamp="1586796597671">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="980" height="395" key="GridCell.Tab.0.bottom/0.0.2048.1112/-2560.0.2048.1112@-2560.0.2048.1112" timestamp="1586457688992" />
+    <state width="2005" height="392" key="GridCell.Tab.0.bottom/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586796597671" />
+    <state width="2005" height="392" key="GridCell.Tab.0.center" timestamp="1586796597670">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="980" height="395" key="GridCell.Tab.0.center/0.0.2048.1112/-2560.0.2048.1112@-2560.0.2048.1112" timestamp="1586457688992" />
+    <state width="2005" height="392" key="GridCell.Tab.0.center/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586796597670" />
+    <state width="2005" height="392" key="GridCell.Tab.0.left" timestamp="1586796597670">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="980" height="395" key="GridCell.Tab.0.left/0.0.2048.1112/-2560.0.2048.1112@-2560.0.2048.1112" timestamp="1586457688992" />
+    <state width="2005" height="392" key="GridCell.Tab.0.left/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586796597670" />
+    <state width="2005" height="392" key="GridCell.Tab.0.right" timestamp="1586796597670">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="980" height="395" key="GridCell.Tab.0.right/0.0.2048.1112/-2560.0.2048.1112@-2560.0.2048.1112" timestamp="1586457688992" />
+    <state width="2005" height="392" key="GridCell.Tab.0.right/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586796597670" />
+    <state width="2005" height="376" key="GridCell.Tab.1.bottom" timestamp="1586367720107">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="2005" height="376" key="GridCell.Tab.1.bottom/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586367720107" />
+    <state width="2005" height="376" key="GridCell.Tab.1.center" timestamp="1586367720107">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="2005" height="376" key="GridCell.Tab.1.center/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586367720107" />
+    <state width="2005" height="376" key="GridCell.Tab.1.left" timestamp="1586367720107">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="2005" height="376" key="GridCell.Tab.1.left/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586367720107" />
+    <state width="2005" height="376" key="GridCell.Tab.1.right" timestamp="1586367720107">
+      <screen x="0" y="0" width="2048" height="1112" />
+    </state>
+    <state width="2005" height="376" key="GridCell.Tab.1.right/0.0.2048.1112/-2560.0.2048.1112@0.0.2048.1112" timestamp="1586367720107" />
+  </component>
+</project>

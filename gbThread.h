@@ -26,6 +26,7 @@ public:
     explicit GBThread(QObject *parent = nullptr);
     ~GBThread() override;
     void setRom(std::string dir);
+    void saveRAM();
 
 public slots:
     void processInput(Joypad button, bool pressed);

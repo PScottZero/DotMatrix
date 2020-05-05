@@ -45,5 +45,4 @@ signals:
     void sendInput(Joypad button, bool pressed);
 };
 
-
 #endif //DOTMATRIX_DMWINDOW_H

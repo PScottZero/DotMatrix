@@ -47,17 +47,22 @@ class MMU {
 public:
     unsigned char* mem;
     char* cart;
+    char* ram;
+    std::string cartDir;
     bool ramEnabled;
     bool bankMode;
     unsigned int bankUpperBits;
     unsigned int bankLowerBits;
+    unsigned int ramBank;
     BankType bankType;
     std::unordered_map<Joypad, bool> joypad;
 
     MMU();
     [[nodiscard]] unsigned char read(unsigned short) const;
     void write(unsigned short, unsigned char);
-    void loadCartridge(const std::string&) const;
+    void loadCartridge(std::string);
+    void loadRAM() const;
+    void saveRAM() const;
     void checkForInput();
     void checkForMBCRequest(unsigned short addr, unsigned char value);
     void checkForDMATransfer(unsigned short addr, unsigned char value);

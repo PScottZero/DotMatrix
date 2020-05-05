@@ -1,5 +1,8 @@
 #include "dmWindow.h"
 
+// ================================
+// Constructor
+// ================================
 DMWindow::DMWindow() : QMainWindow() {
     setWindowTitle(tr("Dot Matrix v0.1 alpha"));
     setWindowIcon(QIcon(":/img/dm_icon.ico"));
@@ -19,6 +22,9 @@ DMWindow::DMWindow() : QMainWindow() {
     setFixedSize(size());
 }
 
+// ================================
+// Create menu bar for UI
+// ================================
 void DMWindow::createMenuBar() {
     auto *menu = new QMenuBar();
 
@@ -34,7 +40,6 @@ void DMWindow::createMenuBar() {
     QAction *quit = fileMenu->addAction(tr("Quit"));
     quit->setShortcut(QKeySequence("Ctrl+Q"));
     connect(quit, &QAction::triggered, this, &QApplication::quit);
-
 
 
     // option menu
@@ -59,19 +64,29 @@ void DMWindow::createMenuBar() {
     setMenuBar(menu);
 }
 
+// ================================
+// Set Game Boy palette
+// ================================
 void DMWindow::setPalette(QObject* pal) const {
     gbthread->ppu->setPalette(qobject_cast<Palette*>(pal));
 }
 
+// ================================
+// Add Game Boy palette to UI
+// ================================
 void DMWindow::addPalette(QMenu* palMenu, QSignalMapper *sigMap, const std::string& name, Palette* pal) {
     QAction *palette = palMenu->addAction(name.c_str());
     connect(palette, SIGNAL(triggered()), sigMap, SLOT(map()));
     sigMap->setMapping(palette, pal);
 }
 
+// ================================
+// Open ROM from file manager
+// ================================
 void DMWindow::loadRom() {
     gbthread->terminate();
     gbthread->wait();
+    gbthread->saveRAM();
     QString rom = QFileDialog::getOpenFileName(this, tr("Load Rom"), "/", tr("Game Boy Rom (*.gb)"));
     if (!rom.isEmpty()) {
         gbthread->setRom(rom.toStdString());
@@ -79,13 +94,22 @@ void DMWindow::loadRom() {
     }
 }
 
+// ================================
+// Display bank error dialog
+// ================================
 void DMWindow::bankError(unsigned char bankType) {
     QMessageBox bankError;
-    std::string err = "Error: Unsupported Bank Type " + std::to_string(bankType);
+    std::string err = "Unsupported Bank Type " + std::to_string(bankType);
+    bankError.setWindowIcon(QIcon(":/img/dm_icon.ico"));
+    bankError.setIcon(QMessageBox::Critical);
+    bankError.setWindowTitle("Bank Type Error");
     bankError.setText(err.c_str());
     bankError.exec();
 }
 
+// ================================
+// Check for key press
+// ================================
 void DMWindow::keyPressEvent(QKeyEvent *event) {
     switch (event->key()) {
         case KEYCODE_M:
@@ -115,6 +139,9 @@ void DMWindow::keyPressEvent(QKeyEvent *event) {
     }
 }
 
+// ================================
+// Check for key release
+// ================================
 void DMWindow::keyReleaseEvent(QKeyEvent *event) {
     switch (event->key()) {
         case KEYCODE_M:

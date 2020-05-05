@@ -10,27 +10,43 @@ GBThread::GBThread(QObject *parent) : QThread(parent) {
 }
 
 GBThread::~GBThread() {
+    cpu.mmu->saveRAM();
+    delete[] cpu.mmu->ram;
     delete[] cpu.mmu->mem;
     delete[] cpu.mmu->cart;
     terminate();
     wait();
 }
 
+// ================================
+// Set ROM path
+// ================================
 void GBThread::setRom(std::string dir) {
     rom = std::move(dir);
 }
 
+// ================================
+// Save RAM data
+// ================================
+void GBThread::saveRAM() {
+    cpu.mmu->saveRAM();
+}
+
+// ================================
+// Run emulator thread
+// ================================
 void GBThread::run() {
     cpu.reset();
     QImage frame(160, 144, QImage::Format_RGB32);
 
     cpu.mmu->loadCartridge(rom);
+    cpu.mmu->loadRAM();
     if (checkBankType()) {
         ppu->setDisplay(&frame);
-
         auto cycleStart = std::chrono::system_clock::now();
 
         forever {
+            // step through machine cycle
             cpu.step();
             ppu->step();
 
@@ -51,14 +67,20 @@ void GBThread::run() {
     }
 }
 
+// ================================
+// Check if bank type is valid
+// ================================
 bool GBThread::checkBankType() {
     unsigned char bankType = cpu.mmu->read(BANK_TYPE);
-    if (bankType == 0x0) {
+    if (bankType == 0x00) {
         printf("NON-BANKING ROM\n");
         cpu.mmu->bankType = NONE;
-    } else if (bankType >= 0x1 && bankType <= 0x3) {
+    } else if (bankType >= 0x01 && bankType <= 0x03) {
         printf("MBC1 ROM\n");
         cpu.mmu->bankType = MBC1;
+    } else if (bankType >= 0x05 && bankType <= 0x06) {
+        printf("MBC2 ROM\n");
+        cpu.mmu->bankType = MBC2;
     } else if (bankType >= 0x0F && bankType <= 0x13) {
         printf("MBC3 ROM\n");
         cpu.mmu->bankType = MBC3;
@@ -69,6 +91,10 @@ bool GBThread::checkBankType() {
     return true;
 }
 
+// ================================
+// Process input from
+// DMWindow class
+// ================================
 void GBThread::processInput(Joypad button, bool pressed) {
     bool oldState = cpu.mmu->joypad[button];
     cpu.mmu->joypad[button] = pressed;

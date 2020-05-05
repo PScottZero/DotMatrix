@@ -4,11 +4,13 @@
 MMU::MMU() {
     mem = new unsigned char[0x10000];
     cart = new char[0x200000];
+    ram = new char[0x10000];
     ramEnabled = false;
     bankMode = true;
     bankType = NONE;
     bankUpperBits = 0;
     bankLowerBits = 0;
+    ramBank = 0;
 
     // zero memory from 0x8000 to 0x9FFF
     for (int i = 0x8000; i < 0xA000; i++) {
@@ -33,9 +35,11 @@ unsigned char MMU::read(unsigned short addr) const {
     // MBC1 and MBC3
     else {
         if (addr >= 0x0000 && addr < 0x4000) {
-            return (unsigned char)cart[addr];
+            return cart[addr];
         } else if (addr >= 0x4000 && addr < 0x8000) {
-            return (unsigned char)cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+            return cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+        } else if (addr >= 0xA000 && addr < 0xC000) {
+            return ram[ramBank | (addr & 0x1FFF)];
         } else {
             return mem[addr];
         }
@@ -56,6 +60,8 @@ void MMU::write(unsigned short addr, unsigned char value) {
             mem[addr] = (mem[addr] & 0x87) | (value & 0x78);
         } else if (addr == DIVIDER) {
             mem[addr] = 0;
+        } else if (addr >= 0xA000 && addr < 0xC000 && ramBank < 0x8) {
+            ram[ramBank | (addr & 0x1FFF)] = (char)value;
         } else {
             mem[addr] = value;
         }
@@ -67,37 +73,94 @@ void MMU::write(unsigned short addr, unsigned char value) {
     }
 }
 
+// ================================
+// Check if bank setting is
+// being changed
+// ================================
 void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
+
+    // ram enable
+    if (addr >= 0x0000 && addr < 0x2000) {
+        ramEnabled = (value & 0xF) == 0xA;
+    }
+
+    // ========================
+    // MBC1 BANK TYPE
+    // ========================
     if (bankType == MBC1) {
-        if (addr >= 0x0000 && addr < 0x2000) {
-            ramEnabled = (value & 0xF) == 0xA;
-        } else if (addr >= 0x2000 && addr < 0x4000) {
+
+        // lower five bits of bank number
+        if (addr >= 0x2000 && addr < 0x4000) {
             bankLowerBits = (value & 0x1F) << 14;
             if (bankLowerBits == 0) {
                 bankLowerBits = 0x4000;
             }
-        } else if (addr >= 0x4000 && addr < 0x6000) {
-            bankUpperBits = (value & 0x3) << 19;
-        } else if (addr >= 0x6000 && addr < 0x8000) {
+        }
+
+        // upper two bits of bank number
+        // or ram bank number
+        else if (addr >= 0x4000 && addr < 0x6000) {
+            if (bankMode == 0) {
+                bankUpperBits = (value & 0x3) << 19;
+            } else {
+                ramBank = (value & 0x3) << 13;
+            }
+        }
+
+        // bank mode
+        else if (addr >= 0x6000 && addr < 0x8000) {
             bankMode = value & 0x1;
         }
-    } else if (bankType == MBC3) {
-        if (addr >= 0x0000 && addr < 0x2000) {
-            ramEnabled = (value & 0xF) == 0xA;
-        } else if (addr >= 0x2000 && addr < 0x4000) {
+    }
+
+    // ========================
+    // MBC2 BANK TYPE
+    // ========================
+    else if (bankType == MBC2) {
+
+        // lower five bits of bank number
+        if (addr >= 0x2000 && addr < 0x4000) {
+            bankLowerBits = (value & 0xF) << 14;
+            bankUpperBits = 0;
+            if (bankLowerBits == 0) {
+                bankLowerBits = 0x4000;
+            }
+        }
+    }
+
+    // ========================
+    // MBC3 BANK TYPE
+    // ========================
+    else if (bankType == MBC3) {
+
+        // bank number
+        if (addr >= 0x2000 && addr < 0x4000) {
             bankUpperBits = (value & 0x60) << 14;
             bankLowerBits = (value & 0x1F) << 14;
             if (value == 0) {
                 bankLowerBits = 0x4000;
             }
-        } else if (addr >= 0x4000 && addr < 0x6000) {
-            printf("MBC3: RAM BANK NO. NOT IMPLEMENTED\n");
-        } else if (addr >= 0x6000 && addr < 0x8000) {
+        }
+
+        // ram bank number
+        else if (addr >= 0x4000 && addr < 0x6000) {
+            ramBank = value & 0xF;
+            if (ramBank >= 0x8) {
+                printf("MBC3: REAL TIME CLOCK NOT IMPLEMENTED\n");
+            }
+        }
+
+        // latch clock data
+        else if (addr >= 0x6000 && addr < 0x8000) {
             printf("MBC3: LATCH CLOCK DATA NOT IMPLEMENTED\n");
         }
     }
 }
 
+// ================================
+// Perform DMA transfer if address
+// is equal to 0xFF46
+// ================================
 void MMU::checkForDMATransfer(unsigned short addr, unsigned char value) {
     if (addr == DMA) {
         unsigned short oamDataAddr = value << 8;
@@ -107,6 +170,10 @@ void MMU::checkForDMATransfer(unsigned short addr, unsigned char value) {
     }
 }
 
+// ================================
+// Write to echo ram if addr
+// is in range
+// ================================
 void MMU::checkForEcho(unsigned short addr, unsigned char value) const {
     if (addr >= 0xC000 && addr < 0xDE00) {
         mem[addr + 0x2000] = value;
@@ -116,13 +183,38 @@ void MMU::checkForEcho(unsigned short addr, unsigned char value) const {
 // ================================
 // Load cartridge data into memory
 // ================================
-void MMU::loadCartridge(const std::string& dir) const {
-
-    // read cartridge
-    std::ifstream cartridge (dir, std::ios::in | std::ios::binary);
+void MMU::loadCartridge(std::string dir) {
+    cartDir = std::move(dir);;
+    std::ifstream cartridge (cartDir, std::ios::in | std::ios::binary);
     cartridge.read(cart, 0x200000);
+    cartridge.close();
 }
 
+// ================================
+// Load RAM data
+// ================================
+void MMU::loadRAM() const {
+    std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
+    std::ifstream ramBuffer (ramDir, std::ios::in | std::ios::binary);
+    if (!ramBuffer.fail()) {
+        ramBuffer.read(ram, 0x10000);
+    }
+    ramBuffer.close();
+}
+
+// ================================
+// Save RAM data
+// ================================
+void MMU::saveRAM() const {
+    std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
+    std::ofstream saveData (ramDir, std::ios::out | std::ios::binary);
+    saveData.write(ram, 0x10000);
+    saveData.close();
+}
+
+// ================================
+// Check for joypad input
+// ================================
 void MMU::checkForInput() {
     mem[JOYPAD] |= 0xCFu;
     if ((((unsigned char)(mem[JOYPAD] >> 4) & 0x1) == 0) || ((mem[JOYPAD] & 0x30) == 0x30)) {

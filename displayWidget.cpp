@@ -6,6 +6,9 @@ DisplayWidget::DisplayWidget(QWidget *parent) : QWidget(parent) {
 
 DisplayWidget::~DisplayWidget() = default;
 
+// ================================
+// Draw image onto UI
+// ================================
 void DisplayWidget::paintEvent(QPaintEvent *) {
     QPainter painter(this);
     painter.scale(4, 4);
@@ -14,6 +17,9 @@ void DisplayWidget::paintEvent(QPaintEvent *) {
     }
 }
 
+// ================================
+// Update display image
+// ================================
 void DisplayWidget::updateDisplay(const QImage &frame) {
     display = QPixmap::fromImage(frame);
     update();
