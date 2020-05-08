@@ -8,7 +8,7 @@
 PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount) {
     mem = cpuMem;
     display = nullptr;
-    palette = new Palette(0xffffff, 0xA9A9A9, 0x545454, 0x000000);
+    palette = new Palette(0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000);
     ppuCycle = 0;
     cycleCount = cpuCycleCount;
     rendered = false;
@@ -369,7 +369,7 @@ bool PPU::getSpritePalette(int oamEntry) const {
 // ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
 // ======================================================================================
 
-void PPU::setLcdInt() {
+void PPU::setLcdInt() const {
     if (coincidenceCheck() ||
         modeCheck(MODE_0, 0x8) ||
         modeCheck(MODE_1, 0x10) ||

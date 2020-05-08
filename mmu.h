@@ -8,17 +8,29 @@
 constexpr auto BANK_SIZE = 0x4000;
 
 // ================================
+// Memory map addresses
+// ================================
+constexpr auto ROM_BANK_0_START = 0x0000;
+constexpr auto ROM_BANK_0_END = 0x4000;
+constexpr auto ROM_BANK_1_START = 0x4000;
+constexpr auto ROM_BANK_1_END = 0x8000;
+constexpr auto VRAM_START = 0x8000;
+constexpr auto VRAM_END = 0xA000;
+constexpr auto EXT_RAM_START = 0xA000;
+constexpr auto EXT_RAM_END = 0xC000;
+constexpr auto WORK_RAM_START = 0xC000;
+constexpr auto WORK_RAM_ECHO_END = 0xDE00;
+constexpr auto ECHO_OFFSET = 0x2000;
+
+// ================================
 // Register memory addresses
 // ================================
 constexpr auto BANK_TYPE = 0x147;
-constexpr auto WORK_RAM = 0xC000;
-constexpr auto ECHO_START = 0xE000;
-constexpr auto ECHO_END = 0xFE00;
 constexpr auto JOYPAD = 0xFF00;
 constexpr auto DIVIDER = 0xFF04;
-constexpr auto COUNTER = 0xFF05;
-constexpr auto MODULO = 0xFF06;
-constexpr auto TIMER_CONTROL = 0xFF07;
+constexpr auto TIMA = 0xFF05;
+constexpr auto TMA = 0xFF06;
+constexpr auto TAC = 0xFF07;
 constexpr auto DMA = 0xFF46;
 
 // ================================
@@ -27,6 +39,19 @@ constexpr auto DMA = 0xFF46;
 constexpr auto OAM_ADDR = 0xFE00;
 constexpr auto OAM_COUNT = 40;
 constexpr auto BYTES_PER_OAM = 4;
+
+// ================================
+// Banking Modes (MBC1)
+// ================================
+constexpr auto ROM_BANKING_MODE = 0;
+constexpr auto RAM_BANKING_MODE = 1;
+
+// ================================
+// Memory Sizes
+// ================================
+constexpr auto GB_MEM_SIZE = 0x10000;
+constexpr auto EXT_RAM_SIZE = 0x10000;
+constexpr auto CART_SIZE = 0x200000;
 
 // ================================
 // ROM banking types
@@ -49,6 +74,7 @@ public:
     char* cart;
     char* ram;
     std::string cartDir;
+    bool hasRAM;
     bool ramEnabled;
     bool bankMode;
     unsigned int bankUpperBits;

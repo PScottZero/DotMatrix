@@ -28,7 +28,7 @@ void GBThread::setRom(std::string dir) {
 // ================================
 // Save RAM data
 // ================================
-void GBThread::saveRAM() {
+void GBThread::saveRAM() const {
     cpu.mmu->saveRAM();
 }
 
@@ -36,12 +36,12 @@ void GBThread::saveRAM() {
 // Run emulator thread
 // ================================
 void GBThread::run() {
-    cpu.reset();
+    cpu.powerUp();
     QImage frame(160, 144, QImage::Format_RGB32);
 
     cpu.mmu->loadCartridge(rom);
-    cpu.mmu->loadRAM();
     if (checkBankType()) {
+        cpu.mmu->loadRAM();
         ppu->setDisplay(&frame);
         auto cycleStart = std::chrono::system_clock::now();
 
@@ -73,22 +73,23 @@ void GBThread::run() {
 bool GBThread::checkBankType() {
     unsigned char bankType = cpu.mmu->read(BANK_TYPE);
     if (bankType == 0x00) {
-        printf("NON-BANKING ROM\n");
         cpu.mmu->bankType = NONE;
     } else if (bankType >= 0x01 && bankType <= 0x03) {
-        printf("MBC1 ROM\n");
         cpu.mmu->bankType = MBC1;
-    } else if (bankType >= 0x05 && bankType <= 0x06) {
-        printf("MBC2 ROM\n");
-        cpu.mmu->bankType = MBC2;
     } else if (bankType >= 0x0F && bankType <= 0x13) {
-        printf("MBC3 ROM\n");
         cpu.mmu->bankType = MBC3;
     } else {
         emit sendBankError(bankType);
         return false;
     }
+    cpu.mmu->hasRAM = checkForRAM(bankType);
     return true;
+}
+
+bool GBThread::checkForRAM(unsigned char bankType) {
+    return bankType == 0x02 || bankType == 0x03 ||
+           bankType == 0x0F || bankType == 0x10 ||
+           bankType == 0x12 || bankType == 0x13;
 }
 
 // ================================

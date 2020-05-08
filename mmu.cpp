@@ -2,10 +2,11 @@
 #include "ppu.h"
 
 MMU::MMU() {
-    mem = new unsigned char[0x10000];
-    cart = new char[0x200000];
-    ram = new char[0x10000];
+    mem = new unsigned char[GB_MEM_SIZE];
+    cart = new char[CART_SIZE];
+    ram = new char[EXT_RAM_SIZE];
     ramEnabled = false;
+    hasRAM = false;
     bankMode = true;
     bankType = NONE;
     bankUpperBits = 0;
@@ -13,8 +14,13 @@ MMU::MMU() {
     ramBank = 0;
 
     // zero memory from 0x8000 to 0x9FFF
-    for (int i = 0x8000; i < 0xA000; i++) {
+    for (int i = VRAM_START; i < VRAM_END; i++) {
         mem[i] = 0;
+    }
+
+    // zero RAM
+    for (unsigned int i = 0; i < EXT_RAM_SIZE; i++) {
+        ram[i] = 0;
     }
 }
 
@@ -25,22 +31,41 @@ unsigned char MMU::read(unsigned short addr) const {
 
     // no banking
     if (bankType == NONE) {
-        if (addr < 0x8000) {
+
+        // read from rom banks 0 and 1
+        if (addr < ROM_BANK_1_END) {
             return (unsigned char)cart[addr];
-        } else {
+        }
+
+        // read from regular memory
+        else {
             return mem[addr];
         }
     }
 
     // MBC1 and MBC3
     else {
-        if (addr >= 0x0000 && addr < 0x4000) {
+
+        // read from rom bank 0
+        if (addr >= ROM_BANK_0_START && addr < ROM_BANK_0_END) {
             return cart[addr];
-        } else if (addr >= 0x4000 && addr < 0x8000) {
+        }
+
+        // read from rom bank 1
+        else if (addr >= ROM_BANK_1_START && addr < ROM_BANK_1_END) {
             return cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
-        } else if (addr >= 0xA000 && addr < 0xC000) {
-            return ram[ramBank | (addr & 0x1FFF)];
-        } else {
+        }
+
+        // read from external ram
+        else if (addr >= EXT_RAM_START && addr < EXT_RAM_END) {
+            if (ramBank < 0x8 && hasRAM && ramEnabled) {
+                return ram[ramBank | (addr & 0x1FFF)];
+            }
+            return 0;
+        }
+
+        // read from regular memory
+        else {
             return mem[addr];
         }
     }
@@ -55,14 +80,27 @@ void MMU::write(unsigned short addr, unsigned char value) {
     checkForEcho(addr, value);
 
     // write value to address
-    if (addr >= 0x8000) {
+    if (addr >= ROM_BANK_1_END) {
+
+        // write to lcd stat register
         if (addr == STAT) {
             mem[addr] = (mem[addr] & 0x87) | (value & 0x78);
-        } else if (addr == DIVIDER) {
+        }
+
+        // powerUp divider register
+        else if (addr == DIVIDER) {
             mem[addr] = 0;
-        } else if (addr >= 0xA000 && addr < 0xC000 && ramBank < 0x8) {
-            ram[ramBank | (addr & 0x1FFF)] = (char)value;
-        } else {
+        }
+
+        // write to external ram
+        else if (addr >= EXT_RAM_START && addr < EXT_RAM_END) {
+            if (ramBank < 0x8 && hasRAM && ramEnabled) {
+                ram[ramBank | (addr & 0x1FFF)] = (char) value;
+            }
+        }
+
+        // write to regular memory
+        else {
             mem[addr] = value;
         }
     }
@@ -144,15 +182,7 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
 
         // ram bank number
         else if (addr >= 0x4000 && addr < 0x6000) {
-            ramBank = value & 0xF;
-            if (ramBank >= 0x8) {
-                printf("MBC3: REAL TIME CLOCK NOT IMPLEMENTED\n");
-            }
-        }
-
-        // latch clock data
-        else if (addr >= 0x6000 && addr < 0x8000) {
-            printf("MBC3: LATCH CLOCK DATA NOT IMPLEMENTED\n");
+            ramBank = (value & 0xF) << 13;
         }
     }
 }
@@ -175,8 +205,8 @@ void MMU::checkForDMATransfer(unsigned short addr, unsigned char value) {
 // is in range
 // ================================
 void MMU::checkForEcho(unsigned short addr, unsigned char value) const {
-    if (addr >= 0xC000 && addr < 0xDE00) {
-        mem[addr + 0x2000] = value;
+    if (addr >= WORK_RAM_START && addr < WORK_RAM_ECHO_END) {
+        mem[addr + ECHO_OFFSET] = value;
     }
 }
 
@@ -186,7 +216,7 @@ void MMU::checkForEcho(unsigned short addr, unsigned char value) const {
 void MMU::loadCartridge(std::string dir) {
     cartDir = std::move(dir);;
     std::ifstream cartridge (cartDir, std::ios::in | std::ios::binary);
-    cartridge.read(cart, 0x200000);
+    cartridge.read(cart, CART_SIZE);
     cartridge.close();
 }
 
@@ -194,22 +224,35 @@ void MMU::loadCartridge(std::string dir) {
 // Load RAM data
 // ================================
 void MMU::loadRAM() const {
-    std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
-    std::ifstream ramBuffer (ramDir, std::ios::in | std::ios::binary);
-    if (!ramBuffer.fail()) {
-        ramBuffer.read(ram, 0x10000);
+    if (hasRAM) {
+        std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
+        std::ifstream ramBuffer (ramDir, std::ios::in | std::ios::binary);
+        if (!ramBuffer.fail()) {
+            ramBuffer.read(ram, EXT_RAM_SIZE);
+        }
+        ramBuffer.close();
     }
-    ramBuffer.close();
 }
 
 // ================================
 // Save RAM data
 // ================================
 void MMU::saveRAM() const {
-    std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
-    std::ofstream saveData (ramDir, std::ios::out | std::ios::binary);
-    saveData.write(ram, 0x10000);
-    saveData.close();
+    if (hasRAM) {
+        std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
+        std::ofstream saveData (ramDir, std::ios::out | std::ios::binary);
+
+        // determine save size
+        unsigned int saveSize = 0;
+        for (unsigned int i = EXT_RAM_SIZE - 1; i >= 0; i--) {
+            if (ram[i] != 0) {
+                saveSize = i + 1;
+                break;
+            }
+        }
+        saveData.write(ram, saveSize);
+        saveData.close();
+    }
 }
 
 // ================================

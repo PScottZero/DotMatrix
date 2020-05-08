@@ -112,7 +112,7 @@ public:
     // Interrupt functions
     // ================================
     void triggerVBlankInt() const;
-    void setLcdInt();
+    void setLcdInt() const;
     bool coincidenceCheck() const;
     bool modeCheck(Mode, unsigned char) const;
 };

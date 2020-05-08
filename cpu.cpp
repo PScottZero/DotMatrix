@@ -8,10 +8,12 @@
 // ================================
 CPU::CPU() {
     mmu = new MMU();
-    reset();
+    powerUp();
 }
 
-void CPU::reset() {
+void CPU::powerUp() {
+
+    // set registers
     A = H = 0x01;
     B = D = 0x00;
     C = 0x13;
@@ -19,21 +21,49 @@ void CPU::reset() {
     L = 0x4D;
     PC = 0x100;
     SP = 0xFFFE;
+
+    // set flags
     zero = halfCarry = carry = true;
     subtract = false;
     IME = false;
+
+    // set memory
+    mmu->write(0xFF10, 0x80);
+    mmu->write(0xFF11, 0xBF);
+    mmu->write(0xFF12, 0xF3);
+    mmu->write(0xFF14, 0xBF);
+    mmu->write(0xFF16, 0x3F);
+    mmu->write(0xFF17, 0x00);
+    mmu->write(0xFF19, 0xBF);
+    mmu->write(0xFF1A, 0x7F);
+    mmu->write(0xFF1B, 0xFF);
+    mmu->write(0xFF1C, 0x9F);
+    mmu->write(0xFF1E, 0xBF);
+    mmu->write(0xFF20, 0xFF);
+    mmu->write(0xFF21, 0x00);
+    mmu->write(0xFF22, 0x00);
+    mmu->write(0xFF23, 0xBF);
+    mmu->write(0xFF24, 0x77);
+    mmu->write(0xFF25, 0xF3);
+    mmu->write(0xFF26, 0xF1);
+    mmu->write(LCDC, 0x91);
+    mmu->write(SCROLL_Y, 0x00);
+    mmu->write(SCROLL_X, 0x00);
+    mmu->write(LY_COMP, 0x00);
+    mmu->write(BGP, 0xFC);
+    mmu->write(OBP0, 0xFF);
+    mmu->write(OBP1, 0xFF);
+    mmu->write(WINDOW_Y, 0x00);
+    mmu->write(WINDOW_X, 0x00);
+    mmu->write(IE, 0x00);
+
+    // other values
     halted = false;
     cycleCount = 0;
     internalDivider = 0;
     internalCounter = 0;
     mmu->bankLowerBits = 0;
     mmu->bankUpperBits = 0;
-    mmu->write(LY, 0);
-    mmu->write(LCDC, 0x91);
-    mmu->write(STAT, 0x85);
-    mmu->write(IE, 0);
-    mmu->write(IF, 0xE1);
-    mmu->write(JOYPAD, 0xFF);
 }
 
 // ================================
@@ -60,9 +90,9 @@ void CPU::incTimers() {
         internalDivider -= DIVIDER_CYCLES;
     }
 
-    if (mmu->read(TIMER_CONTROL) & 0x4) {
+    if (mmu->read(TAC) & 0x4) {
         int counterMod = 0;
-        switch (mmu->read(TIMER_CONTROL) & 0b11) {
+        switch (mmu->read(TAC) & 0b11) {
             case 0b00:
                 counterMod = COUNTER_CYCLES_0;
                 break;
@@ -79,11 +109,11 @@ void CPU::incTimers() {
 
         internalCounter += cycleCount;
         while (internalCounter >= counterMod) {
-            mmu->write(COUNTER, mmu->read(COUNTER) + 1);
+            mmu->write(TIMA, mmu->read(TIMA) + 1);
             internalCounter -= counterMod;
 
-            if (mmu->read(COUNTER) == 0) {
-                mmu->write(COUNTER, mmu->read(MODULO));
+            if (mmu->read(TIMA) == 0) {
+                mmu->write(TIMA, mmu->read(TMA));
                 setInt(TIMER_OVERFLOW);
             }
         }
@@ -1417,19 +1447,19 @@ void CPU::condition(Control condFunc, unsigned char condValue,
 void CPU::setInt(Interrupt i) const {
     switch (i) {
         case VBLANK:
-            mmu->write(IF, mmu->read(IF) | 0x01);
+            mmu->write(IF, mmu->read(IF) | VBLANK_INT_SET);
             break;
         case LCD_STAT:
-            mmu->write(IF, mmu->read(IF) | 0x02);
+            mmu->write(IF, mmu->read(IF) | LCD_INT_SET);
             break;
         case TIMER_OVERFLOW:
-            mmu->write(IF, mmu->read(IF) | 0x04);
+            mmu->write(IF, mmu->read(IF) | TIMER_INT_SET);
             break;
         case SERIAL_LINK:
-            mmu->write(IF, mmu->read(IF) | 0x08);
+            mmu->write(IF, mmu->read(IF) | SERIAL_INT_SET);
             break;
         case JOYPAD_PRESSED:
-            mmu->write(IF, mmu->read(IF) | 0x10);
+            mmu->write(IF, mmu->read(IF) | JOYPAD_INT_SET);
             break;
     }
 }
@@ -1437,19 +1467,19 @@ void CPU::setInt(Interrupt i) const {
 void CPU::resetInt(Interrupt i) const {
     switch(i) {
         case VBLANK:
-            mmu->write(IF, mmu->read(IF) & 0xFE);
+            mmu->write(IF, mmu->read(IF) & VBLANK_INT_RESET);
             break;
         case LCD_STAT:
-            mmu->write(IF, mmu->read(IF) & 0xFD);
+            mmu->write(IF, mmu->read(IF) & LCD_INT_RESET);
             break;
         case TIMER_OVERFLOW:
-            mmu->write(IF, mmu->read(IF) & 0xFB);
+            mmu->write(IF, mmu->read(IF) & TIMER_INT_RESET);
             break;
         case SERIAL_LINK:
-            mmu->write(IF, mmu->read(IF) & 0xF7);
+            mmu->write(IF, mmu->read(IF) & SERIAL_INT_RESET);
             break;
         case JOYPAD_PRESSED:
-            mmu->write(IF, mmu->read(IF) & 0xEF);
+            mmu->write(IF, mmu->read(IF) & JOYPAD_INT_RESET);
             break;
     }
 }
@@ -1490,23 +1520,23 @@ void CPU::checkForInt() {
 }
 
 bool CPU::vblankIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & 0x01;
+    return mmu->read(IE) & mmu->read(IF) & VBLANK_INT_SET;
 }
 
 bool CPU::lcdIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & 0x02;
+    return mmu->read(IE) & mmu->read(IF) & LCD_INT_SET;
 }
 
 bool CPU::timerIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & 0x04;
+    return mmu->read(IE) & mmu->read(IF) & TIMER_INT_SET;
 }
 
 bool CPU::serialIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & 0x08;
+    return mmu->read(IE) & mmu->read(IF) & SERIAL_INT_SET;
 }
 
 bool CPU::joypadIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & 0x10;
+    return mmu->read(IE) & mmu->read(IF) & JOYPAD_INT_SET;
 }
 
 #pragma clang diagnostic pop

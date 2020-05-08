@@ -15,7 +15,9 @@
       <w>rlca</w>
       <w>rrca</w>
       <w>scanline</w>
+      <w>tima</w>
       <w>vblank</w>
+      <w>vram</w>
     </words>
   </dictionary>
 </component>

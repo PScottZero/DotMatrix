@@ -39,6 +39,20 @@ constexpr auto COUNTER_CYCLES_2 = DIVIDER_CYCLES / 4;
 constexpr auto COUNTER_CYCLES_3 = DIVIDER_CYCLES;
 
 // ================================
+// Interrupt masks
+// ================================
+constexpr auto VBLANK_INT_SET = 0x01;
+constexpr auto VBLANK_INT_RESET = 0xFE;
+constexpr auto LCD_INT_SET = 0x02;
+constexpr auto LCD_INT_RESET = 0xFD;
+constexpr auto TIMER_INT_SET = 0x04;
+constexpr auto TIMER_INT_RESET = 0xFB;
+constexpr auto SERIAL_INT_SET = 0x08;
+constexpr auto SERIAL_INT_RESET = 0xF7;
+constexpr auto JOYPAD_INT_SET = 0x10;
+constexpr auto JOYPAD_INT_RESET = 0xEF;
+
+// ================================
 // Control flow options
 // ================================
 enum Control {
@@ -73,7 +87,7 @@ public:
     void decode(unsigned char opcode);
     void step();
     void incTimers();
-    void reset();
+    void powerUp();
 
     // ================================
     // Memory access functions

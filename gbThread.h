@@ -26,7 +26,7 @@ public:
     explicit GBThread(QObject *parent = nullptr);
     ~GBThread() override;
     void setRom(std::string dir);
-    void saveRAM();
+    void saveRAM() const;
 
 public slots:
     void processInput(Joypad button, bool pressed);
@@ -36,6 +36,7 @@ protected:
 
 private:
     bool checkBankType();
+    bool checkForRAM(unsigned char bankType);
 
 signals:
     void sendFrame(const QImage &frame);
