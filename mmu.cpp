@@ -102,6 +102,10 @@ void MMU::write(unsigned short addr, unsigned char value) {
         // write to regular memory
         else {
             mem[addr] = value;
+
+            if (addr == IF) {
+                mem[addr] |= 0xE0;
+            }
         }
     }
 

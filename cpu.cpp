@@ -57,6 +57,10 @@ void CPU::powerUp() {
     mmu->write(WINDOW_X, 0x00);
     mmu->write(IE, 0x00);
 
+    // extra memory settings
+    mmu->write(STAT, 0x80);
+    mmu->write(IF, 0xE1);
+
     // other values
     halted = false;
     cycleCount = 0;
