@@ -88,7 +88,7 @@ void MMU::write(unsigned short addr, unsigned char value) {
         }
 
         // powerUp divider register
-        else if (addr == DIVIDER) {
+        else if (addr == DIV) {
             mem[addr] = 0;
         }
 
@@ -110,7 +110,7 @@ void MMU::write(unsigned short addr, unsigned char value) {
     }
 
     // check for joypad input
-    if (addr == JOYPAD) {
+    if (addr == JOYP) {
         checkForInput();
     }
 }
@@ -263,54 +263,54 @@ void MMU::saveRAM() const {
 // Check for joypad input
 // ================================
 void MMU::checkForInput() {
-    mem[JOYPAD] |= 0xCFu;
-    if ((((unsigned char)(mem[JOYPAD] >> 4) & 0x1) == 0) || ((mem[JOYPAD] & 0x30) == 0x30)) {
+    mem[JOYP] |= 0xCFu;
+    if ((((unsigned char)(mem[JOYP] >> 4) & 0x1) == 0) || ((mem[JOYP] & 0x30) == 0x30)) {
         if (joypad[RIGHT]) {
-            mem[JOYPAD] &= 0xFE;
+            mem[JOYP] &= 0xFE;
         } else {
-            mem[JOYPAD] |= 0x1;
+            mem[JOYP] |= 0x1;
         }
 
         if (joypad[LEFT]) {
-            mem[JOYPAD] &= 0xFD;
+            mem[JOYP] &= 0xFD;
         } else {
-            mem[JOYPAD] |= 0x2;
+            mem[JOYP] |= 0x2;
         }
 
         if (joypad[UP]) {
-            mem[JOYPAD] &= 0xFB;
+            mem[JOYP] &= 0xFB;
         } else {
-            mem[JOYPAD] |= 0x4;
+            mem[JOYP] |= 0x4;
         }
 
         if (joypad[DOWN]) {
-            mem[JOYPAD] &= 0xF7;
+            mem[JOYP] &= 0xF7;
         } else {
-            mem[JOYPAD] |= 0x8;
+            mem[JOYP] |= 0x8;
         }
-    } else if (((unsigned char)(mem[JOYPAD] >> 5) & 0x1) == 0) {
+    } else if (((unsigned char)(mem[JOYP] >> 5) & 0x1) == 0) {
         if (joypad[BUTTON_A]) {
-            mem[JOYPAD] &= 0xFE;
+            mem[JOYP] &= 0xFE;
         } else {
-            mem[JOYPAD] |= 0x1;
+            mem[JOYP] |= 0x1;
         }
 
         if (joypad[BUTTON_B]) {
-            mem[JOYPAD] &= 0xFD;
+            mem[JOYP] &= 0xFD;
         } else {
-            mem[JOYPAD] |= 0x2;
+            mem[JOYP] |= 0x2;
         }
 
         if (joypad[SELECT]) {
-            mem[JOYPAD] &= 0xFB;
+            mem[JOYP] &= 0xFB;
         } else {
-            mem[JOYPAD] |= 0x4;
+            mem[JOYP] |= 0x4;
         }
 
         if (joypad[START]) {
-            mem[JOYPAD] &= 0xF7;
+            mem[JOYP] &= 0xF7;
         } else {
-            mem[JOYPAD] |= 0x8;
+            mem[JOYP] |= 0x8;
         }
     }
 }

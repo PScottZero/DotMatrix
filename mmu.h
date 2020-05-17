@@ -26,8 +26,9 @@ constexpr auto ECHO_OFFSET = 0x2000;
 // Register memory addresses
 // ================================
 constexpr auto BANK_TYPE = 0x147;
-constexpr auto JOYPAD = 0xFF00;
-constexpr auto DIVIDER = 0xFF04;
+constexpr auto JOYP = 0xFF00;
+constexpr auto SC = 0xFF02;
+constexpr auto DIV = 0xFF04;
 constexpr auto TIMA = 0xFF05;
 constexpr auto TMA = 0xFF06;
 constexpr auto TAC = 0xFF07;

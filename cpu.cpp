@@ -90,7 +90,7 @@ void CPU::step() {
 void CPU::incTimers() {
     internalDivider += cycleCount;
     while (internalDivider >= DIVIDER_CYCLES) {
-        mmu->mem[DIVIDER]++;
+        mmu->mem[DIV]++;
         internalDivider -= DIVIDER_CYCLES;
     }
 
@@ -1508,6 +1508,7 @@ void CPU::checkForInt() {
             resetInt(TIMER_OVERFLOW);
         } else if (serialIntTriggered()) {
             intAddr = 0x58;
+            mmu->write(SC, mmu->read(SC) & 0x7F);
             resetInt(SERIAL_LINK);
         } else if (joypadIntTriggered()) {
             intAddr = 0x60;
@@ -1536,7 +1537,7 @@ bool CPU::timerIntTriggered() const {
 }
 
 bool CPU::serialIntTriggered() const {
-    return mmu->read(IE) & mmu->read(IF) & SERIAL_INT_SET;
+    return (mmu->read(IE) & mmu->read(IF) & SERIAL_INT_SET) || ((mmu->read(SC) & 0x81) == 0x81);
 }
 
 bool CPU::joypadIntTriggered() const {
