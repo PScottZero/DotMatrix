@@ -76,9 +76,11 @@ bool GBThread::checkBankType() {
         cpu.mmu->bankType = NONE;
     } else if (bankType >= 0x01 && bankType <= 0x03) {
         cpu.mmu->bankType = MBC1;
+    } else if (bankType >= 0x05 && bankType <= 0x06) {
+        cpu.mmu->bankType = MBC2;
     } else if (bankType >= 0x0F && bankType <= 0x13) {
         cpu.mmu->bankType = MBC3;
-    } else {
+    }else {
         emit sendBankError(bankType);
         return false;
     }
@@ -88,8 +90,9 @@ bool GBThread::checkBankType() {
 
 bool GBThread::checkForRAM(unsigned char bankType) {
     return bankType == 0x02 || bankType == 0x03 ||
-           bankType == 0x0F || bankType == 0x10 ||
-           bankType == 0x12 || bankType == 0x13;
+        bankType == 0x05 || bankType == 0x06 ||
+        bankType == 0x0F || bankType == 0x10 ||
+        bankType == 0x12 || bankType == 0x13;
 }
 
 // ================================

@@ -33,6 +33,7 @@ void PPU::step() {
         } else {
             mem[STAT] &= 0xFB;
         }
+        setLcdInt();
         if (ppuCycle / SCANLINE < 144) {
             if (ppuCycle % SCANLINE <= 20) {
                 rendered = false;
@@ -103,7 +104,6 @@ void PPU::drawScanline() {
 
     delete[] scanline;
     delete[] scanPal;
-    setLcdInt();
 }
 
 // ================================

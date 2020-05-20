@@ -5,8 +5,6 @@
 #include <fstream>
 #include <unordered_map>
 
-constexpr auto BANK_SIZE = 0x4000;
-
 // ================================
 // Memory map addresses
 // ================================
@@ -42,16 +40,10 @@ constexpr auto OAM_COUNT = 40;
 constexpr auto BYTES_PER_OAM = 4;
 
 // ================================
-// Banking Modes (MBC1)
-// ================================
-constexpr auto ROM_BANKING_MODE = 0;
-constexpr auto RAM_BANKING_MODE = 1;
-
-// ================================
 // Memory Sizes
 // ================================
 constexpr auto GB_MEM_SIZE = 0x10000;
-constexpr auto EXT_RAM_SIZE = 0x10000;
+constexpr auto EXT_RAM_SIZE = 0x8000;
 constexpr auto CART_SIZE = 0x200000;
 
 // ================================

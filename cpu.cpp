@@ -66,7 +66,7 @@ void CPU::powerUp() {
     cycleCount = 0;
     internalDivider = 0;
     internalCounter = 0;
-    mmu->bankLowerBits = 0;
+    mmu->bankLowerBits = 1;
     mmu->bankUpperBits = 0;
 }
 

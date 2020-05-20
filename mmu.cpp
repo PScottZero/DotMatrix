@@ -10,7 +10,7 @@ MMU::MMU() {
     bankMode = true;
     bankType = NONE;
     bankUpperBits = 0;
-    bankLowerBits = 0;
+    bankLowerBits = 1;
     ramBank = 0;
 
     // zero memory from 0x8000 to 0x9FFF
@@ -43,7 +43,7 @@ unsigned char MMU::read(unsigned short addr) const {
         }
     }
 
-    // MBC1 and MBC3
+    // MBC
     else {
 
         // read from rom bank 0
@@ -53,15 +53,19 @@ unsigned char MMU::read(unsigned short addr) const {
 
         // read from rom bank 1
         else if (addr >= ROM_BANK_1_START && addr < ROM_BANK_1_END) {
-            return cart[bankUpperBits | bankLowerBits | (addr & 0x3FFF)];
+            return cart[(bankUpperBits << 19) | (bankLowerBits << 14) | (addr & 0x3FFF)];
         }
 
         // read from external ram
         else if (addr >= EXT_RAM_START && addr < EXT_RAM_END) {
-            if (ramBank < 0x8 && hasRAM && ramEnabled) {
-                return ram[ramBank | (addr & 0x1FFF)];
+            if (hasRAM && ramEnabled) {
+                if (bankType == MBC2) {
+                    return ram[addr & 0x1FF];
+                } else if (ramBank < 0x4) {
+                    return ram[(ramBank << 13) | (addr & 0x1FFF)];
+                }
+                return 0;
             }
-            return 0;
         }
 
         // read from regular memory
@@ -94,8 +98,12 @@ void MMU::write(unsigned short addr, unsigned char value) {
 
         // write to external ram
         else if (addr >= EXT_RAM_START && addr < EXT_RAM_END) {
-            if (ramBank < 0x8 && hasRAM && ramEnabled) {
-                ram[ramBank | (addr & 0x1FFF)] = (char) value;
+            if (hasRAM && ramEnabled) {
+                if (bankType == MBC2) {
+                    ram[addr & 0x1FF] = (char) (value & 0xF);
+                } else if (ramBank < 0x4) {
+                    ram[(ramBank << 13) | (addr & 0x1FFF)] = (char) value;
+                }
             }
         }
 
@@ -133,9 +141,9 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
 
         // lower five bits of bank number
         if (addr >= 0x2000 && addr < 0x4000) {
-            bankLowerBits = (value & 0x1F) << 14;
+            bankLowerBits = (value & 0x1F);
             if (bankLowerBits == 0) {
-                bankLowerBits = 0x4000;
+                bankLowerBits = 0x1;
             }
         }
 
@@ -143,9 +151,9 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
         // or ram bank number
         else if (addr >= 0x4000 && addr < 0x6000) {
             if (bankMode == 0) {
-                bankUpperBits = (value & 0x3) << 19;
+                bankUpperBits = (value & 0x3);
             } else {
-                ramBank = (value & 0x3) << 13;
+                ramBank = (value & 0x3);
             }
         }
 
@@ -160,12 +168,12 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
     // ========================
     else if (bankType == MBC2) {
 
-        // lower five bits of bank number
+        // bank number
         if (addr >= 0x2000 && addr < 0x4000) {
-            bankLowerBits = (value & 0xF) << 14;
+            bankLowerBits = (value & 0xF);
             bankUpperBits = 0;
             if (bankLowerBits == 0) {
-                bankLowerBits = 0x4000;
+                bankLowerBits = 0x1;
             }
         }
     }
@@ -177,16 +185,16 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
 
         // bank number
         if (addr >= 0x2000 && addr < 0x4000) {
-            bankUpperBits = (value & 0x60) << 14;
-            bankLowerBits = (value & 0x1F) << 14;
+            bankLowerBits = value & 0x7F;
+            bankUpperBits = 0;
             if (value == 0) {
-                bankLowerBits = 0x4000;
+                bankLowerBits = 0x1;
             }
         }
 
         // ram bank number
         else if (addr >= 0x4000 && addr < 0x6000) {
-            ramBank = (value & 0xF) << 13;
+            ramBank = (value & 0xF);
         }
     }
 }
