@@ -36,6 +36,7 @@ public:
 
 public slots:
     void setPalette(QObject *pal) const;
+    void setSpeed(int speed) const;
     void bankError(unsigned char);
 
 protected:

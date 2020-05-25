@@ -23,10 +23,12 @@ public:
     CPU cpu;
     PPU *ppu;
     std::string rom;
+    int speed;
     explicit GBThread(QObject *parent = nullptr);
     ~GBThread() override;
     void setRom(std::string dir);
     void saveRAM() const;
+    void setSpeed(int frameRate);
 
 public slots:
     void processInput(Joypad button, bool pressed);

@@ -12,16 +12,6 @@ MMU::MMU() {
     bankUpperBits = 0;
     bankLowerBits = 1;
     ramBank = 0;
-
-    // zero memory from 0x8000 to 0x9FFF
-    for (int i = VRAM_START; i < VRAM_END; i++) {
-        mem[i] = 0;
-    }
-
-    // zero RAM
-    for (unsigned int i = 0; i < EXT_RAM_SIZE; i++) {
-        ram[i] = 0;
-    }
 }
 
 // ================================

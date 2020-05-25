@@ -10,6 +10,7 @@ PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount) {
     display = nullptr;
     palette = new Palette(0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000);
     ppuCycle = 0;
+    waitOneCycle = false;
     cycleCount = cpuCycleCount;
     rendered = false;
 }
@@ -25,34 +26,56 @@ PPU::PPU(unsigned char *cpuMem, unsigned int* cpuCycleCount) {
 // ================================
 void PPU::step() {
     if (lcdEnable()) {
+
+        // increment ppu clock
+        waitOneCycle = false;
         ppuCycle += *cycleCount;
         ppuCycle %= SCREEN_CYCLE;
+
+        // check if LY has changed
+        unsigned char oldLY = mem[LY];
         mem[LY] = (ppuCycle / SCANLINE) % 154;
         if (mem[LY] == mem[LY_COMP]) {
             mem[STAT] |= 0x04;
         } else {
             mem[STAT] &= 0xFB;
         }
-        setLcdInt();
-        if (ppuCycle / SCANLINE < 144) {
-            if (ppuCycle % SCANLINE <= 20) {
-                rendered = false;
-                setMode(MODE_2);
-            } else if (ppuCycle % SCANLINE <= 63) {
-                setMode(MODE_3);
-                if (!rendered) {
-                    drawScanline();
+        if (oldLY != mem[LY]) {
+            setLcdInt();
+        }
+
+        // perform ppu cycle
+        if (!waitOneCycle) {
+            if (ppuCycle / SCANLINE < 144) {
+
+                // oam access
+                if (ppuCycle % SCANLINE <= 20) {
+                    rendered = false;
+                    setMode(MODE_2);
+                }
+
+                // scanline
+                else if (ppuCycle % SCANLINE <= 63) {
+                    setMode(MODE_3);
+                    if (!rendered) {
+                        drawScanline();
+                    }
+                }
+
+                // h-blank
+                else {
+                    rendered = false;
+                    setMode(MODE_0);
                 }
             } else {
-                rendered = false;
-                setMode(MODE_0);
+
+                // v-blank
+                if (mem[LY] == 144 && !rendered) {
+                    triggerVBlankInt();
+                    rendered = true;
+                }
+                setMode(MODE_1);
             }
-        } else {
-            if (mem[LY] == 144 && !rendered) {
-                triggerVBlankInt();
-                rendered = true;
-            }
-            setMode(MODE_1);
         }
     } else {
         mem[LY] = 0;
@@ -369,12 +392,15 @@ bool PPU::getSpritePalette(int oamEntry) const {
 // ------------------------------- INTERRUPT FUNCTIONS ----------------------------------
 // ======================================================================================
 
-void PPU::setLcdInt() const {
+void PPU::setLcdInt() {
     if (coincidenceCheck() ||
         modeCheck(MODE_0, 0x8) ||
         modeCheck(MODE_1, 0x10) ||
         modeCheck(MODE_2, 0x20)) {
         mem[IF] |= 0b10;
+        if (mem[IE] & 0x2) {
+            waitOneCycle = true;
+        }
     }
 }
 

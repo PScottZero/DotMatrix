@@ -61,6 +61,16 @@ void CPU::powerUp() {
     mmu->write(STAT, 0x80);
     mmu->write(IF, 0xE1);
 
+    // zero memory from 0x8000 to 0x9FFF
+    for (int i = VRAM_START; i < VRAM_END; i++) {
+        mmu->mem[i] = 0;
+    }
+
+    // zero RAM
+    for (unsigned int i = 0; i < EXT_RAM_SIZE; i++) {
+        mmu->ram[i] = 0;
+    }
+
     // other values
     halted = false;
     cycleCount = 0;

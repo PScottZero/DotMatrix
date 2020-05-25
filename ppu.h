@@ -68,6 +68,7 @@ public:
     QImage *display;
     Palette *palette;
     bool rendered;
+    bool waitOneCycle;
     unsigned int ppuCycle;
     unsigned int *cycleCount;
 
@@ -112,7 +113,7 @@ public:
     // Interrupt functions
     // ================================
     void triggerVBlankInt() const;
-    void setLcdInt() const;
+    void setLcdInt();
     bool coincidenceCheck() const;
     bool modeCheck(Mode, unsigned char) const;
 };

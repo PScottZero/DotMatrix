@@ -7,6 +7,7 @@ GBThread::GBThread(QObject *parent) : QThread(parent) {
     rom = "";
     emitted = false;
     ppu = new PPU(cpu.mmu->mem, &cpu.cycleCount);
+    speed = 16;
 }
 
 GBThread::~GBThread() {
@@ -30,6 +31,10 @@ void GBThread::setRom(std::string dir) {
 // ================================
 void GBThread::saveRAM() const {
     cpu.mmu->saveRAM();
+}
+
+void GBThread::setSpeed(int frameRate) {
+    this->speed = frameRate;
 }
 
 // ================================
@@ -57,7 +62,7 @@ void GBThread::run() {
                     frame.fill(ppu->palette->getColor(PX_ZERO));
                 }
                 emit sendFrame(frame);
-                auto nextCycle = cycleStart + std::chrono::milliseconds(16);
+                auto nextCycle = cycleStart + std::chrono::milliseconds(speed);
                 std::this_thread::sleep_until(nextCycle);
                 cycleStart = std::chrono::system_clock::now();
             } else if (cpu.mmu->read(LY) <= 143) {

@@ -4,7 +4,7 @@
 // Constructor
 // ================================
 DMWindow::DMWindow() : QMainWindow() {
-    setWindowTitle(tr("Dot Matrix v0.1 alpha"));
+    setWindowTitle(tr("Dot Matrix v0.5 βeta"));
     setWindowIcon(QIcon(":/img/dm_icon.ico"));
 
     setStyleSheet("QMainWindow {border-image: url(:/img/background.png) 0 0 0 0 stretch stretch}");
@@ -45,6 +45,7 @@ void DMWindow::createMenuBar() {
     // option menu
     QMenu *optionsMenu = menu->addMenu(tr("Options"));
 
+    // palette options
     QMenu *palette = optionsMenu->addMenu("Palette");
     auto *paletteSignal = new QSignalMapper(this);
     addPalette(palette, paletteSignal, "BGB", palBGB);
@@ -59,8 +60,31 @@ void DMWindow::createMenuBar() {
     addPalette(palette, paletteSignal, "Pokemon (Super Game Boy)", palPokemon);
     addPalette(palette, paletteSignal, "Virtual Boy", palVB);
     addPalette(palette, paletteSignal, "Wish GB (By Kerrie Lake)", palWish);
-
     connect(paletteSignal, SIGNAL(mapped(QObject*)), this, SLOT(setPalette(QObject*)));
+
+    // speed options
+    QMenu *speed = optionsMenu->addMenu("Speed");
+    auto *speedGroup = new QActionGroup(this);
+    auto *speedSignal = new QSignalMapper(this);
+    QAction *speedQuadruple = speed->addAction("x4");
+    QAction *speedDouble = speed->addAction("x2");
+    QAction *speedNormal = speed->addAction("x1");
+    QAction *speedHalf = speed->addAction("x0.5");
+    QAction *speedQuarter = speed->addAction("x0.25");
+    speedSignal->setMapping(speedQuadruple, 4);
+    speedSignal->setMapping(speedDouble, 8);
+    speedSignal->setMapping(speedNormal, 16);
+    speedSignal->setMapping(speedHalf, 32);
+    speedSignal->setMapping(speedQuarter, 64);
+    connect(speedQuadruple, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    connect(speedDouble, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    connect(speedNormal, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    connect(speedHalf, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    connect(speedQuarter, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    connect(speedSignal, SIGNAL(mapped(int)), this, SLOT(setSpeed(int)));
+
+    // rom path option
+    optionsMenu->addAction("Set ROM Path");
 
     setMenuBar(menu);
 }
@@ -70,6 +94,10 @@ void DMWindow::createMenuBar() {
 // ================================
 void DMWindow::setPalette(QObject* pal) const {
     gbthread->ppu->setPalette(qobject_cast<Palette*>(pal));
+}
+
+void DMWindow::setSpeed(int speed) const {
+    gbthread->setSpeed(speed);
 }
 
 // ================================
