@@ -39,6 +39,7 @@ protected:
 private:
     bool checkBankType();
     bool checkForRAM(unsigned char bankType);
+    bool checkForBattery(unsigned char bankType);
 
 signals:
     void sendFrame(const QImage &frame);

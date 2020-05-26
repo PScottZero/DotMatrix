@@ -32,7 +32,10 @@ public:
     DMWindow();
     void createMenuBar();
     void loadRom();
-    void addPalette(QMenu *palMenu, QSignalMapper *sigMap, const std::string& name, Palette *pal);
+    void addPalette(QMenu *palMenu, QSignalMapper *sigMap, QActionGroup *actionGroup,
+            const std::string& name, Palette *, bool checked);
+    void addSpeedOption(QMenu *speedMenu, QSignalMapper *sigMap, QActionGroup *actionGroup,
+            const std::string& name, int speed, bool checked);
 
 public slots:
     void setPalette(QObject *pal) const;

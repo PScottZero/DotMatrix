@@ -47,44 +47,35 @@ void DMWindow::createMenuBar() {
 
     // palette options
     QMenu *palette = optionsMenu->addMenu("Palette");
+    auto *palGroup = new QActionGroup(this);
+    palGroup->setExclusive(true);
     auto *paletteSignal = new QSignalMapper(this);
-    addPalette(palette, paletteSignal, "BGB", palBGB);
-    addPalette(palette, paletteSignal, "Bicycle (By Braquen)", palBicycle);
-    addPalette(palette, paletteSignal, "Chocolate (By GrafxKid)", palChocolate);
-    addPalette(palette, paletteSignal, "Cobalt", palCobalt);
-    addPalette(palette, paletteSignal, "Game Boy Original", palDMG);
-    addPalette(palette, paletteSignal, "Game Boy Pocket (Default)", palGBP);
-    addPalette(palette, paletteSignal, "Inverted", palInvert);
-    addPalette(palette, paletteSignal, "Kirby (Super Game Boy)", palKirby);
-    addPalette(palette, paletteSignal, "Platinum (By WildLeoKnight)", palPlatinum);
-    addPalette(palette, paletteSignal, "Pokemon (Super Game Boy)", palPokemon);
-    addPalette(palette, paletteSignal, "Virtual Boy", palVB);
-    addPalette(palette, paletteSignal, "Wish GB (By Kerrie Lake)", palWish);
+    addPalette(palette, paletteSignal, palGroup, "BGB", palBGB, false);
+    addPalette(palette, paletteSignal, palGroup, "Bicycle (By Braquen)", palBicycle, false);
+    addPalette(palette, paletteSignal, palGroup, "Chocolate (By GrafxKid)", palChocolate, false);
+    addPalette(palette, paletteSignal, palGroup, "Cobalt", palCobalt, false);
+    addPalette(palette, paletteSignal, palGroup, "Game Boy Original", palDMG, false);
+    addPalette(palette, paletteSignal, palGroup, "Game Boy Pocket", palGBP, true);
+    addPalette(palette, paletteSignal, palGroup, "Inverted", palInvert, false);
+    addPalette(palette, paletteSignal, palGroup, "Kirby (Super Game Boy)", palKirby, false);
+    addPalette(palette, paletteSignal, palGroup, "Platinum (By WildLeoKnight)", palPlatinum, false);
+    addPalette(palette, paletteSignal, palGroup, "Pokemon (Super Game Boy)", palPokemon, false);
+    addPalette(palette, paletteSignal, palGroup, "Virtual Boy", palVB, false);
+    addPalette(palette, paletteSignal, palGroup, "Wish GB (By Kerrie Lake)", palWish, false);
     connect(paletteSignal, SIGNAL(mapped(QObject*)), this, SLOT(setPalette(QObject*)));
 
     // speed options
     QMenu *speed = optionsMenu->addMenu("Speed");
     auto *speedGroup = new QActionGroup(this);
+    speedGroup->setExclusive(true);
     auto *speedSignal = new QSignalMapper(this);
-    QAction *speedQuadruple = speed->addAction("x4");
-    QAction *speedDouble = speed->addAction("x2");
-    QAction *speedNormal = speed->addAction("x1");
-    QAction *speedHalf = speed->addAction("x0.5");
-    QAction *speedQuarter = speed->addAction("x0.25");
-    speedSignal->setMapping(speedQuadruple, 4);
-    speedSignal->setMapping(speedDouble, 8);
-    speedSignal->setMapping(speedNormal, 16);
-    speedSignal->setMapping(speedHalf, 32);
-    speedSignal->setMapping(speedQuarter, 64);
-    connect(speedQuadruple, SIGNAL(triggered()), speedSignal, SLOT(map()));
-    connect(speedDouble, SIGNAL(triggered()), speedSignal, SLOT(map()));
-    connect(speedNormal, SIGNAL(triggered()), speedSignal, SLOT(map()));
-    connect(speedHalf, SIGNAL(triggered()), speedSignal, SLOT(map()));
-    connect(speedQuarter, SIGNAL(triggered()), speedSignal, SLOT(map()));
+    addSpeedOption(speed, speedSignal, speedGroup, "4x", 4, false);
+    addSpeedOption(speed, speedSignal, speedGroup, "2x", 8, false);
+    addSpeedOption(speed, speedSignal, speedGroup, "1x", 16, true);
+    addSpeedOption(speed, speedSignal, speedGroup, "0.5x", 32, false);
+    addSpeedOption(speed, speedSignal, speedGroup, "0.25x", 64, false);
     connect(speedSignal, SIGNAL(mapped(int)), this, SLOT(setSpeed(int)));
 
-    // rom path option
-    optionsMenu->addAction("Set ROM Path");
 
     setMenuBar(menu);
 }
@@ -96,6 +87,9 @@ void DMWindow::setPalette(QObject* pal) const {
     gbthread->ppu->setPalette(qobject_cast<Palette*>(pal));
 }
 
+// ================================
+// Set emulation palette
+// ================================
 void DMWindow::setSpeed(int speed) const {
     gbthread->setSpeed(speed);
 }
@@ -103,10 +97,27 @@ void DMWindow::setSpeed(int speed) const {
 // ================================
 // Add Game Boy palette to UI
 // ================================
-void DMWindow::addPalette(QMenu* palMenu, QSignalMapper *sigMap, const std::string& name, Palette* pal) {
-    QAction *palette = palMenu->addAction(name.c_str());
-    connect(palette, SIGNAL(triggered()), sigMap, SLOT(map()));
+void DMWindow::addPalette(QMenu *palMenu, QSignalMapper *sigMap, QActionGroup *actionGroup,
+        const std::string& name, Palette *pal, bool checked) {
+    QAction *palette = actionGroup->addAction(name.c_str());
+    palMenu->addAction(palette);
     sigMap->setMapping(palette, pal);
+    palette->setCheckable(true);
+    palette->setChecked(checked);
+    connect(palette, SIGNAL(triggered()), sigMap, SLOT(map()));
+}
+
+// ================================
+// Add speed option to UI
+// ================================
+void DMWindow::addSpeedOption(QMenu *speedMenu, QSignalMapper *sigMap, QActionGroup *actionGroup,
+        const std::string& name, int speed, bool checked) {
+    QAction *speedOption = actionGroup->addAction(name.c_str());
+    speedMenu->addAction(speedOption);
+    sigMap->setMapping(speedOption, speed);
+    speedOption->setCheckable(true);
+    speedOption->setChecked(checked);
+    connect(speedOption, SIGNAL(triggered()), sigMap, SLOT(map()));
 }
 
 // ================================

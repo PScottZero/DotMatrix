@@ -7,6 +7,7 @@ MMU::MMU() {
     ram = new char[EXT_RAM_SIZE];
     ramEnabled = false;
     hasRAM = false;
+    hasBattery = false;
     bankMode = true;
     bankType = NONE;
     bankUpperBits = 0;
@@ -33,7 +34,7 @@ unsigned char MMU::read(unsigned short addr) const {
         }
     }
 
-    // MBC
+    // Memory Bank Controller
     else {
 
         // read from rom bank 0
@@ -43,7 +44,11 @@ unsigned char MMU::read(unsigned short addr) const {
 
         // read from rom bank 1
         else if (addr >= ROM_BANK_1_START && addr < ROM_BANK_1_END) {
-            return cart[(bankUpperBits << 19) | (bankLowerBits << 14) | (addr & 0x3FFF)];
+            if (bankType != MBC5) {
+                return cart[(bankUpperBits << 19) | (bankLowerBits << 14) | (addr & 0x3FFF)];
+            } else {
+                return cart[(bankUpperBits << 22) | (bankLowerBits << 14) | (addr & 0x3FFF)];
+            }
         }
 
         // read from external ram
@@ -51,10 +56,9 @@ unsigned char MMU::read(unsigned short addr) const {
             if (hasRAM && ramEnabled) {
                 if (bankType == MBC2) {
                     return ram[addr & 0x1FF];
-                } else if (ramBank < 0x4) {
+                } else {
                     return ram[(ramBank << 13) | (addr & 0x1FFF)];
                 }
-                return 0;
             }
         }
 
@@ -63,6 +67,8 @@ unsigned char MMU::read(unsigned short addr) const {
             return mem[addr];
         }
     }
+
+    return 0;
 }
 
 // ================================
@@ -91,7 +97,7 @@ void MMU::write(unsigned short addr, unsigned char value) {
             if (hasRAM && ramEnabled) {
                 if (bankType == MBC2) {
                     ram[addr & 0x1FF] = (char) (value & 0xF);
-                } else if (ramBank < 0x4) {
+                } else {
                     ram[(ramBank << 13) | (addr & 0x1FFF)] = (char) value;
                 }
             }
@@ -187,6 +193,27 @@ void MMU::checkForMBCRequest(unsigned short addr, unsigned char value) {
             ramBank = (value & 0xF);
         }
     }
+
+    // ========================
+    // MBC5 BANK TYPE
+    // ========================
+    else if (bankType == MBC5) {
+
+        // lower eight bits of ROM bank number
+        if (addr >= 0x2000 && addr < 0x3000) {
+            bankLowerBits = value;
+        }
+
+        // upper bit of ROM bank number
+        else if (addr >= 0x3000 && addr < 0x4000) {
+            bankUpperBits = value & 0x1;
+        }
+
+        // ram bank number
+        else if (addr >= 0x4000 && addr < 0x6000) {
+            ramBank = (value & 0xF);
+        }
+    }
 }
 
 // ================================
@@ -226,7 +253,7 @@ void MMU::loadCartridge(std::string dir) {
 // Load RAM data
 // ================================
 void MMU::loadRAM() const {
-    if (hasRAM) {
+    if (hasBattery) {
         std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
         std::ifstream ramBuffer (ramDir, std::ios::in | std::ios::binary);
         if (!ramBuffer.fail()) {
@@ -240,7 +267,7 @@ void MMU::loadRAM() const {
 // Save RAM data
 // ================================
 void MMU::saveRAM() const {
-    if (hasRAM) {
+    if (hasBattery) {
         std::string ramDir = cartDir.substr(0, cartDir.size() - 3) + ".exram";
         std::ofstream saveData (ramDir, std::ios::out | std::ios::binary);
 

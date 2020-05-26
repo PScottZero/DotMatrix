@@ -17,20 +17,22 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 HEADERS += \
     cpu.h \
-    gbthread.h \
-    gbwidget.h \
+    gbThread.h \
+    displayWidget.h \
     ppu.h \
     mmu.h \
-    dmwindow.h
+    dmWindow.h \
+    palette.h
 
 SOURCES += \
     cpu.cpp \
-    gbthread.cpp \
-    gbwidget.cpp \
+    gbThread.cpp \
+    displayWidget.cpp \
     main.cpp \
     ppu.cpp \
     mmu.cpp \
-    dmwindow.cpp
+    dmWindow.cpp \
+    palette.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -41,3 +43,5 @@ RC_ICONS = img/dm_icon.ico
 
 RESOURCES += \
     resource.qrc
+
+CONFIG += static

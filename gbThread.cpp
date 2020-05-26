@@ -27,14 +27,17 @@ void GBThread::setRom(std::string dir) {
 }
 
 // ================================
+// Set emulation speed
+// ================================
+void GBThread::setSpeed(int frameRate) {
+    this->speed = frameRate;
+}
+
+// ================================
 // Save RAM data
 // ================================
 void GBThread::saveRAM() const {
     cpu.mmu->saveRAM();
-}
-
-void GBThread::setSpeed(int frameRate) {
-    this->speed = frameRate;
 }
 
 // ================================
@@ -73,7 +76,7 @@ void GBThread::run() {
 }
 
 // ================================
-// Check if bank type is valid
+// Check if bank type is supported
 // ================================
 bool GBThread::checkBankType() {
     unsigned char bankType = cpu.mmu->read(BANK_TYPE);
@@ -85,19 +88,37 @@ bool GBThread::checkBankType() {
         cpu.mmu->bankType = MBC2;
     } else if (bankType >= 0x0F && bankType <= 0x13) {
         cpu.mmu->bankType = MBC3;
-    }else {
+    } else if (bankType >= 0x19 && bankType <= 0x1E) {
+        cpu.mmu->bankType = MBC5;
+    } else {
         emit sendBankError(bankType);
         return false;
     }
     cpu.mmu->hasRAM = checkForRAM(bankType);
+    cpu.mmu->hasBattery = checkForBattery(bankType);
     return true;
 }
 
+// ================================
+// Banking methods with RAM
+// ================================
 bool GBThread::checkForRAM(unsigned char bankType) {
     return bankType == 0x02 || bankType == 0x03 ||
         bankType == 0x05 || bankType == 0x06 ||
+        bankType == 0x10 || bankType == 0x12 ||
+        bankType == 0x13 || bankType == 0x1A ||
+        bankType == 0x1B || bankType == 0x1D ||
+        bankType == 0x1E;
+}
+
+// ================================
+// Banking methods with battery
+// ================================
+bool GBThread::checkForBattery(unsigned char bankType) {
+    return bankType == 0x03 || bankType == 0x06 ||
         bankType == 0x0F || bankType == 0x10 ||
-        bankType == 0x12 || bankType == 0x13;
+        bankType == 0x13 || bankType == 0x1B ||
+        bankType == 0x1E;
 }
 
 // ================================

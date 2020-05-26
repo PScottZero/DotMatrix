@@ -43,8 +43,8 @@ constexpr auto BYTES_PER_OAM = 4;
 // Memory Sizes
 // ================================
 constexpr auto GB_MEM_SIZE = 0x10000;
-constexpr auto EXT_RAM_SIZE = 0x8000;
-constexpr auto CART_SIZE = 0x200000;
+constexpr auto EXT_RAM_SIZE = 0x20000;
+constexpr auto CART_SIZE = 0x800000;
 
 // ================================
 // ROM banking types
@@ -68,6 +68,7 @@ public:
     char* ram;
     std::string cartDir;
     bool hasRAM;
+    bool hasBattery;
     bool ramEnabled;
     bool bankMode;
     unsigned int bankUpperBits;
