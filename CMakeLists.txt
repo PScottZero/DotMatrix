@@ -3,7 +3,7 @@ project(dotmatrix)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_PREFIX_PATH "C:\\Qt\\5.12.6\\mingw73_32\\")
+set(CMAKE_PREFIX_PATH "C:\\Qt\\5.12.6\\mingw73_32")
 set(CMAKE_PREFIX_PATH "/Users/pscott/Qt/5.12.6/clang_64")
 
 find_package(Qt5Widgets REQUIRED)
