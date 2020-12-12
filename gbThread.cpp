@@ -2,6 +2,7 @@
 #pragma ide diagnostic ignored "EndlessLoop"
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "gbThread.h"
+#include <thread>
 
 GBThread::GBThread(QObject *parent) : QThread(parent) {
     rom = "";
@@ -51,7 +52,7 @@ void GBThread::run() {
     if (checkBankType()) {
         cpu.mmu->loadRAM();
         ppu->setDisplay(&frame);
-        QDeadlineTimer cycleStart = QDeadlineTimer::current();
+        auto cycleStart = std::chrono::system_clock::now();
 
         forever {
             // step through machine cycle
@@ -65,9 +66,9 @@ void GBThread::run() {
                     frame.fill(ppu->palette->getColor(PX_ZERO));
                 }
                 emit sendFrame(frame);
-                auto nextCycle = cycleStart + 16;
-                wait(nextCycle.deadline());
-                cycleStart = QDeadlineTimer::current();
+                auto nextCycle = cycleStart + std::chrono::milliseconds(speed);
+                std::this_thread::sleep_until(nextCycle);
+                cycleStart = std::chrono::system_clock::now();
             } else if (cpu.mmu->read(LY) <= 143) {
                 emitted = false;
             }

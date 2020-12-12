@@ -40,8 +40,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RC_ICONS = img/dm_icon.ico
+ICON = img/dm_icon.icns
 
 RESOURCES += \
     resource.qrc
 
-CONFIG += static
+CONFIG += c++14
