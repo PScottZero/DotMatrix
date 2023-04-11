@@ -30,7 +30,6 @@ using namespace std;
 #define BG_TILE_COUNT 32 * 32
 #define OAM_ENTRY_COUNT 40
 #define MAX_SPRITES_PER_LINE 10
-#define PALETTE_COLOR_COUNT 4
 
 // screen modes
 #define H_BLANK_MODE 0b00
@@ -41,7 +40,7 @@ using namespace std;
 // screen memory addresses
 #define WINDOW_CODE_ADDR_0 0x9800
 #define WINDOW_CODE_ADDR_1 0x9C00
-#define BG_DATA_ADDR_0 0x8800
+#define BG_DATA_ADDR_0 0x9000
 #define BG_DATA_ADDR_1 0x8000
 #define BG_CODE_ADDR_0 0x9800
 #define BG_CODE_ADDR_1 0x9C00
@@ -58,9 +57,6 @@ typedef struct {
 } sprite_t;
 
 using TileRow = array<uint8, TILE_PX_DIM>;
-using Palette = uint[PALETTE_COLOR_COUNT];
-
-Palette defaultPal{0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000};
 
 class PPU {
  private:
@@ -78,7 +74,7 @@ class PPU {
   void applyPalettes();
 
   // read display memory functions
-  TileRow getTileRow(uint8 tileNo, uint8 row);
+  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
   TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
   sprite_t getSpriteOAM(uint8 spriteIdx);
 
@@ -89,7 +85,7 @@ class PPU {
   bool spriteEnable();
   uint8 spriteHeight();
   uint16 windowMapAddr();
-  uint16 bgDataAddr();
+  uint16 bgWindowDataAddr();
   uint16 bgMapAddr();
 
   // stat register functions

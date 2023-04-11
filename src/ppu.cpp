@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include "palette.h"
 
 #include <stdlib.h>
 
@@ -93,6 +94,7 @@ void PPU::run() {
 // render background tiles
 void PPU::renderBg() {
   uint16 tileMapAddr = bgMapAddr();
+  uint16 tileDataAddr = bgWindowDataAddr();
 
   // render bg row
   int pxY = (scy + ly) % BG_PX_DIM;
@@ -104,10 +106,10 @@ void PPU::renderBg() {
     int tileNo = tileY * BG_TILE_DIM + tileX;
     int innerTileX = pxX % TILE_PX_DIM;
     int innerTileY = pxY % TILE_PX_DIM;
-    uint8 tileMap = mem.getByte(tileMapAddr + tileNo);
-
+    
     // draw tile row onto screen
-    TileRow row = getTileRow(tileMap, innerTileY);
+    uint8 tileMap = mem.getByte(tileMapAddr + tileNo);
+    TileRow row = getTileRow(tileDataAddr, tileMap, innerTileY);
     for (int px = 0; px < TILE_PX_DIM - innerTileX; ++px) {
       if (pxCount < SCREEN_PX_WIDTH) {
         screen.setPixel(pxCount, ly, row[px + innerTileX]);
@@ -141,7 +143,18 @@ void PPU::renderSprites() {
 }
 
 // render window
-void PPU::renderWindow() {}
+void PPU::renderWindow() {
+  uint16 tileMapAddr = windowMapAddr();
+  uint16 tileDataAddr = bgWindowDataAddr();
+
+//  for (int px = wx - 7; px < SCREEN_PX_WIDTH; px += TILE_PX_DIM) {
+//    uint8 tileMap = mem.getByte(tileMapAddr + );
+//    TileRow row = getTileRow(tileDataAddr, );
+//    if (px >= 0) {
+
+//    }
+//  }
+}
 
 // find which sprites intersect the
 // current scanline
@@ -185,7 +198,7 @@ void PPU::applyPalettes() {
     }
 
     uint pxPalVal = (palette >> (2 * pxVal)) & 0b11;
-    screen.setPixel(x, ly, defaultPal[pxPalVal]);
+    screen.setPixel(x, ly, palGBP[pxPalVal]);
   }
 }
 
@@ -195,11 +208,11 @@ void PPU::applyPalettes() {
 // **************************************************
 // **************************************************
 
-// get specified row of given tile
-TileRow PPU::getTileRow(uint8 tileNo, uint8 row) {
-  // get pointer to tile data
-  uint16 tileDataAddr = bgDataAddr();
-  uint16 tileAddr = tileDataAddr * tileNo * TILE_BYTES;
+// get specified row of the given tile
+TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
+  // get tile
+  int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
+  uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
   uint16 *tile = (uint16 *)mem.getPtr(tileAddr);
 
   // split row data into hi and lo byte
@@ -208,30 +221,31 @@ TileRow PPU::getTileRow(uint8 tileNo, uint8 row) {
   uint8 rowDataLo = rowData & 0xFF;
 
   // row (uint16) = abcdefgh ijklmnop
-  // pxData (uint8[]) = ai bj ck dl em fn go hp
-  TileRow pxRow;
+  // pxData (uint8[]) = ia jb kc ld me nf og ph
+  TileRow tileRow;
   for (int i = 0; i < TILE_PX_DIM; i++) {
     uint8 pxIdx = TILE_PX_DIM - i - 1;
-    pxRow[i] = (rowDataHi >> (pxIdx - 1)) & 0b10;
-    pxRow[i] |= (rowDataLo >> pxIdx) & 0b1;
+    tileRow[i] = (rowDataHi >> pxIdx) & 0b1;
+    tileRow[i] |= (rowDataLo >> (pxIdx - 1)) & 0b10;
   }
-  return pxRow;
+  return tileRow;
 }
 
 // get specified row of given sprite
 TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
   uint8 height = spriteHeight();
   row = oamEntry.flipY ? height - row - 1 : row;
-  TileRow pxRow = getTileRow(oamEntry.pattern, row);
+  uint8 pattern = height == SPRITE_PX_HEIGHT_TALL ? oamEntry.pattern & 0xFE : oamEntry.pattern;
+  TileRow tileRow = getTileRow(BG_DATA_ADDR_1, pattern, row);
   if (oamEntry.flipX) {
-    for (uint8 i = 0; i < pxRow.size() / 2; ++i) {
-      uint8 swapIdx = pxRow.size() - i - 1;
-      uint8 temp = pxRow[swapIdx];
-      pxRow[swapIdx] = pxRow[i];
-      pxRow[i] = temp;
+    for (uint8 i = 0; i < tileRow.size() / 2; ++i) {
+      uint8 swapIdx = tileRow.size() - i - 1;
+      uint8 temp = tileRow[swapIdx];
+      tileRow[swapIdx] = tileRow[i];
+      tileRow[i] = temp;
     }
   }
-  return pxRow;
+  return tileRow;
 }
 
 // get sprite oam entry at a given sprite index
@@ -276,7 +290,7 @@ uint16 PPU::windowMapAddr() {
   return lcdc & 0x40 ? WINDOW_CODE_ADDR_1 : WINDOW_CODE_ADDR_0;
 }
 
-uint16 PPU::bgDataAddr() {
+uint16 PPU::bgWindowDataAddr() {
   return lcdc & 0x10 ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
 }
 

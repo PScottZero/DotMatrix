@@ -10,8 +10,8 @@ int main(int argc, char *argv[]) {
   w.show();
 
   // create emulator
-  auto cgb = CGB();
-  cgb.run();
+//  auto cgb = CGB();
+//  cgb.run();
 
   return a.exec();
 }

@@ -1216,7 +1216,7 @@ bool CPU::jumpCondMet(uint8 jumpCond) {
 // binary coded decimals
 void CPU::decimalAdjAcc() {
   uint8 correction = 0;
-  if ((!subtract && A & 0xF > 0x9) || halfCarry) {
+  if ((!subtract && (A & 0xF) > 0x9) || halfCarry) {
     correction += 0x6;
   }
   if ((!subtract && A > 0x99) || carry) {

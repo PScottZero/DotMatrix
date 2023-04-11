@@ -1,7 +1,13 @@
+.DS_Store
 .vscode/
+.qt/
 docs/
 roms/
+build/
+cgb.app/
+cgb_autogen/
 CMakeCache.txt
+CMakeLists.txt.user
 CMakeFiles/
 Makefile
 cmake_install.cmake

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(cgb VERSION 0.1 LANGUAGES CXX)
+project(DotMatrix VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -24,12 +24,14 @@ set(PROJECT_SOURCES
         src/cpu.h
         src/memory.h
         src/ppu.h
+        src/palette.h
         src/utils.h
         src/mainwindow.ui
 )
 
+qt_add_resources(PROJECT_SOURCES resource.qrc)
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_resources(resource.qrc)
     qt_add_executable(cgb
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}

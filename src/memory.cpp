@@ -135,7 +135,7 @@ uint16 Memory::imm16(uint16 &PC, uint8 &cycles) const {
 uint8 Memory::getByte(uint16 addr) const { return mem[addr - MEM_BYTES]; }
 
 uint16 Memory::getTwoBytes(uint16 addr) const {
-  return mem[addr - MEM_BYTES] << 8 | mem[addr - MEM_BYTES + 1];
+  return (mem[addr - MEM_BYTES] << 8) | mem[addr - MEM_BYTES + 1];
 }
 
 uint8 *Memory::getPtr(uint16 addr) { return &mem[addr - MEM_BYTES]; }
@@ -143,10 +143,10 @@ uint8 *Memory::getPtr(uint16 addr) { return &mem[addr - MEM_BYTES]; }
 uint8 &Memory::getRef(uint16 addr) { return mem[addr - MEM_BYTES]; }
 
 bool Memory::canAccessVRAM() const {
-  return mem[STAT] & 0b11 != PIXEL_TRANSFER_MODE;
+  return (mem[STAT] & 0b11) != PIXEL_TRANSFER_MODE;
 }
 
 bool Memory::canAccessOAM() const {
-  return mem[STAT] & 0b11 != PIXEL_TRANSFER_MODE &&
-         mem[STAT] & 0b11 != OAM_SEARCH_MODE;
+  return (mem[STAT] & 0b11) != PIXEL_TRANSFER_MODE &&
+         (mem[STAT] & 0b11) != OAM_SEARCH_MODE;
 }
