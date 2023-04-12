@@ -6,12 +6,19 @@
 // **************************************************
 // **************************************************
 
+#include <math.h>
 #include <stdio.h>
 
+#include <QActionGroup>
+#include <QFileDialog>
 #include <QImage>
+#include <QMainWindow>
+#include <QPixmap>
+#include <QSignalMapper>
+#include <QSizePolicy>
+#include <QWidget>
 #include <array>
 #include <chrono>
-#include <math.h>
 #include <string>
 #include <thread>
 
@@ -219,7 +226,7 @@ typedef struct {
 using TileRow = std::array<uint8, TILE_PX_DIM>;
 
 // palette class
-class Palette : public QObject {
+class Palette : public QWidget {
   Q_OBJECT
 
  public:

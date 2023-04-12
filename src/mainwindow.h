@@ -1,11 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QActionGroup>
-#include <QMainWindow>
-#include <QSignalMapper>
-
 #include "cgb.h"
+#include "utils.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

@@ -1,9 +1,5 @@
 #include "mainwindow.h"
 
-#include <QFileDialog>
-#include <QPixmap>
-#include <QSizePolicy>
-
 #include "./ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -93,8 +89,8 @@ MainWindow::MainWindow(QWidget *parent)
                    &palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
                    &palWishGB);
-  connect(paletteSigMap, SIGNAL(mapped(QObject *)), this,
-          SLOT(setPalette(QObject *)));
+  connect(paletteSigMap, SIGNAL(mapped(QObject*)), this,
+          SLOT(setPalette(QObject*)));
 
   // set main window size
   setScale(1);
@@ -112,7 +108,11 @@ void MainWindow::setScale(int scale) {
   float scaleFloat = scale == 0 ? 0.5 : scale;
   int width = WINDOW_BASE_WIDTH * scaleFloat;
   int height = WINDOW_BASE_HEIGHT * scaleFloat;
+#ifdef Q_OS_MAC
+  this->setFixedSize(width, height);
+#else
   this->setFixedSize(width, height + ui->menubar->height());
+#endif
   ui->screen->setFixedSize(width, height);
 }
 
