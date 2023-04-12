@@ -1,20 +1,6 @@
 #pragma once
 
 #include "memory.h"
-#include "utils.h"
-
-#define DMG_CLOCK_SPEED 0x100000
-#define CGB_CLOCK_SPEED 0x200000
-
-#define NUM_REG_16 4
-#define NUM_REG_8 8
-#define MEM_HL 0b110
-
-// jump conditions
-#define JUMP_NZ 0b00
-#define JUMP_Z 0b01
-#define JUMP_NC 0b10
-#define JUMP_C 0b11
 
 class CPU {
  private:
@@ -24,7 +10,6 @@ class CPU {
   bool zero, subtract, halfCarry, carry;  // flags
 
   bool IME;
-  bool preIntIME;
   bool halt;
   bool stop;
 
@@ -33,7 +18,10 @@ class CPU {
 
   Memory &mem;
 
-  int &speedMult;
+  uint8 &intEnable;
+  uint8 &intFlag;
+
+  float &speedMult;
 
   // instruction decoding functions
   void runInstr(uint8 instr, uint8 &cycles);
@@ -75,8 +63,15 @@ class CPU {
   uint16 getAF();
   void setAF(uint16 val);
 
+  // interrupt functions
+  void handleInterrupts();
+  void enableInterrupt(uint8 interrupt);
+  void disableInterrupt(uint8 interrupt);
+  bool interruptEnabled(uint8 interrupt);
+  bool interruptTriggered(uint8 interrupt);
+
  public:
-  CPU(Memory &mem, int &speedMult);
+  CPU(Memory &mem, float &speedMult);
 
   void run();
 };

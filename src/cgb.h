@@ -1,18 +1,21 @@
 #pragma once
 
 #include "cpu.h"
+#include "utils.h"
 #include "memory.h"
 #include "ppu.h"
 
 class CGB {
- private:
-  int speedMult;
+private:
   Memory mem;
   PPU ppu;
   CPU cpu;
 
  public:
-  CGB();
+  float speedMult;
+  Palette *palette;
+
+  CGB(Palette *palette);
 
   void run();
 };

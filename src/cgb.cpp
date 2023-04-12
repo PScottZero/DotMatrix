@@ -1,13 +1,16 @@
 #include "cgb.h"
 
-#include <chrono>
-#include <thread>
-
 using namespace std;
 
-CGB::CGB() : speedMult(1), mem(), ppu(mem, speedMult), cpu(mem, speedMult) {}
+CGB::CGB(Palette *palette)
+    : speedMult(1.0),
+      palette(palette),
+      mem(),
+      ppu(mem, palette, speedMult),
+      cpu(mem, speedMult) {}
 
 void CGB::run() {
+  mem.init();
   thread cpuThread(&CPU::run, cpu);
   thread ppuThread(&PPU::run, ppu);
   cpuThread.detach();

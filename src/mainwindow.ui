@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>480</width>
-    <height>459</height>
+    <width>640</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,18 +19,46 @@
   <property name="windowTitle">
    <string>Dot Matrix: Game Boy Emulator</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../resource.qrc">
+    <normaloff>:/img/dm_icon.ico</normaloff>:/img/dm_icon.ico</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="screen">
     <property name="geometry">
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>480</width>
-      <height>432</height>
+      <width>640</width>
+      <height>576</height>
      </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>640</width>
+      <height>576</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>640</width>
+      <height>576</height>
+     </size>
     </property>
     <property name="text">
      <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="../resource.qrc">:/img/background.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>
@@ -39,41 +67,121 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>480</width>
-     <height>24</height>
+     <width>640</width>
+     <height>26</height>
     </rect>
    </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>640</width>
+     <height>26</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>640</width>
+     <height>26</height>
+    </size>
+   </property>
+   <property name="font">
+    <font>
+     <family>DejaVu Sans Mono</family>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
    <widget class="QMenu" name="menuFile">
+    <property name="font">
+     <font>
+      <family>DejaVu Sans Mono</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen_ROM"/>
+    <addaction name="actionOpenROM"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
+    <property name="font">
+     <font>
+      <family>DejaVu Sans Mono</family>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
     <property name="title">
      <string>Settings</string>
     </property>
-    <addaction name="actionScale"/>
-    <addaction name="actionSpeed"/>
-    <addaction name="actionPalette"/>
+    <widget class="QMenu" name="menuSpeed">
+     <property name="font">
+      <font>
+       <family>DejaVu Sans Mono</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Speed</string>
+     </property>
+     <addaction name="actionSpeed025x"/>
+     <addaction name="actionSpeed05x"/>
+     <addaction name="actionSpeed1x"/>
+     <addaction name="actionSpeed2x"/>
+     <addaction name="actionSpeed4x"/>
+     <addaction name="actionSpeed8x"/>
+    </widget>
+    <widget class="QMenu" name="menuPalette">
+     <property name="font">
+      <font>
+       <family>DejaVu Sans Mono</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Palette</string>
+     </property>
+     <addaction name="actionBGB"/>
+     <addaction name="actionBicycle"/>
+     <addaction name="actionChocolate"/>
+     <addaction name="actionCobalt"/>
+     <addaction name="actionGameBoy"/>
+     <addaction name="actionGameBoyPocket"/>
+     <addaction name="actionInverted"/>
+     <addaction name="actionKirby"/>
+     <addaction name="actionPlatinum"/>
+     <addaction name="actionPokemon"/>
+     <addaction name="actionVirtualBoy"/>
+     <addaction name="actionWishGB"/>
+    </widget>
+    <widget class="QMenu" name="menuScale">
+     <property name="font">
+      <font>
+       <family>DejaVu Sans Mono</family>
+       <pointsize>10</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Scale</string>
+     </property>
+     <addaction name="actionScale05x"/>
+     <addaction name="actionScale1x"/>
+     <addaction name="actionScale2x"/>
+     <addaction name="actionScale3x"/>
+    </widget>
+    <addaction name="menuScale"/>
+    <addaction name="menuSpeed"/>
+    <addaction name="menuPalette"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSettings"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionSpeed">
-   <property name="text">
-    <string>Speed</string>
-   </property>
-  </action>
-  <action name="actionPalette">
-   <property name="text">
-    <string>Palette</string>
-   </property>
-  </action>
-  <action name="actionOpen_ROM">
+  <action name="actionOpenROM">
    <property name="text">
     <string>Open ROM</string>
    </property>
@@ -83,12 +191,202 @@
     <string>Quit</string>
    </property>
   </action>
-  <action name="actionScale">
+  <action name="actionSpeed025x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Scale</string>
+    <string>0.25x</string>
+   </property>
+  </action>
+  <action name="actionSpeed05x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.5x</string>
+   </property>
+  </action>
+  <action name="actionSpeed1x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1x</string>
+   </property>
+  </action>
+  <action name="actionSpeed2x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2x</string>
+   </property>
+  </action>
+  <action name="actionSpeed4x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4x</string>
+   </property>
+  </action>
+  <action name="actionSpeed8x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>8x</string>
+   </property>
+  </action>
+  <action name="actionBGB">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>BGB</string>
+   </property>
+  </action>
+  <action name="actionBicycle">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Bicycle (By Braquen)</string>
+   </property>
+  </action>
+  <action name="actionChocolate">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Chocolate (By GrafxKid)</string>
+   </property>
+  </action>
+  <action name="actionCobalt">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Cobalt</string>
+   </property>
+  </action>
+  <action name="actionGameBoy">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Game Boy</string>
+   </property>
+  </action>
+  <action name="actionGameBoyPocket">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Game Boy Pocket</string>
+   </property>
+  </action>
+  <action name="actionInverted">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Inverted</string>
+   </property>
+  </action>
+  <action name="actionKirby">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Kirby (Super Game Boy)</string>
+   </property>
+  </action>
+  <action name="actionPlatinum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Platinum (By WildLeoKnight)</string>
+   </property>
+  </action>
+  <action name="actionPokemon">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pokémon (Super Game Boy)</string>
+   </property>
+  </action>
+  <action name="actionVirtualBoy">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Virtual Boy</string>
+   </property>
+  </action>
+  <action name="actionWishGB">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Wish GB (By Kerrie Lake)</string>
+   </property>
+  </action>
+  <action name="actionScale025x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.25x</string>
+   </property>
+  </action>
+  <action name="actionScale05x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.5x</string>
+   </property>
+  </action>
+  <action name="actionScale1x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1x</string>
+   </property>
+  </action>
+  <action name="actionScale2x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2x</string>
+   </property>
+  </action>
+  <action name="actionScale3x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>3x</string>
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="../resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

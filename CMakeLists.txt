@@ -24,7 +24,6 @@ set(PROJECT_SOURCES
         src/cpu.h
         src/memory.h
         src/ppu.h
-        src/palette.h
         src/utils.h
         src/mainwindow.ui
 )

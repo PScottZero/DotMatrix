@@ -8,9 +8,7 @@ Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
       cart((uint8 *)malloc(CART_BYTES)),
       romBank0((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)),
-      romBank1((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)) {
-  init();
-}
+      romBank1((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)) {}
 
 Memory::~Memory() {
   free(mem);

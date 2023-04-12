@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-CPU::CPU(Memory &mem, int &speedMult)
+CPU::CPU(Memory &mem, float &speedMult)
     : PC(0x100),
       SP(0xFFFE),
       BC(0x0013),
@@ -20,21 +20,32 @@ CPU::CPU(Memory &mem, int &speedMult)
       halfCarry(true),
       carry(true),
       IME(false),
-      preIntIME(IME),
       halt(false),
       stop(false),
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       mem(mem),
+      intEnable(mem.getRef(IE)),
+      intFlag(mem.getRef(IF)),
       speedMult(speedMult) {}
 
 void CPU::run() {
   while (true) {
+    // get current system time
     auto start = chrono::system_clock::now();
     uint8 cycles = 0;
-    runInstr(mem.imm8(PC, cycles), cycles);
+
+    // check for interrupts
+    if (IME) {
+      handleInterrupts();
+    } else {
+      runInstr(mem.imm8(PC, cycles), cycles);
+    }
+
+    // wait until the time corresponding to the number
+    // of cycles has passed
     int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
-    auto end = start + chrono::nanoseconds(cycleTimeNs);
+    auto end = start + chrono::nanoseconds(cycles * cycleTimeNs);
     this_thread::sleep_until(end);
   }
 }
@@ -395,7 +406,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // return from interrupt
     case 0xD9:
       PC = pop(cycles);
-      IME = preIntIME;
+      IME = true;
       ++cycles;
       break;
 
@@ -1254,4 +1265,42 @@ void CPU::setAF(uint16 val) {
   subtract = (F >> 6) & 0b1;
   halfCarry = (F >> 5) & 0b1;
   carry = (F >> 4) & 0b1;
+}
+
+// **************************************************
+// **************************************************
+// Interrupt Functions
+// **************************************************
+// **************************************************
+
+void CPU::handleInterrupts() {
+  uint8 cycles;
+  uint16 intAddr = 0;
+  if (interruptTriggered(V_BLANK_INT)) {
+    intAddr = 0x40;
+  } else if (interruptTriggered(LCDC_INT)) {
+    intAddr = 0x48;
+  } else if (interruptTriggered(TIMER_INT)) {
+    intAddr = 0x50;
+  } else if (interruptTriggered(SERIAL_INT)) {
+    intAddr = 0x58;
+  } else if (interruptTriggered(JOYPAD_INT)) {
+    intAddr = 0x60;
+  }
+
+  if (intAddr != 0) {
+    IME = false;
+    push(PC, cycles);
+    PC = intAddr;
+  }
+}
+
+void CPU::enableInterrupt(uint8 interrupt) { intEnable |= interrupt; }
+
+void CPU::disableInterrupt(uint8 interrupt) { intEnable &= ~interrupt; }
+
+bool CPU::interruptEnabled(uint8 interrupt) { return intEnable & interrupt; }
+
+bool CPU::interruptTriggered(uint8 interrupt) {
+  return interruptEnabled(interrupt) && (intFlag & interrupt);
 }

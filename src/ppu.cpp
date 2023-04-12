@@ -1,9 +1,8 @@
 #include "ppu.h"
-#include "palette.h"
 
 #include <stdlib.h>
 
-PPU::PPU(Memory &mem, int &speedMult)
+PPU::PPU(Memory &mem, Palette *palette, float &speedMult)
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       lcdc(mem.getRef(LCDC)),
       stat(mem.getRef(STAT)),
@@ -20,7 +19,8 @@ PPU::PPU(Memory &mem, int &speedMult)
       visibleSprites(),
       visibleSpriteCount(),
       speedMult(speedMult),
-      mem(mem) {}
+      mem(mem),
+      palette(palette) {}
 
 void PPU::run() {
   while (true) {
@@ -106,7 +106,7 @@ void PPU::renderBg() {
     int tileNo = tileY * BG_TILE_DIM + tileX;
     int innerTileX = pxX % TILE_PX_DIM;
     int innerTileY = pxY % TILE_PX_DIM;
-    
+
     // draw tile row onto screen
     uint8 tileMap = mem.getByte(tileMapAddr + tileNo);
     TileRow row = getTileRow(tileDataAddr, tileMap, innerTileY);
@@ -147,13 +147,13 @@ void PPU::renderWindow() {
   uint16 tileMapAddr = windowMapAddr();
   uint16 tileDataAddr = bgWindowDataAddr();
 
-//  for (int px = wx - 7; px < SCREEN_PX_WIDTH; px += TILE_PX_DIM) {
-//    uint8 tileMap = mem.getByte(tileMapAddr + );
-//    TileRow row = getTileRow(tileDataAddr, );
-//    if (px >= 0) {
+  //  for (int px = wx - 7; px < SCREEN_PX_WIDTH; px += TILE_PX_DIM) {
+  //    uint8 tileMap = mem.getByte(tileMapAddr + );
+  //    TileRow row = getTileRow(tileDataAddr, );
+  //    if (px >= 0) {
 
-//    }
-//  }
+  //    }
+  //  }
 }
 
 // find which sprites intersect the
@@ -183,22 +183,22 @@ void PPU::applyPalettes() {
     uint32 px = screen.pixel(x, ly);
     uint8 pxVal = px & 0b11;
     uint8 palOption = px >> 2 & 0b11;
-    uint8 palette = 0;
+    uint8 pal = 0;
 
     switch (palOption) {
       case 0b00:
-        palette = bgp;
+        pal = bgp;
         break;
       case 0b01:
-        palette = obp0;
+        pal = obp0;
         break;
       case 0b10:
-        palette = obp1;
+        pal = obp1;
         break;
     }
 
-    uint pxPalVal = (palette >> (2 * pxVal)) & 0b11;
-    screen.setPixel(x, ly, palGBP[pxPalVal]);
+    uint pxPalVal = (pal >> (2 * pxVal)) & 0b11;
+    screen.setPixel(x, ly, palette->data[pxPalVal]);
   }
 }
 
@@ -235,7 +235,8 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
 TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
   uint8 height = spriteHeight();
   row = oamEntry.flipY ? height - row - 1 : row;
-  uint8 pattern = height == SPRITE_PX_HEIGHT_TALL ? oamEntry.pattern & 0xFE : oamEntry.pattern;
+  uint8 pattern = height == SPRITE_PX_HEIGHT_TALL ? oamEntry.pattern & 0xFE
+                                                  : oamEntry.pattern;
   TileRow tileRow = getTileRow(BG_DATA_ADDR_1, pattern, row);
   if (oamEntry.flipX) {
     for (uint8 i = 0; i < tileRow.size() / 2; ++i) {
