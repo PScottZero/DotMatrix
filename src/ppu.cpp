@@ -16,6 +16,7 @@ PPU::PPU(Memory &mem, Palette *palette, float &speedMult)
       obp1(mem.getRef(OBP1)),
       wy(mem.getRef(WY)),
       wx(mem.getRef(WX)),
+      intFlag(mem.getRef(IF)),
       visibleSprites(),
       visibleSpriteCount(),
       speedMult(speedMult),
@@ -43,6 +44,7 @@ void PPU::run() {
         } else {
           stat &= 0xFB;
         }
+        setLCDInterrupt();
 
         if (lineNo < SCREEN_PX_HEIGHT) {
           // horizontal timing
@@ -59,6 +61,7 @@ void PPU::run() {
           // OAM Search
           // ==================================================
           setMode(OAM_SEARCH_MODE);
+          setLCDInterrupt();
           findVisibleSprites();
           this_thread::sleep_until(oamSearchEnd);
 
@@ -76,6 +79,7 @@ void PPU::run() {
           // H-Blank
           // ==================================================
           setMode(H_BLANK_MODE);
+          setLCDInterrupt();
           this_thread::sleep_until(hblankEnd);
         } else {
           // ==================================================
@@ -83,6 +87,7 @@ void PPU::run() {
           // ==================================================
           if ((stat & 0b11) != V_BLANK_MODE) {
             setMode(V_BLANK_MODE);
+            setLCDInterrupt();
             sendScreen(&screen);
           }
           auto vblankStart = chrono::system_clock::now();
@@ -157,13 +162,9 @@ void PPU::renderWindow() {
   uint16 tileMapAddr = windowMapAddr();
   uint16 tileDataAddr = bgWindowDataAddr();
 
-  //  for (int px = wx - 7; px < SCREEN_PX_WIDTH; px += TILE_PX_DIM) {
-  //    uint8 tileMap = mem.getByte(tileMapAddr + );
-  //    TileRow row = getTileRow(tileDataAddr, );
-  //    if (px >= 0) {
+  // for (int i = 0; i < BG_TILE_DIM; i++) {
 
-  //    }
-  //  }
+  // }
 }
 
 // find which sprites intersect the
@@ -315,7 +316,23 @@ uint16 PPU::bgMapAddr() {
 // **************************************************
 // **************************************************
 
+// set the current lcd mode
+// 00 - hblank mode
+// 01 - vblank mode
+// 10 - oam search mode
+// 11 - pixel transfer mode
 void PPU::setMode(uint8 mode) {
   stat &= 0xFC;
   stat |= mode;
+}
+
+// set the interrupt register IF based on
+// the current state of the STAT register
+void PPU::setLCDInterrupt() {
+  if (((stat & 0x40) && (stat & 0b100)) ||
+      ((stat & 0x20) && (stat & 0b011) == OAM_SEARCH_MODE) ||
+      ((stat & 0x10) && (stat & 0b011) == V_BLANK_MODE) ||
+      ((stat & 0x08) && (stat & 0b011) == H_BLANK_MODE)) {
+    intFlag |= 0x02;
+  }
 }

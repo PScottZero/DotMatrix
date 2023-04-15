@@ -189,6 +189,7 @@ using namespace std;
 #define OAM_ADDR 0xFE00
 #define OAM_END_ADDR 0xFFA0
 #define ZERO_PAGE_ADDR 0xFF00
+#define HRAM_ADDR 0xFF80
 
 // ==================================================
 // Miscellaneous Constants

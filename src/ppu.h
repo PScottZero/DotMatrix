@@ -7,7 +7,7 @@ class PPU : public QThread {
   Q_OBJECT
 
  private:
-  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
+  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx, &intFlag;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   uint8 visibleSpriteCount;
   float &speedMult;
@@ -39,6 +39,7 @@ class PPU : public QThread {
 
   // stat register functions
   void setMode(uint8 mode);
+  void setLCDInterrupt();
 
  public:
   QImage screen;
