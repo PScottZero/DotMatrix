@@ -1,6 +1,7 @@
 #include "cpu.h"
 
 #include <stdio.h>
+
 #include <fstream>
 
 CPU::CPU(Memory &mem, float &speedMult)
@@ -45,19 +46,26 @@ void CPU::run() {
     auto start = chrono::system_clock::now();
     uint8 cycles = 0;
 
-    sprintf(logLine, ">>> PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | CHNZ: %d%d%d%d\n", PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
+    sprintf(logLine,
+            ">>> PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: "
+            "%02x | CHNZ: %d%d%d%d\n",
+            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
     log.write(logLine, strlen(logLine));
 
     // check for interrupts
     if (IME) {
-      handleInterrupts();
-    } else {
-      runInstr(mem.imm8(PC, cycles), cycles);
+      handleInterrupts(cycles);
     }
 
-    sprintf(logLine, "<<< PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | CHNZ: %d%d%d%d\n", PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
+    // run instructor at current PC
+    runInstr(mem.imm8(PC, cycles), cycles);
+
+    sprintf(logLine,
+            "<<< PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: "
+            "%02x | CHNZ: %d%d%d%d\n",
+            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
     log.write(logLine, strlen(logLine));
-    
+
     // wait until the time corresponding to the number
     // of cycles has passed
     int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
@@ -83,9 +91,10 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
   uint8 regPair = (opcode >> 4) & 0b11;
   uint8 jumpCond = regDest & 0b11;
   uint8 loNibble = opcode & 0xF;
-  bool bit5 = (opcode >> 5) & 0b1;
 
-  bool instrFound = true;
+  bool prevCarry = carry;
+  bool prevZero = zero;
+
   regmap8[MEM_HL] = mem.getPtr(HL);
 
   // instruction comment format:
@@ -108,7 +117,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(HL, mem.imm8(PC, cycles), cycles);
       break;
 
-    // CHECKED
     // LD A, (BC)
     // 2 ----
     // load memory at BC into accumulator
@@ -116,23 +124,20 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       A = mem.read(BC, cycles);
       break;
 
-    // CHECKED
     // LD A, (DE)
     // 2 ----
-    // load memory at BC into accumulator
+    // load memory at DE into accumulator
     case 0x1A:
       A = mem.read(DE, cycles);
       break;
 
-    // CHECKED
     // LD A, (C)
     // 2 ----
-    // load memory at BC into accumulator
+    // load memory at FF00 + C into accumulator
     case 0xF2:
       A = mem.read(ZERO_PAGE_ADDR + C, cycles);
       break;
 
-    // CHECKED
     // LD (C), A
     // 2 ----
     // load accumulator into memory at FF00 + C
@@ -140,7 +145,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(ZERO_PAGE_ADDR + C, A, cycles);
       break;
 
-    // CHECKED
     // LD A, (n)
     // 3 ----
     // load memory at FF00 + 8-bit immediate n
@@ -149,7 +153,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       A = mem.read(ZERO_PAGE_ADDR + mem.imm8(PC, cycles), cycles);
       break;
 
-    // CHECKED
     // LD (n), A
     // 3 ----
     // load accumulator into memory at
@@ -158,16 +161,14 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(ZERO_PAGE_ADDR + mem.imm8(PC, cycles), A, cycles);
       break;
 
-    // CHECKED
     // LD A, (nn)
     // 4 ----
-    // load memory at 16-bit immediate
-    // into accumulator nn
+    // load memory at 16-bit immediate nn
+    // into accumulator
     case 0xFA:
       A = mem.read(mem.imm16(PC, cycles), cycles);
       break;
 
-    // CHECKED
     // LD (nn), A
     // 4 ----
     // load accumulator into memory at
@@ -176,25 +177,22 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(mem.imm16(PC, cycles), A, cycles);
       break;
 
-    // CHECKED
     // LD A, (HLI)
     // 2 ----
     // load memory at HL into accumulator
-    // then increment HL by one
+    // then increment HL
     case 0x2A:
       A = mem.read(HL++, cycles);
       break;
 
-    // CHECKED
     // LD A, (HLD)
     // 2 ----
     // load memory at HL into accumulator
-    // then decrement HL by one
+    // then decrement HL
     case 0x3A:
       A = mem.read(HL--, cycles);
       break;
 
-    // CHECKED
     // LD (BC), A
     // 2 ----
     // load accumulator into memory at BC
@@ -202,7 +200,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(BC, A, cycles);
       break;
 
-    // CHECKED
     // LD (DE), A
     // 2 ----
     // load accumulator into memory at DE
@@ -210,7 +207,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(DE, A, cycles);
       break;
 
-    // CHECKED
     // LD (HLI), A
     // 2 ----
     // load accumulator into memory at HL
@@ -219,7 +215,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(HL++, A, cycles);
       break;
 
-    // CHECKED
     // LD (HLD), A
     // 2 ----
     // load accumulator into memory at HL
@@ -232,7 +227,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 16-Bit Transfer Instructions
     // ==================================================
 
-    // CHECKED
     // LD SP, HL
     // 2 ----
     // load register HL into the stack pointer
@@ -241,18 +235,16 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       ++cycles;
       break;
 
-    // CHECKED
     // LDHL SP, e
     // 3 CH00
-    // load the stack pointer + 8-bit immediate e
-    // into register HL
+    // load the stack pointer + 8-bit signed
+    // immediate e into register HL
     case 0xF8:
       HL = add(SP, (int8)mem.imm8(PC, cycles));
       zero = false;
       ++cycles;
       break;
 
-    // CHECKED
     // LD (nn), SP
     // 5 ----
     // load the stack pointer into memory at
@@ -265,7 +257,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 8-Bit Arithmetic and Logical Instructions
     // ==================================================
 
-    // CHECKED
     // ADD A, n
     // 2 CH0Z
     // add 8-bit immediate n to accumulator and
@@ -274,7 +265,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       A = add(A, mem.imm8(PC, cycles));
       break;
 
-    // CHECKED
     // ADC A, n
     // 2 CH0Z
     // add 8-bit immediate n and carry to
@@ -284,19 +274,17 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       A = add(A, mem.imm8(PC, cycles), carry);
       break;
 
-    // CHECKED
     // SUB A, n
     // 2 CH1Z
-    // subtract 8-bit immediate to accumulator
+    // subtract 8-bit immediate n to accumulator
     // and store result in accumulator
     case 0xD6:
       A = sub(A, mem.imm8(PC, cycles));
       break;
 
-    // CHECKED
     // SBC A, n
     // 2 CH1Z
-    // subtract 8-bit immediate and carry from
+    // subtract 8-bit immediate n and carry from
     // accumulator and store result
     // in accumulator
     case 0xDE:
@@ -305,7 +293,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // AND A, n
     // 2 010Z
-    // and 8-bit immediate with accumulator
+    // and 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xE6:
       _and(mem.imm8(PC, cycles));
@@ -313,7 +301,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // XOR A, n
     // 2 000Z
-    // xor 8-bit immediate with accumulator
+    // xor 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xEE:
       _xor(mem.imm8(PC, cycles));
@@ -321,7 +309,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // OR A, n
     // 2 000Z
-    // or 8-bit immediate with accumulator
+    // or 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xF6:
       _or(mem.imm8(PC, cycles));
@@ -329,9 +317,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // CP A, n
     // 2 CH1Z
-    // compare 8-bit immediate with accumulator
+    // compare 8-bit immediate n with accumulator
     case 0xFE:
-      compare(mem.imm8(PC, cycles));
+      sub(A, mem.imm8(PC, cycles));
       break;
 
     // ==================================================
@@ -340,10 +328,10 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // ADD SP, e
     // 4 CH00
-    // add 8-bit immediate to stack pointer
+    // add 8-bit signed immediate e to stack pointer
     // and store result in stack pointer
     case 0xE8:
-      SP = add(SP, (uint16)mem.imm8(PC, cycles));
+      SP = add(SP, (int8)mem.imm8(PC, cycles));
       zero = false;
       cycles += 2;
       break;
@@ -392,7 +380,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // run instruction with CB prefix
     case 0xCB:
-      runInstrCB(mem.read(++PC, cycles), cycles);
+      runInstrCB(mem.imm8(PC, cycles), cycles);
       break;
 
     // ==================================================
@@ -404,11 +392,12 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // jump to 16-bit immediate address nn
     case 0xC3:
       PC = mem.imm16(PC, cycles);
+      ++cycles;
       break;
 
     // JR e
     // 3 ----
-    // jump to address PC + (signed) 8-bit
+    // jump to address PC + 8-bit signed
     // immediate e
     case 0x18:
       PC += (int8)mem.imm8(PC, cycles);
@@ -423,7 +412,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       break;
 
     // CALL nn
-    // 6/3 ----
+    // 6 ----
     // push PC onto stack and jump to
     // 16-bit immediate address
     case 0xCD:
@@ -527,66 +516,67 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       --cycles;
       break;
 
-    default:
-      instrFound = false;
+    // illegal opcodes
+    case 0xD3:
+    case 0xDB:
+    case 0xDD:
+    case 0xE3:
+    case 0xE4:
+    case 0xEB:
+    case 0xEC:
+    case 0xED:
+    case 0xF4:
+    case 0xFC:
+    case 0xFD:
+      printf("Illegal opcode %02x", opcode);
       break;
-  }
 
-  // the following instructions are
-  // represented by a range of
-  // 8-bit opcode values
-  if (!instrFound) {
-    switch (upperTwoBits) {
-      case 0b00:
-        switch (loNibble) {
-          // ==================================================
-          // 16-Bit Transfer Instructions
-          // ==================================================
+    // the following instructions are
+    // represented by a range of
+    // 8-bit opcode values
+    default:
+      switch (upperTwoBits) {
+        case 0b00:
+          switch (loNibble) {
+            // LD dd, nn
+            // 3 ----
+            // load 16-bit immediate nn into register pair dd
+            case 0x1:
+              *regmap16[regPair] = mem.imm16(PC, cycles);
+              break;
 
-          // CHECKED
-          // LD dd, nn
-          // 3 ----
-          // load 16-bit immediate nn into register pair dd
-          case 0x1:
-            *regmap16[regPair] = mem.imm16(PC, cycles);
-            break;
+            // INC ss
+            // 2 ----
+            // increment register pair ss
+            case 0x3:
+              ++*regmap16[regPair];
+              ++cycles;
+              break;
 
-          // ==================================================
-          // 16-Bit Arithmetic Instructions
-          // ==================================================
+            // ADD HL, ss
+            // 2 CH0-
+            // add register pair ss to HL and store
+            // result in HL
+            case 0x9:
+              HL = add(HL, *regmap16[regPair]);
+              zero = prevZero;
+              ++cycles;
+              break;
 
-          // INC ss
-          // 2 ----
-          // increment register pair ss
-          case 0x3:
-            ++*regmap16[regPair];
-            ++cycles;
-            break;
+            // DEC ss
+            // 2 ----
+            // decrement register pair ss
+            case 0xB:
+              --*regmap16[regPair];
+              break;
 
-          // ADD HL, ss
-          // 2 CH0-
-          // add register pair ss to HL and store
-          // result in HL
-          case 0x9:
-            HL = add(HL, *regmap16[regPair]);
-            ++cycles;
-            break;
-
-          // DEC ss
-          // 2 ----
-          // decrement register pair ss
-          case 0xB:
-            --*regmap16[regPair];
-            break;
-
-          default:
-            switch (regSrc) {
-              case 0b000:
+            default:
+              switch (regSrc) {
                 // JR cc, e
                 // 3/2 ----
-                // jump to address PC + (signed) e if jump
-                // condition cc is met
-                if (bit5) {
+                // jump to address PC + 8-bit signed
+                // immediate e if jump condition cc is met
+                case 0b000:
                   if (jumpCondMet(jumpCond)) {
                     PC += (int8)mem.imm8(PC, cycles);
                     ++cycles;
@@ -594,243 +584,205 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                     ++PC;
                     cycles += 1;
                   }
-                }
-                break;
+                  break;
 
-              // ==================================================
-              // 8-Bit Arithmetic and Logical Instructions
-              // ==================================================
+                // INC r / INC (HL)
+                // 1/3 -H0Z
+                // increment register r (or memory at HL)
+                case 0b100:
+                  *regmap8[regDest] = add(*regmap8[regDest], 1);
+                  carry = prevCarry;
+                  if (regDest == MEM_HL) cycles += 2;
+                  break;
 
-              // INC r / INC (HL)
-              // 1/3 -H0Z
-              // increment register r (or memory at HL)
-              case 0b100:
-                *regmap8[regDest] = increment(*regmap8[regDest]);
-                if (regDest == MEM_HL) cycles += 2;
-                break;
+                // DEC r / DEC (HL)
+                // 1/3 -H1Z
+                // decrement register r (or memory at HL)
+                case 0b101:
+                  *regmap8[regDest] = sub(*regmap8[regDest], 1);
+                  carry = prevCarry;
+                  if (regDest == MEM_HL) cycles += 2;
+                  break;
 
-              // DEC r / DEC (HL)
-              // 1/3 -H1Z
-              // decrement register r (or memory at HL)
-              case 0b101:
-                *regmap8[regDest] = decrement(*regmap8[regDest]);
-                if (regDest == MEM_HL) cycles += 2;
-                break;
-
-              // ==================================================
-              // 8-Bit Transfer and I/O Instructions
-              // ==================================================
-
-              // CHECKED
-              // LD r, n / LD (HL), n
-              // 2/3 ----
-              // load 8-bit immediate n into register r
-              // (or memory at HL)
-              case 0b110:
-                *regmap8[regDest] = mem.imm8(PC, cycles);
-                if (regDest == MEM_HL) ++cycles;
-                break;
-            }
-            break;
-        }
-        break;
-
-      case 0b01:
-        // ==================================================
-        // 8-Bit Transfer and I/O Instructions
-        // ==================================================
-
-        // CHECKED
-        // LD r, r' / LD r, (HL) / LD (HL), r
-        // 1/2/2 ----
-        // load value of register r' (or memory at HL)
-        // into register r (or memory at HL)
-        *regmap8[regDest] = *regmap8[regSrc];
-        if (regSrc == MEM_HL || regDest == MEM_HL) ++cycles;
-
-        break;
-
-      case 0b10:
-        // ==================================================
-        // 8-Bit Arithmetic and Logical Instructions
-        // ==================================================
-
-        switch (regDest) {
-
-          // CHECKED
-          // ADD A, r / ADD A, (HL)
-          // 1/2 CH0Z
-          // add register r (or memory at HL) to
-          // accumulator and store result
-          // in accumulator
-          case 0b000:
-            A = add(A, *regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // CHECKED
-          // ADC A, r / ADC A, (HL)
-          // 1/2 CH0Z
-          // add register r (or memory at HL) and
-          // carry to accumulator and store result
-          // in accumulator
-          case 0b001:
-            A = add(A, *regmap8[regSrc], carry);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // CHECKED
-          // SUB A, r / SUB A, (HL)
-          // 1/2 CH1Z
-          // subtract register r (or memory at HL)
-          // from accumulator and store result
-          // in accumulator
-          case 0b010:
-            A = sub(A, *regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // CHECKED
-          // SBC A, r / SBC A, (HL)
-          // 1/2 CH1Z
-          // subtract register r (or memory at HL) and
-          // carry from accumulator and store result
-          // in accumulator
-          case 0b011:
-            A = sub(A, *regmap8[regSrc], carry);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // AND A, r / AND A, (HL)
-          // 1/2 010Z
-          // and register r (or memory at HL) with
-          // accumulator and store result in accumulator
-          case 0b100:
-            _and(*regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // XOR A, r / XOR A, (HL)
-          // 1/2 000Z
-          // xor register r (or memory at HL) with
-          // accumulator and store result in accumulator
-          case 0b101:
-            _xor(*regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // OR A, r / OR A, (HL)
-          // 1/2 000Z
-          // or register r (or memory at HL) with
-          // accumulator and store result in accumulator
-          case 0b110:
-            _or(*regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-
-          // CP A, r / CP A, (HL)
-          // 1/2 CH1Z
-          // compare register r (or memory at HL)
-          // with accumulator
-          case 0b111:
-            compare(*regmap8[regSrc]);
-            if (regSrc == MEM_HL) ++cycles;
-            break;
-        }
-        break;
-
-      case 0b11:
-        // ==================================================
-        // 16-Bit Transfer Instructions
-        // ==================================================
-
-        // CHECKED
-        // PUSH qq
-        // 4 ----
-        // push register pair qq onto stack
-        if (loNibble == 0x5) {
-          push(regPair != 0b11 ? *regmap16[regPair] : getAF(), cycles);
-        }
-
-        // CHECKED
-        // POP qq
-        // 3 ----
-        // pop the stack and store popped
-        // content in register pair qq
-        else if (loNibble == 0x1) {
-          if (regPair != 0b11) {
-            *regmap16[regPair] = pop(cycles);
-          } else {
-            setAF(pop(cycles));
+                // LD r, n / LD (HL), n
+                // 2/3 ----
+                // load 8-bit immediate n into register r
+                // (or memory at HL)
+                case 0b110:
+                  *regmap8[regDest] = mem.imm8(PC, cycles);
+                  if (regDest == MEM_HL) ++cycles;
+                  break;
+              }
+              break;
           }
-        }
+          break;
 
-        else {
-          // ==================================================
-          // Jump, Call, and Return Instructions
-          // ==================================================
+        case 0b01:
+          // LD r, r' / LD r, (HL) / LD (HL), r
+          // 1/2/2 ----
+          // load value of register r' (or memory at HL)
+          // into register r (or memory at HL)
+          *regmap8[regDest] = *regmap8[regSrc];
+          if (regSrc == MEM_HL || regDest == MEM_HL) ++cycles;
+          break;
 
-          switch (regSrc) {
+        case 0b10:
+          switch (regDest) {
+            // ADD A, r / ADD A, (HL)
+            // 1/2 CH0Z
+            // add register r (or memory at HL) to
+            // accumulator and store result
+            // in accumulator
             case 0b000:
-              // RET cc
-              // 5/2 ----
-              // return from subroutine if jump condition
-              // cc is met
-              if (!bit5) {
-                if (jumpCondMet(jumpCond)) {
-                  PC = pop(cycles);
-                  cycles += 2;
-                } else {
-                  ++cycles;
-                }
-              }
+              A = add(A, *regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
               break;
 
+            // ADC A, r / ADC A, (HL)
+            // 1/2 CH0Z
+            // add register r (or memory at HL) and
+            // carry to accumulator and store result
+            // in accumulator
+            case 0b001:
+              A = add(A, *regmap8[regSrc], carry);
+              if (regSrc == MEM_HL) ++cycles;
+              break;
+
+            // SUB A, r / SUB A, (HL)
+            // 1/2 CH1Z
+            // subtract register r (or memory at HL)
+            // from accumulator and store result
+            // in accumulator
             case 0b010:
-              // JP cc, nn
-              // 4/3 ----
-              // jump to address nn if jump condition
-              // cc is met
-              if (!bit5) {
-                if (jumpCondMet(jumpCond)) {
-                  PC = mem.imm16(PC, cycles);
-                  ++cycles;
-                } else {
-                  PC += 2;
-                  cycles += 2;
-                }
-              }
+              A = sub(A, *regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
               break;
 
+            // SBC A, r / SBC A, (HL)
+            // 1/2 CH1Z
+            // subtract register r (or memory at HL) and
+            // carry from accumulator and store result
+            // in accumulator
+            case 0b011:
+              A = sub(A, *regmap8[regSrc], carry);
+              if (regSrc == MEM_HL) ++cycles;
+              break;
+
+            // AND A, r / AND A, (HL)
+            // 1/2 010Z
+            // and register r (or memory at HL) with
+            // accumulator and store result in accumulator
             case 0b100:
-              // CALL cc, nn
-              // 6/3 ----
-              // push PC onto stack and jump to 16-bit
-              // immediate address nn if jump condition
-              // cc is met
-              if (!bit5) {
-                if (jumpCondMet(jumpCond)) {
-                  push(PC, cycles);
-                  PC = mem.imm16(PC, cycles);
-                } else {
-                  PC += 2;
-                  cycles += 2;
-                }
-              }
+              _and(*regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
               break;
 
-            // RST t
-            // 4 ----
-            // call subroutine in zero page memory
+            // XOR A, r / XOR A, (HL)
+            // 1/2 000Z
+            // xor register r (or memory at HL) with
+            // accumulator and store result in accumulator
+            case 0b101:
+              _xor(*regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
+              break;
+
+            // OR A, r / OR A, (HL)
+            // 1/2 000Z
+            // or register r (or memory at HL) with
+            // accumulator and store result in accumulator
+            case 0b110:
+              _or(*regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
+              break;
+
+            // CP A, r / CP A, (HL)
+            // 1/2 CH1Z
+            // compare register r (or memory at HL)
+            // with accumulator
             case 0b111:
-              push(PC, cycles);
-              PC = 0x8 * regDest;
-              ++cycles;
+              sub(A, *regmap8[regSrc]);
+              if (regSrc == MEM_HL) ++cycles;
               break;
           }
-        }
-        break;
-    }
+          break;
+
+        case 0b11:
+          switch (loNibble) {
+            // POP qq
+            // 3 ----
+            // pop the stack and store popped
+            // content in register pair qq
+            case 0x1:
+              if (regPair != 0b11) {
+                *regmap16[regPair] = pop(cycles);
+              } else {
+                setAF(pop(cycles));
+              }
+              break;
+
+            // PUSH qq
+            // 4 ----
+            // push register pair qq onto stack
+            case 0x5:
+              push(regPair != 0b11 ? *regmap16[regPair] : getAF(), cycles);
+              break;
+
+            default:
+              switch (regSrc) {
+                // RET cc
+                // 5/2 ----
+                // return from subroutine if jump condition
+                // cc is met
+                case 0b000:
+                  if (jumpCondMet(jumpCond)) {
+                    PC = pop(cycles);
+                    cycles += 2;
+                  } else {
+                    ++cycles;
+                  }
+                  break;
+
+                // JP cc, nn
+                // 4/3 ----
+                // jump to address nn if jump condition
+                // cc is met
+                case 0b010:
+                  if (jumpCondMet(jumpCond)) {
+                    PC = mem.imm16(PC, cycles);
+                    ++cycles;
+                  } else {
+                    PC += 2;
+                    cycles += 2;
+                  }
+                  break;
+
+                // CALL cc, nn
+                // 6/3 ----
+                // push PC onto stack and jump to 16-bit
+                // immediate address nn if jump condition
+                // cc is met
+                case 0b100:
+                  if (jumpCondMet(jumpCond)) {
+                    push(PC, cycles);
+                    PC = mem.imm16(PC, cycles);
+                  } else {
+                    PC += 2;
+                    cycles += 2;
+                  }
+                  break;
+
+                // RST t
+                // 4 ----
+                // call subroutine in zero page memory
+                case 0b111:
+                  push(PC, cycles);
+                  PC = 0x8 * regDest;
+                  break;
+              }
+          }
+          break;
+      }
+      break;
   }
 }
 
@@ -853,18 +805,16 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // RLC r / RLC (HL)
         // 2/4 C00Z
         // rotate register r (or memory at HL)
-        // to the left and set carry to bit7
-        // of register r
+        // to the left
         case 0b000:
           *regmap8[regSrc] = rotateLeft(*regmap8[regSrc]);
           if (regSrc == MEM_HL) cycles += 2;
           break;
 
-        // RRC m / RRC (HL)
+        // RRC r / RRC (HL)
         // 2/4 C00Z
         // rotate register r (or memory at HL)
-        // to the right and set carry to bit0
-        // of register r
+        // to the right
         case 0b001:
           *regmap8[regSrc] = rotateRight(*regmap8[regSrc]);
           if (regSrc == MEM_HL) cycles += 2;
@@ -940,7 +890,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
       break;
 
     // RES b, r / RES b, (HL)
-    // 2/4 -10Z
+    // 2/4 ----
     // set bit b of register r (or memory at HL)
     // to zero
     case 0b10:
@@ -949,7 +899,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
       break;
 
     // SET b, r / BIT b, (HL)
-    // 2/4 -10Z
+    // 2/4 ----
     // set bit b of register r (or memory at HL)
     // to one
     case 0b11:
@@ -1083,47 +1033,6 @@ void CPU::_xor(uint8 val) {
   zero = A == 0;
 }
 
-// compare 8-bit number val with the accumulator,
-// same as subtract except accumulator is not
-// overwritten
-//
-// flags affected:
-// C - true if borrow, false otherwise
-// H - true if borrow from bit 4, false otherwise
-// N - set to true
-// Z - true if result is zero, false otherwise
-void CPU::compare(uint8 val) { sub(A, val); }
-
-// increment 8-bit number val, same as
-// adding val and 1 except carry is
-// not affected
-//
-// flags affected:
-// H - true if carry from bit 3, false otherwise
-// N - set to false
-// Z - true if result is zero, false otherwise
-uint8 CPU::increment(uint8 val) {
-  bool tempCarry = carry;
-  uint8 result = add(val, 1);
-  carry = tempCarry;
-  return result;
-}
-
-// decrement 8-bit number val, same as
-// subtracting 1 from val except carry is
-// not affected
-//
-// flags affected:
-// H - true if borrow from bit 4, false otherwise
-// N - set to true
-// Z - true if result is zero, false otherwise
-uint8 CPU::decrement(uint8 val) {
-  bool tempCarry = carry;
-  uint8 result = sub(val, 1);
-  carry = tempCarry;
-  return result;
-}
-
 // **************************************************
 // **************************************************
 // Rotate Shift Functions
@@ -1141,9 +1050,9 @@ uint8 CPU::decrement(uint8 val) {
 uint8 CPU::rotateLeft(uint8 val, bool thruCarry) {
   bool bit7 = (val >> 7) & 0b1;
   uint8 thruBit = thruCarry ? carry : bit7;
-  val = shiftLeft(val) | thruBit;
-  zero = val == 0;
-  return val;
+  uint8 result = shiftLeft(val) | thruBit;
+  zero = result == 0;
+  return result;
 }
 
 // rotate 8-bit number to the right, can optionally
@@ -1157,9 +1066,9 @@ uint8 CPU::rotateLeft(uint8 val, bool thruCarry) {
 uint8 CPU::rotateRight(uint8 val, bool thruCarry) {
   bool bit0 = val & 0b1;
   uint8 thruBit = (thruCarry ? carry : bit0) << 7;
-  val = shiftRight(val) | thruBit;
-  zero = val == 0;
-  return val;
+  uint8 result = shiftRight(val) | thruBit;
+  zero = result == 0;
+  return result;
 }
 
 // shift 8-bit number to the left, can optionally
@@ -1324,31 +1233,38 @@ void CPU::setAF(uint16 val) {
 // **************************************************
 // **************************************************
 
-void CPU::handleInterrupts() {
-  uint8 cycles;
+void CPU::handleInterrupts(uint8 &cycles) {
   uint16 intAddr = 0;
   if (interruptTriggered(V_BLANK_INT)) {
     intAddr = 0x40;
+    resetInterrupt(V_BLANK_INT);
   } else if (interruptTriggered(LCDC_INT)) {
     intAddr = 0x48;
+    resetInterrupt(LCDC_INT);
   } else if (interruptTriggered(TIMER_INT)) {
     intAddr = 0x50;
+    resetInterrupt(TIMER_INT);
   } else if (interruptTriggered(SERIAL_INT)) {
     intAddr = 0x58;
+    resetInterrupt(SERIAL_INT);
   } else if (interruptTriggered(JOYPAD_INT)) {
     intAddr = 0x60;
+    resetInterrupt(JOYPAD_INT);
   }
 
   if (intAddr != 0) {
     IME = false;
     push(PC, cycles);
     PC = intAddr;
+    cycles += 2;
   }
 }
 
 void CPU::enableInterrupt(uint8 interrupt) { intEnable |= interrupt; }
 
 void CPU::disableInterrupt(uint8 interrupt) { intEnable &= ~interrupt; }
+
+void CPU::resetInterrupt(uint8 interrupt) { intFlag &= ~interrupt; }
 
 bool CPU::interruptEnabled(uint8 interrupt) { return intEnable & interrupt; }
 

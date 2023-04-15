@@ -41,9 +41,6 @@ class CPU : public QThread {
   void _and(uint8 val);
   void _or(uint8 val);
   void _xor(uint8 val);
-  void compare(uint8 val);
-  uint8 increment(uint8 val);
-  uint8 decrement(uint8 val);
 
   // rotate shift functions
   uint8 rotateLeft(uint8 val, bool thruCarry = false);
@@ -67,9 +64,10 @@ class CPU : public QThread {
   void setAF(uint16 val);
 
   // interrupt functions
-  void handleInterrupts();
+  void handleInterrupts(uint8 &cycles);
   void enableInterrupt(uint8 interrupt);
   void disableInterrupt(uint8 interrupt);
+  void resetInterrupt(uint8 interrupt);
   bool interruptEnabled(uint8 interrupt);
   bool interruptTriggered(uint8 interrupt);
 
