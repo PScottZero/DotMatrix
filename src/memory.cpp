@@ -100,8 +100,26 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
 
   // can only write to HRAM during dma transfer
   if (!dmaTransferMode || (addr >= HRAM_ADDR)) {
+    // writing anything to DIV register
+    // will set its value to zero
+    if (addr == DIV) {
+      mem[DIV] = 0;
+    }
+
+    // only bits 6-3 of the STAT register
+    // can be written to
+    else if (addr == STAT) {
+      mem[STAT] &= 0x87;
+      mem[STAT] |= (val & 0x78);
+    }
+
+    // LY register is read-only
+    else if (addr == LY) {
+      return;
+    }
+
     // write to memory
-    if (addr >= VRAM_ADDR && addr < RAM_ADDR && canAccessVRAM() ||
+    else if (addr >= VRAM_ADDR && addr < RAM_ADDR && canAccessVRAM() ||
         addr >= RAM_ECHO_END_ADDR && addr < ECHO_RAM_ADDR ||
         addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
         addr >= ZERO_PAGE_ADDR) {

@@ -39,32 +39,23 @@ CPU::~CPU() {
 }
 
 void CPU::run() {
-  fstream log("log.txt", ios::app);
+  fstream fs("log.txt", ios::app);
   char logLine[256];
   while (running) {
     // get current system time
     auto start = chrono::system_clock::now();
     uint8 cycles = 0;
 
-    sprintf(logLine,
-            ">>> PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: "
-            "%02x | CHNZ: %d%d%d%d\n",
-            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
-    log.write(logLine, strlen(logLine));
-
     // check for interrupts
     if (IME) {
       handleInterrupts(cycles);
     }
 
+    // log cpu state
+    log(fs);
+
     // run instructor at current PC
     runInstr(mem.imm8(PC, cycles), cycles);
-
-    sprintf(logLine,
-            "<<< PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: "
-            "%02x | CHNZ: %d%d%d%d\n",
-            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero);
-    log.write(logLine, strlen(logLine));
 
     // wait until the time corresponding to the number
     // of cycles has passed
@@ -72,7 +63,7 @@ void CPU::run() {
     auto end = start + chrono::nanoseconds(cycles * cycleTimeNs);
     this_thread::sleep_until(end);
   }
-  log.close();
+  fs.close();
 }
 
 // **************************************************
@@ -1270,4 +1261,16 @@ bool CPU::interruptEnabled(uint8 interrupt) { return intEnable & interrupt; }
 
 bool CPU::interruptTriggered(uint8 interrupt) {
   return interruptEnabled(interrupt) && (intFlag & interrupt);
+}
+
+void CPU::log(fstream &fs) {
+  char logLine[256];
+  sprintf(logLine,
+          "A: %02x | BC: %04x | DE: %04x | HL: %02x | SP: %04x | PC: %04x "
+          "| IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: "
+          "%02x | CHNZ: %d%d%d%d\n",
+          A, BC, DE, HL, SP, PC, IME, mem.getByte(LCDC), mem.getByte(STAT),
+          mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
+          subtract, zero);
+  fs.write(logLine, strlen(logLine));
 }

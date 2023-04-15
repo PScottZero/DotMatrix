@@ -71,6 +71,8 @@ class CPU : public QThread {
   bool interruptEnabled(uint8 interrupt);
   bool interruptTriggered(uint8 interrupt);
 
+  void log(fstream &fs);
+
  public:
   CPU(Memory &mem, float &speedMult);
   ~CPU();
