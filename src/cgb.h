@@ -1,21 +1,20 @@
 #pragma once
 
 #include "cpu.h"
-#include "utils.h"
 #include "memory.h"
 #include "ppu.h"
+#include "utils.h"
 
 class CGB {
-private:
-  Memory mem;
-  PPU ppu;
-  CPU cpu;
-
  public:
   float speedMult;
   Palette *palette;
-
+  Memory mem;
+  PPU ppu;
+  CPU cpu;
+  
   CGB(Palette *palette);
 
   void run();
+  void loadROM(QString dir);
 };

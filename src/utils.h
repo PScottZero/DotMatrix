@@ -13,10 +13,11 @@
 #include <QFileDialog>
 #include <QImage>
 #include <QMainWindow>
+#include <QObject>
 #include <QPixmap>
 #include <QSignalMapper>
 #include <QSizePolicy>
-#include <QWidget>
+#include <QThread>
 #include <array>
 #include <chrono>
 #include <string>
@@ -226,7 +227,7 @@ typedef struct {
 using TileRow = std::array<uint8, TILE_PX_DIM>;
 
 // palette class
-class Palette : public QWidget {
+class Palette : public QObject {
   Q_OBJECT
 
  public:

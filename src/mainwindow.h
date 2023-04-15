@@ -1,5 +1,4 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include "cgb.h"
 #include "utils.h"
@@ -19,6 +18,7 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void loadROM();
+  void setScreen(QImage *image);
   void setPalette(QObject *palette);
   void setScale(int scale);
   void setSpeed(int speed);
@@ -35,4 +35,3 @@ class MainWindow : public QMainWindow {
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, Palette *mapValue);
 };
-#endif  // MAINWINDOW_H

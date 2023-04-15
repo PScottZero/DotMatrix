@@ -23,7 +23,7 @@ class Memory {
 
   void init();
 
-  void loadROM(string dir);
+  void loadROM(QString dir);
 
   // memory read + write functions
   uint8 read(uint16 addr, uint8 &cycles) const;

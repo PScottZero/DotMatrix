@@ -2,7 +2,9 @@
 
 #include "memory.h"
 
-class CPU {
+class CPU : public QThread {
+  Q_OBJECT
+
  private:
   uint16 PC, SP, BC, DE, HL;        // 16-bit registers
   uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
@@ -22,6 +24,7 @@ class CPU {
   uint8 &intFlag;
 
   float &speedMult;
+  bool running;
 
   // instruction decoding functions
   void runInstr(uint8 instr, uint8 &cycles);
@@ -72,6 +75,7 @@ class CPU {
 
  public:
   CPU(Memory &mem, float &speedMult);
+  ~CPU();
 
-  void run();
+  void run() override;
 };

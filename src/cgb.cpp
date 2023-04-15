@@ -11,8 +11,8 @@ CGB::CGB(Palette *palette)
 
 void CGB::run() {
   mem.init();
-  thread cpuThread(&CPU::run, cpu);
-  thread ppuThread(&PPU::run, ppu);
-  cpuThread.detach();
-  ppuThread.detach();
+  cpu.start();
+  ppu.start();
 }
+
+void CGB::loadROM(QString dir) { mem.loadROM(dir); }

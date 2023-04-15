@@ -89,8 +89,10 @@ MainWindow::MainWindow(QWidget *parent)
                    &palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
                    &palWishGB);
-  connect(paletteSigMap, SIGNAL(mapped(QObject*)), this,
-          SLOT(setPalette(QObject*)));
+  connect(paletteSigMap, SIGNAL(mapped(QObject *)), this,
+          SLOT(setPalette(QObject *)));
+
+  connect(&cgb.ppu, SIGNAL(sendScreen(QImage *)), this, SLOT(setScreen(QImage *)));
 
   // set main window size
   setScale(1);
@@ -99,9 +101,14 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::loadROM() {
-  QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), "/home",
+  QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), ".",
                                                  tr("Game Boy ROMs (*.gb)"));
-  printf("%s\n", romName.toStdString().c_str());
+  cgb.loadROM(romName);
+  cgb.run();
+}
+
+void MainWindow::setScreen(QImage *image) {
+  ui->screen->setPixmap(QPixmap::fromImage(*image));
 }
 
 void MainWindow::setScale(int scale) {

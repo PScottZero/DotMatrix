@@ -20,10 +20,17 @@ PPU::PPU(Memory &mem, Palette *palette, float &speedMult)
       visibleSpriteCount(),
       speedMult(speedMult),
       mem(mem),
-      palette(palette) {}
+      palette(palette),
+      running(true) {}
+
+PPU::~PPU() {
+  running = false;
+  terminate();
+  wait();
+}
 
 void PPU::run() {
-  while (true) {
+  while (running) {
     if (lcdEnable()) {
       for (uint8 lineNo = 0; lineNo < SCREEN_LINES; ++lineNo) {
         int cycleTimeNs = NS_PER_SEC / (PPU_CLOCK_SPEED * speedMult);
@@ -74,7 +81,10 @@ void PPU::run() {
           // ==================================================
           // V-Blank
           // ==================================================
-          setMode(V_BLANK_MODE);
+          if ((stat & 0b11) != V_BLANK_MODE) {
+            setMode(V_BLANK_MODE);
+            sendScreen(&screen);
+          }
           auto vblankStart = chrono::system_clock::now();
           auto vblankEnd =
               vblankStart + chrono::nanoseconds(V_BLANK_CYCLES * cycleTimeNs);

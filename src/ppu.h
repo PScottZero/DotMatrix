@@ -1,9 +1,11 @@
 #pragma once
 
-#include "utils.h"
 #include "memory.h"
+#include "utils.h"
 
-class PPU {
+class PPU : public QThread {
+  Q_OBJECT
+
  private:
   uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
@@ -11,6 +13,7 @@ class PPU {
   float &speedMult;
   Memory &mem;
   Palette *palette;
+  bool running;
 
   // rendering functions
   void renderBg();
@@ -39,8 +42,12 @@ class PPU {
 
  public:
   QImage screen;
-  
-  PPU(Memory &mem, Palette *palette, float &speedMult);
 
-  void run();
+  PPU(Memory &mem, Palette *palette, float &speedMult);
+  ~PPU();
+
+  void run() override;
+
+ signals:
+  void sendScreen(QImage *);
 };

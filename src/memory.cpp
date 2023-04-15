@@ -51,8 +51,8 @@ void Memory::init() {
   mem[IE] = 0x00;
 }
 
-void Memory::loadROM(string dir) {
-  fstream fs(dir);
+void Memory::loadROM(QString dir) {
+  fstream fs(dir.toStdString());
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
