@@ -1,10 +1,6 @@
 #include "cpu.h"
 
-#include <stdio.h>
-
-#include <fstream>
-
-CPU::CPU(Memory &mem, float &speedMult)
+CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
     : PC(0x100),
       SP(0xFFFE),
       BC(0x0013),
@@ -23,45 +19,47 @@ CPU::CPU(Memory &mem, float &speedMult)
       carry(true),
       IME(false),
       halt(false),
-      stop(false),
+      stop(stop),
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       mem(mem),
-      intEnable(mem.getRef(IE)),
-      intFlag(mem.getRef(IF)),
+      intEnable(mem.getByte(IE)),
+      intFlags(mem.getByte(IF)),
       speedMult(speedMult),
-      running(true) {}
+      threadRunning(threadRunning) {}
 
 CPU::~CPU() {
-  running = false;
-  terminate();
+  threadRunning = false;
   wait();
 }
 
 void CPU::run() {
-  fstream fs("log.txt", ios::app);
+  std::fstream fs("./log.txt", std::ios::app);
   char logLine[256];
-  while (running) {
-    // get current system time
-    auto start = chrono::system_clock::now();
-    uint8 cycles = 0;
 
-    // check for interrupts
-    if (IME) {
-      handleInterrupts(cycles);
+  while (threadRunning) {
+    if (!stop) {
+      // get current system time
+      auto start = std::chrono::system_clock::now();
+      uint8 cycles = 0;
+
+      // check for interrupts
+      if (IME) handleInterrupts(cycles);
+
+      // run instruction at current PC
+      if (!halt) {
+        log(fs);
+        runInstr(mem.imm8(PC, cycles), cycles);
+      } else {
+        cycles = 1;
+      }
+
+      // wait until the time corresponding to the number
+      // of cycles has passed
+      int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
+      auto end = start + std::chrono::nanoseconds(cycles * cycleTimeNs);
+      std::this_thread::sleep_until(end);
     }
-
-    // log cpu state
-    log(fs);
-
-    // run instructor at current PC
-    runInstr(mem.imm8(PC, cycles), cycles);
-
-    // wait until the time corresponding to the number
-    // of cycles has passed
-    int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
-    auto end = start + chrono::nanoseconds(cycles * cycleTimeNs);
-    this_thread::sleep_until(end);
   }
   fs.close();
 }
@@ -86,7 +84,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
   bool prevCarry = carry;
   bool prevZero = zero;
 
-  regmap8[MEM_HL] = mem.getPtr(HL);
+  regmap8[MEM_HL] = mem.getBytePtr(HL);
 
   // instruction comment format:
   // INSTR PARAM1, PARAM2
@@ -1226,19 +1224,19 @@ void CPU::setAF(uint16 val) {
 
 void CPU::handleInterrupts(uint8 &cycles) {
   uint16 intAddr = 0;
-  if (interruptTriggered(V_BLANK_INT)) {
+  if (interruptRequested(V_BLANK_INT)) {
     intAddr = 0x40;
     resetInterrupt(V_BLANK_INT);
-  } else if (interruptTriggered(LCDC_INT)) {
+  } else if (interruptRequested(LCDC_INT)) {
     intAddr = 0x48;
     resetInterrupt(LCDC_INT);
-  } else if (interruptTriggered(TIMER_INT)) {
+  } else if (interruptRequested(TIMER_INT)) {
     intAddr = 0x50;
     resetInterrupt(TIMER_INT);
-  } else if (interruptTriggered(SERIAL_INT)) {
+  } else if (interruptRequested(SERIAL_INT)) {
     intAddr = 0x58;
     resetInterrupt(SERIAL_INT);
-  } else if (interruptTriggered(JOYPAD_INT)) {
+  } else if (interruptRequested(JOYPAD_INT)) {
     intAddr = 0x60;
     resetInterrupt(JOYPAD_INT);
   }
@@ -1255,22 +1253,30 @@ void CPU::enableInterrupt(uint8 interrupt) { intEnable |= interrupt; }
 
 void CPU::disableInterrupt(uint8 interrupt) { intEnable &= ~interrupt; }
 
-void CPU::resetInterrupt(uint8 interrupt) { intFlag &= ~interrupt; }
+void CPU::requestInterrupt(uint8 interrupt) { intFlags |= interrupt; }
+
+void CPU::resetInterrupt(uint8 interrupt) { intFlags &= ~interrupt; }
 
 bool CPU::interruptEnabled(uint8 interrupt) { return intEnable & interrupt; }
 
-bool CPU::interruptTriggered(uint8 interrupt) {
-  return interruptEnabled(interrupt) && (intFlag & interrupt);
+bool CPU::interruptRequested(uint8 interrupt) {
+  return interruptEnabled(interrupt) && (intFlags & interrupt);
 }
 
-void CPU::log(fstream &fs) {
+// **************************************************
+// **************************************************
+// Log Function
+// **************************************************
+// **************************************************
+
+void CPU::log(std::fstream &fs) {
   char logLine[256];
-  sprintf(logLine,
-          "A: %02x | BC: %04x | DE: %04x | HL: %02x | SP: %04x | PC: %04x "
-          "| IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: "
-          "%02x | CHNZ: %d%d%d%d\n",
-          A, BC, DE, HL, SP, PC, IME, mem.getByte(LCDC), mem.getByte(STAT),
-          mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
-          subtract, zero);
+  snprintf(logLine, 256,
+           "A: %02x | BC: %04x | DE: %04x | HL: %02x | SP: %04x | PC: %04x "
+           "| IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: "
+           "%02x | CHNZ: %d%d%d%d\n",
+           A, BC, DE, HL, SP, PC, IME, mem.getByte(LCDC), mem.getByte(STAT),
+           mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
+           subtract, zero);
   fs.write(logLine, strlen(logLine));
 }

@@ -1,7 +1,15 @@
 #pragma once
 
+#include <QActionGroup>
+#include <QFileDialog>
+#include <QMainWindow>
+#include <QSignalMapper>
+
+#include "./ui_mainwindow.h"
 #include "cgb.h"
-#include "utils.h"
+
+#define WINDOW_BASE_WIDTH 640
+#define WINDOW_BASE_HEIGHT 576
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

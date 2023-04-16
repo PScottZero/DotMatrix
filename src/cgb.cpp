@@ -1,18 +1,27 @@
 #include "cgb.h"
 
-using namespace std;
-
 CGB::CGB(Palette *palette)
     : speedMult(1.0),
+      stop(false),
+      threadsRunning(false),
       palette(palette),
       mem(),
-      ppu(mem, palette, speedMult),
-      cpu(mem, speedMult) {}
+      timers(cpu, mem, speedMult, stop, threadsRunning),
+      ppu(mem, palette, speedMult, stop, threadsRunning),
+      cpu(mem, speedMult, stop, threadsRunning) {}
 
-void CGB::run() {
-  mem.init();
-  cpu.start();
-  ppu.start();
+CGB::~CGB() {
+  threadsRunning = false;
+  cpu.wait();
+  ppu.wait();
+  timers.wait();
 }
 
-void CGB::loadROM(QString dir) { mem.loadROM(dir); }
+void CGB::run(QString dir) {
+  mem.init();
+  mem.loadROM(dir);
+  threadsRunning = true;
+  cpu.start();
+  ppu.start();
+  timers.start();
+}

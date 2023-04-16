@@ -1,40 +1,39 @@
 #include "ppu.h"
 
-#include <stdlib.h>
-
-PPU::PPU(Memory &mem, Palette *palette, float &speedMult)
+PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
+         bool &threadRunning)
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
-      lcdc(mem.getRef(LCDC)),
-      stat(mem.getRef(STAT)),
-      scy(mem.getRef(SCY)),
-      scx(mem.getRef(SCX)),
-      ly(mem.getRef(LY)),
-      lyc(mem.getRef(LYC)),
-      dma(mem.getRef(DMA)),
-      bgp(mem.getRef(BGP)),
-      obp0(mem.getRef(OBP0)),
-      obp1(mem.getRef(OBP1)),
-      wy(mem.getRef(WY)),
-      wx(mem.getRef(WX)),
-      intFlag(mem.getRef(IF)),
+      lcdc(mem.getByte(LCDC)),
+      stat(mem.getByte(STAT)),
+      scy(mem.getByte(SCY)),
+      scx(mem.getByte(SCX)),
+      ly(mem.getByte(LY)),
+      lyc(mem.getByte(LYC)),
+      dma(mem.getByte(DMA)),
+      bgp(mem.getByte(BGP)),
+      obp0(mem.getByte(OBP0)),
+      obp1(mem.getByte(OBP1)),
+      wy(mem.getByte(WY)),
+      wx(mem.getByte(WX)),
+      intFlag(mem.getByte(IF)),
       visibleSprites(),
       visibleSpriteCount(),
       speedMult(speedMult),
       mem(mem),
       palette(palette),
-      running(true) {}
+      stop(stop),
+      threadRunning(threadRunning) {}
 
 PPU::~PPU() {
-  running = false;
-  terminate();
+  threadRunning = false;
   wait();
 }
 
 void PPU::run() {
-  while (running) {
-    if (lcdEnable()) {
+  while (threadRunning) {
+    if (!stop && lcdEnable()) {
       for (uint8 lineNo = 0; lineNo < SCREEN_LINES; ++lineNo) {
-        int cycleTimeNs = NS_PER_SEC / (PPU_CLOCK_SPEED * speedMult);
+        int cycleTimeNs = _NS_PER_SEC / (PPU_CLOCK_SPEED * speedMult);
         ly = lineNo;
 
         // check if current line number
@@ -48,14 +47,14 @@ void PPU::run() {
 
         if (lineNo < SCREEN_PX_HEIGHT) {
           // horizontal timing
-          auto start = chrono::system_clock::now();
+          auto start = std::chrono::system_clock::now();
           auto oamSearchEnd =
-              start + chrono::nanoseconds(OAM_SEARCH_CYCLES * cycleTimeNs);
+              start + std::chrono::nanoseconds(OAM_SEARCH_CYCLES * cycleTimeNs);
           auto pixelTransferEnd =
               oamSearchEnd +
-              chrono::nanoseconds(PIXEL_TRANSFER_CYCLES * cycleTimeNs);
-          auto hblankEnd = pixelTransferEnd +
-                           chrono::nanoseconds(H_BLANK_CYCLES * cycleTimeNs);
+              std::chrono::nanoseconds(PIXEL_TRANSFER_CYCLES * cycleTimeNs);
+          auto hblankEnd = pixelTransferEnd + std::chrono::nanoseconds(
+                                                  H_BLANK_CYCLES * cycleTimeNs);
 
           // ==================================================
           // OAM Search
@@ -63,7 +62,7 @@ void PPU::run() {
           setMode(OAM_SEARCH_MODE);
           setLCDInterrupt();
           findVisibleSprites();
-          this_thread::sleep_until(oamSearchEnd);
+          std::this_thread::sleep_until(oamSearchEnd);
 
           // ==================================================
           // Pixel Transfer
@@ -73,14 +72,14 @@ void PPU::run() {
           if (spriteEnable()) renderSprites();
           if (windowEnable()) renderWindow();
           applyPalettes();
-          this_thread::sleep_until(pixelTransferEnd);
+          std::this_thread::sleep_until(pixelTransferEnd);
 
           // ==================================================
           // H-Blank
           // ==================================================
           setMode(H_BLANK_MODE);
           setLCDInterrupt();
-          this_thread::sleep_until(hblankEnd);
+          std::this_thread::sleep_until(hblankEnd);
         } else {
           // ==================================================
           // V-Blank
@@ -88,12 +87,12 @@ void PPU::run() {
           if ((stat & 0b11) != V_BLANK_MODE) {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
-            sendScreen(&screen);
+            emit sendScreen(&screen);
           }
-          auto vblankStart = chrono::system_clock::now();
-          auto vblankEnd =
-              vblankStart + chrono::nanoseconds(V_BLANK_CYCLES * cycleTimeNs);
-          this_thread::sleep_until(vblankEnd);
+          auto vblankStart = std::chrono::system_clock::now();
+          auto vblankEnd = vblankStart + std::chrono::nanoseconds(
+                                             V_BLANK_CYCLES * cycleTimeNs);
+          std::this_thread::sleep_until(vblankEnd);
         }
       }
     }
@@ -224,7 +223,7 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
   // get tile
   int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
-  uint16 *tile = (uint16 *)mem.getPtr(tileAddr);
+  uint16 *tile = (uint16 *)mem.getBytePtr(tileAddr);
 
   // split row data into hi and lo byte
   uint16 rowData = *(tile + row);

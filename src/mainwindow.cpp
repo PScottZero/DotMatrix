@@ -1,7 +1,5 @@
 #include "mainwindow.h"
 
-#include "./ui_mainwindow.h"
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       palBGB(0xE0F8D0, 0x88C070, 0x346856, 0x081820),
@@ -92,7 +90,8 @@ MainWindow::MainWindow(QWidget *parent)
   connect(paletteSigMap, SIGNAL(mapped(QObject *)), this,
           SLOT(setPalette(QObject *)));
 
-  connect(&cgb.ppu, SIGNAL(sendScreen(QImage *)), this, SLOT(setScreen(QImage *)));
+  connect(&cgb.ppu, SIGNAL(sendScreen(QImage *)), this,
+          SLOT(setScreen(QImage *)));
 
   // set main window size
   setScale(1);
@@ -103,8 +102,7 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::loadROM() {
   QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), ".",
                                                  tr("Game Boy ROMs (*.gb)"));
-  cgb.loadROM(romName);
-  cgb.run();
+  cgb.run(romName);
 }
 
 void MainWindow::setScreen(QImage *image) {

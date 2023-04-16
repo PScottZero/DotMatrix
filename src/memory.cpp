@@ -1,9 +1,5 @@
 #include "memory.h"
 
-#include <fstream>
-
-#include "ppu.h"
-
 Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
       cart((uint8 *)malloc(CART_BYTES)),
@@ -62,7 +58,7 @@ void Memory::init() {
 // **************************************************
 
 // read 8-bit value from given memory address
-uint8 Memory::read(uint16 addr, uint8 &cycles) const {
+uint8 Memory::read(uint16 addr, uint8 &cycles) {
   ++cycles;
 
   // can only read from HRAM during dma transfer
@@ -82,7 +78,7 @@ uint8 Memory::read(uint16 addr, uint8 &cycles) const {
              addr >= RAM_ADDR && addr < OAM_ADDR ||
              addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
              addr >= ZERO_PAGE_ADDR) {
-      return mem[addr - MEM_BYTES];
+      return getByte(addr);
     }
   }
 
@@ -90,7 +86,7 @@ uint8 Memory::read(uint16 addr, uint8 &cycles) const {
 }
 
 // read 16-bit value from given memory address
-uint16 Memory::read16(uint16 addr, uint8 &cycles) const {
+uint16 Memory::read16(uint16 addr, uint8 &cycles) {
   return read(addr, cycles) | (read(addr + 1, cycles) << 8);
 }
 
@@ -103,14 +99,13 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
     // writing anything to DIV register
     // will set its value to zero
     if (addr == DIV) {
-      mem[DIV] = 0;
+      setByte(DIV, 0);
     }
 
     // only bits 6-3 of the STAT register
     // can be written to
     else if (addr == STAT) {
-      mem[STAT] &= 0x87;
-      mem[STAT] |= (val & 0x78);
+      setByte(STAT, (getByte(STAT) & 0x87) | (val & 0x78));
     }
 
     // LY register is read-only
@@ -120,10 +115,10 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
 
     // write to memory
     else if (addr >= VRAM_ADDR && addr < RAM_ADDR && canAccessVRAM() ||
-        addr >= RAM_ECHO_END_ADDR && addr < ECHO_RAM_ADDR ||
-        addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
-        addr >= ZERO_PAGE_ADDR) {
-      mem[addr - MEM_BYTES] = val;
+             addr >= RAM_ECHO_END_ADDR && addr < ECHO_RAM_ADDR ||
+             addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
+             addr >= ZERO_PAGE_ADDR) {
+      setByte(addr, val);
     }
 
     // write to ram and echo ram
@@ -131,15 +126,15 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
       uint16 offset = addr - (addr < ECHO_RAM_ADDR ? RAM_ADDR : ECHO_RAM_ADDR);
       uint16 echoAddr =
           (addr >= ECHO_RAM_ADDR ? RAM_ADDR : ECHO_RAM_ADDR) + offset;
-      mem[addr - MEM_BYTES] = val;
-      mem[echoAddr - MEM_BYTES] = val;
+      setByte(addr, val);
+      setByte(echoAddr, val);
     }
   }
 
   // start dma transfer if dma
   // address was written to
   if (addr == DMA) {
-    thread dmaTransferThread(&Memory::dmaTransfer, this);
+    std::thread dmaTransferThread(&Memory::dmaTransfer, this);
     dmaTransferThread.detach();
   }
 }
@@ -151,12 +146,10 @@ void Memory::write(uint16 addr, uint16 val, uint8 &cycles) {
 }
 
 // get 8-bit immediate value
-uint8 Memory::imm8(uint16 &PC, uint8 &cycles) const {
-  return read(PC++, cycles);
-}
+uint8 Memory::imm8(uint16 &PC, uint8 &cycles) { return read(PC++, cycles); }
 
 // get 16-bit immediate value
-uint16 Memory::imm16(uint16 &PC, uint8 &cycles) const {
+uint16 Memory::imm16(uint16 &PC, uint8 &cycles) {
   uint16 val = read16(PC++, cycles);
   ++PC;
   return val;
@@ -168,32 +161,29 @@ uint16 Memory::imm16(uint16 &PC, uint8 &cycles) const {
 // **************************************************
 // **************************************************
 
-uint8 Memory::getByte(uint16 addr) const { return mem[addr - MEM_BYTES]; }
+uint8 &Memory::getByte(uint16 addr) { return mem[addr - MEM_BYTES]; }
 
-// get two bytes from memory, ignore endianess
-uint16 Memory::getTwoBytes(uint16 addr) const {
-  return (mem[addr - MEM_BYTES] << 8) | mem[addr - MEM_BYTES + 1];
+uint8 *Memory::getBytePtr(uint16 addr) { return &mem[addr - MEM_BYTES]; }
+
+void Memory::setByte(uint16 addr, uint8 val) { mem[addr - MEM_BYTES] = val; }
+
+uint16 Memory::getTwoBytes(uint16 addr) {
+  return (getByte(addr) << 8) | getByte(addr + 1);
 }
-
-// get pointer to memory at specified address
-uint8 *Memory::getPtr(uint16 addr) { return &mem[addr - MEM_BYTES]; }
-
-// get reference to memory at specified address
-uint8 &Memory::getRef(uint16 addr) { return mem[addr - MEM_BYTES]; }
 
 // check if VRAM can be accessed,
 // can only be access outside of
 // pixel transfer mode
-bool Memory::canAccessVRAM() const {
-  return (mem[STAT] & 0b11) != PIXEL_TRANSFER_MODE;
+bool Memory::canAccessVRAM() {
+  return (mem[STAT] & 0b11) != _PIXEL_TRANSFER_MODE;
 }
 
 // check if OAM memory can be accessed,
 // can only be accesses outside of
 // pixel transfer and oam search mode
-bool Memory::canAccessOAM() const {
-  return (mem[STAT] & 0b11) != PIXEL_TRANSFER_MODE &&
-         (mem[STAT] & 0b11) != OAM_SEARCH_MODE;
+bool Memory::canAccessOAM() {
+  return (mem[STAT] & 0b11) != _PIXEL_TRANSFER_MODE &&
+         (mem[STAT] & 0b11) != _OAM_SEARCH_MODE;
 }
 
 // **************************************************
@@ -204,7 +194,7 @@ bool Memory::canAccessOAM() const {
 
 // load rom at the given directory into memory
 void Memory::loadROM(QString dir) {
-  fstream fs(dir.toStdString());
+  std::fstream fs(dir.toStdString());
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
@@ -223,7 +213,7 @@ void Memory::mapCartMem(uint8 **romBank, uint16 startAddr) {
 void Memory::dmaTransfer() {
   dmaTransferMode = true;
   uint16 dmaAddr = mem[DMA] * 0x100;
-  for (int i = 0; i < OAM_ENTRY_COUNT * OAM_ENTRY_BYTES; ++i) {
+  for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
     mem[OAM_ADDR + i] = mem[dmaAddr + i];
   }
   dmaTransferMode = false;

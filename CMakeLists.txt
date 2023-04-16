@@ -19,12 +19,16 @@ set(PROJECT_SOURCES
         src/cpu.cpp
         src/memory.cpp
         src/ppu.cpp
+        src/timers.cpp
+        src/palette.cpp
         src/mainwindow.h
         src/cgb.h
         src/cpu.h
         src/memory.h
         src/ppu.h
-        src/utils.h
+        src/timers.h
+        src/palette.h
+        src/types.h
         src/mainwindow.ui
 )
 

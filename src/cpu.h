@@ -1,6 +1,38 @@
 #pragma once
 
+#include <stdio.h>
+
+#include <QThread>
+#include <chrono>
+#include <fstream>
+#include <thread>
+
 #include "memory.h"
+
+// clock speed constants
+#define DMG_CLOCK_SPEED 0x100000  // 1MHz
+#define CGB_CLOCK_SPEED 0x200000  // 2MHz
+#ifndef NS_PER_SEC
+#define NS_PER_SEC 1000000000
+#endif
+
+// register constants
+#define NUM_REG_16 4
+#define NUM_REG_8 8
+#define MEM_HL 0b110
+
+// jump condition constants
+#define JUMP_NZ 0b00
+#define JUMP_Z 0b01
+#define JUMP_NC 0b10
+#define JUMP_C 0b11
+
+// interrupt constants
+#define JOYPAD_INT 0x10
+#define SERIAL_INT 0x08
+#define TIMER_INT 0x04
+#define LCDC_INT 0x02
+#define V_BLANK_INT 0x01
 
 class CPU : public QThread {
   Q_OBJECT
@@ -9,22 +41,17 @@ class CPU : public QThread {
   uint16 PC, SP, BC, DE, HL;        // 16-bit registers
   uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
 
-  bool zero, subtract, halfCarry, carry;  // flags
-
-  bool IME;
-  bool halt;
-  bool stop;
+  bool zero, subtract, halfCarry, carry, IME, halt, &stop;  // flags
 
   uint8 *regmap8[NUM_REG_8];
   uint16 *regmap16[NUM_REG_16];
 
   Memory &mem;
 
-  uint8 &intEnable;
-  uint8 &intFlag;
+  uint8 &intEnable, &intFlags;
 
   float &speedMult;
-  bool running;
+  bool &threadRunning;
 
   // instruction decoding functions
   void runInstr(uint8 instr, uint8 &cycles);
@@ -69,13 +96,16 @@ class CPU : public QThread {
   void disableInterrupt(uint8 interrupt);
   void resetInterrupt(uint8 interrupt);
   bool interruptEnabled(uint8 interrupt);
-  bool interruptTriggered(uint8 interrupt);
+  bool interruptRequested(uint8 interrupt);
 
-  void log(fstream &fs);
+  void log(std::fstream &fs);
 
  public:
-  CPU(Memory &mem, float &speedMult);
+  CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning);
   ~CPU();
 
   void run() override;
+
+  // request interrupt function
+  void requestInterrupt(uint8 interrupt);
 };
