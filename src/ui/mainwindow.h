@@ -7,10 +7,9 @@
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QSignalMapper>
-#include <map>
 
+#include "../emulator/cgb.h"
 #include "./ui_mainwindow.h"
-#include "cgb.h"
 
 #define WINDOW_BASE_WIDTH 640
 #define WINDOW_BASE_HEIGHT 576
@@ -34,6 +33,7 @@ class MainWindow : public QMainWindow {
   void setPalette(QObject *palette);
   void setScale(int scale);
   void setSpeed(int speed);
+  void openKeyBindingsWindow();
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
@@ -45,8 +45,6 @@ class MainWindow : public QMainWindow {
 
   Ui::MainWindow *ui;
   CGB cgb;
-
-  // std::map<int, uint8> keybindings;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);

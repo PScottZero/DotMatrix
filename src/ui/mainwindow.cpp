@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 
+#include "keybindingswindow.h"
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       palBGB(0xE0F8D0, 0x88C070, 0x346856, 0x081820),
@@ -93,6 +95,9 @@ MainWindow::MainWindow(QWidget *parent)
   connect(&cgb.ppu, SIGNAL(sendScreen(QImage *)), this,
           SLOT(setScreen(QImage *)));
 
+  connect(ui->actionKeyBindings, &QAction::triggered, this,
+          &MainWindow::openKeyBindingsWindow);
+
   // set main window size
   setScale(1);
 }
@@ -149,4 +154,9 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
     cgb.controls.release(event->key());
   }
+}
+
+void MainWindow::openKeyBindingsWindow() {
+  KeyBindingsWindow kbWin;
+  kbWin.exec();
 }

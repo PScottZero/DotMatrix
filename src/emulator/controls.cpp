@@ -1,7 +1,7 @@
 #include "controls.h"
 
 Controls::Controls(Memory &mem)
-    : keybindings({{RIGHT, Qt::Key_D},
+    : keyBindings({{RIGHT, Qt::Key_D},
                    {LEFT, Qt::Key_A},
                    {UP, Qt::Key_W},
                    {DOWN, Qt::Key_S},
@@ -9,7 +9,7 @@ Controls::Controls(Memory &mem)
                    {B, Qt::Key_O},
                    {SELECT, Qt::Key_N},
                    {START, Qt::Key_M}}),
-      keybindingsInv(invertKeybindingsMap()),
+      keyBindingsInv(invertKeybindingsMap()),
       state({{RIGHT, false},
              {LEFT, false},
              {UP, false},
@@ -48,20 +48,25 @@ void Controls::update() {
 }
 
 void Controls::press(int key) {
-  if (keybindingsInv.find(key) != keybindingsInv.end()) {
-    state[keybindingsInv[key]] = true;
+  if (keyBindingsInv.find(key) != keyBindingsInv.end()) {
+    state[keyBindingsInv[key]] = true;
   }
 }
 
 void Controls::release(int key) {
-  if (keybindingsInv.find(key) != keybindingsInv.end()) {
-    state[keybindingsInv[key]] = false;
+  if (keyBindingsInv.find(key) != keyBindingsInv.end()) {
+    state[keyBindingsInv[key]] = false;
   }
+}
+
+void Controls::bind(int key, Button button) {
+  keyBindings[button] = key;
+  keyBindingsInv = invertKeybindingsMap();
 }
 
 std::map<int, Button> Controls::invertKeybindingsMap() {
   std::map<int, Button> inv{};
-  for (const auto &binding : keybindings) {
+  for (const auto &binding : keyBindings) {
     inv[binding.second] = binding.first;
   }
   return inv;

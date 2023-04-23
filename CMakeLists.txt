@@ -14,24 +14,29 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         src/main.cpp
-        src/mainwindow.cpp
-        src/cgb.cpp
-        src/cpu.cpp
-        src/memory.cpp
-        src/ppu.cpp
-        src/timers.cpp
-        src/palette.cpp
-        src/controls.cpp
-        src/mainwindow.h
-        src/cgb.h
-        src/cpu.h
-        src/memory.h
-        src/ppu.h
-        src/timers.h
-        src/palette.h
-        src/types.h
-        src/controls.h
-        src/mainwindow.ui
+        
+        src/emulator/cgb.cpp
+        src/emulator/cgb.h
+        src/emulator/cpu.cpp
+        src/emulator/cpu.h
+        src/emulator/memory.cpp
+        src/emulator/memory.h
+        src/emulator/ppu.cpp
+        src/emulator/ppu.h
+        src/emulator/timers.cpp
+        src/emulator/timers.h
+        src/emulator/palette.cpp
+        src/emulator/palette.h
+        src/emulator/controls.cpp
+        src/emulator/controls.h
+        src/emulator/types.h
+        
+        src/ui/mainwindow.cpp
+        src/ui/mainwindow.h
+        src/ui/mainwindow.ui
+        src/ui/keybindingswindow.cpp
+        src/ui/keybindingswindow.h
+        src/ui/keybindingswindow.ui
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)

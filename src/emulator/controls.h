@@ -30,8 +30,8 @@ class Controls {
   std::map<int, Button> invertKeybindingsMap();
 
  public:
-  std::map<Button, int> keybindings;
-  std::map<int, Button> keybindingsInv;
+  std::map<Button, int> keyBindings;
+  std::map<int, Button> keyBindingsInv;
   std::map<Button, uint8> buttonToMask;
 
   Controls(Memory &mem);
@@ -40,4 +40,5 @@ class Controls {
 
   void press(int key);
   void release(int key);
+  void bind(int key, Button button);
 };
