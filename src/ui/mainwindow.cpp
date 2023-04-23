@@ -44,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
   addToActionGroup(scaleActionGroup, ui->actionScale1x, scaleSigMap, 1);
   addToActionGroup(scaleActionGroup, ui->actionScale1_5x, scaleSigMap, 2);
   addToActionGroup(scaleActionGroup, ui->actionScale2x, scaleSigMap, 3);
-  connect(scaleSigMap, SIGNAL(mapped(int)), this, SLOT(setScale(int)));
+  connect(scaleSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setScale);
 
   // ==================================================
   // Speed Options
@@ -58,7 +58,7 @@ MainWindow::MainWindow(QWidget *parent)
   addToActionGroup(speedActionGroup, ui->actionSpeed2x, speedSigMap, 3);
   addToActionGroup(speedActionGroup, ui->actionSpeed4x, speedSigMap, 4);
   addToActionGroup(speedActionGroup, ui->actionSpeed8x, speedSigMap, 5);
-  connect(speedSigMap, SIGNAL(mapped(int)), this, SLOT(setSpeed(int)));
+  connect(speedSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setSpeed);
 
   // ==================================================
   // Palette Options
@@ -89,11 +89,9 @@ MainWindow::MainWindow(QWidget *parent)
                    &palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
                    &palWishGB);
-  connect(paletteSigMap, SIGNAL(mapped(QObject *)), this,
-          SLOT(setPalette(QObject *)));
+  connect(paletteSigMap, &QSignalMapper::mappedObject, this, &MainWindow::setPalette);
 
-  connect(&cgb.ppu, SIGNAL(sendScreen(QImage *)), this,
-          SLOT(setScreen(QImage *)));
+  connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
 
   connect(ui->actionKeyBindings, &QAction::triggered, this,
           &MainWindow::openKeyBindingsWindow);
@@ -157,6 +155,6 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin;
+  KeyBindingsWindow kbWin(cgb.controls);
   kbWin.exec();
 }
