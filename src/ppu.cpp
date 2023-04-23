@@ -2,7 +2,8 @@
 
 PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
          bool &threadRunning)
-    : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
+    : QThread(),
+      screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       lcdc(mem.getByte(LCDC)),
       stat(mem.getByte(STAT)),
       scy(mem.getByte(SCY)),

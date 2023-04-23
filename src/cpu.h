@@ -52,6 +52,7 @@ class CPU : public QThread {
 
   float &speedMult;
   bool &threadRunning;
+  bool shouldSetIME;
 
   // instruction decoding functions
   void runInstr(uint8 instr, uint8 &cycles);

@@ -38,10 +38,10 @@ MainWindow::MainWindow(QWidget *parent)
   auto scaleActionGroup = new QActionGroup(this);
   auto scaleSigMap = new QSignalMapper(this);
   scaleActionGroup->setExclusive(true);
-  addToActionGroup(scaleActionGroup, ui->actionScale05x, scaleSigMap, 0);
+  addToActionGroup(scaleActionGroup, ui->actionScale0_5x, scaleSigMap, 0);
   addToActionGroup(scaleActionGroup, ui->actionScale1x, scaleSigMap, 1);
-  addToActionGroup(scaleActionGroup, ui->actionScale2x, scaleSigMap, 2);
-  addToActionGroup(scaleActionGroup, ui->actionScale3x, scaleSigMap, 3);
+  addToActionGroup(scaleActionGroup, ui->actionScale1_5x, scaleSigMap, 2);
+  addToActionGroup(scaleActionGroup, ui->actionScale2x, scaleSigMap, 3);
   connect(scaleSigMap, SIGNAL(mapped(int)), this, SLOT(setScale(int)));
 
   // ==================================================
@@ -50,8 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
   auto speedActionGroup = new QActionGroup(this);
   auto speedSigMap = new QSignalMapper(this);
   speedActionGroup->setExclusive(true);
-  addToActionGroup(speedActionGroup, ui->actionSpeed025x, speedSigMap, 0);
-  addToActionGroup(speedActionGroup, ui->actionSpeed05x, speedSigMap, 1);
+  addToActionGroup(speedActionGroup, ui->actionSpeed0_25x, speedSigMap, 0);
+  addToActionGroup(speedActionGroup, ui->actionSpeed0_5x, speedSigMap, 1);
   addToActionGroup(speedActionGroup, ui->actionSpeed1x, speedSigMap, 2);
   addToActionGroup(speedActionGroup, ui->actionSpeed2x, speedSigMap, 3);
   addToActionGroup(speedActionGroup, ui->actionSpeed4x, speedSigMap, 4);
@@ -110,7 +110,7 @@ void MainWindow::setScreen(QImage *image) {
 }
 
 void MainWindow::setScale(int scale) {
-  float scaleFloat = scale == 0 ? 0.5 : scale;
+  float scaleFloat = 0.5 + scale * 0.5;
   int width = WINDOW_BASE_WIDTH * scaleFloat;
   int height = WINDOW_BASE_HEIGHT * scaleFloat;
 #ifdef Q_OS_MAC
@@ -139,4 +139,14 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 
 void MainWindow::setPalette(QObject *palette) {
   cgb.palette = (Palette *)palette;
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+  cgb.controls.press(event->key());
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent *event) {
+  if (!event->isAutoRepeat()) {
+    cgb.controls.release(event->key());
+  }
 }

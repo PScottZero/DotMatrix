@@ -1,7 +1,8 @@
 #include "cpu.h"
 
 CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
-    : PC(0x100),
+    : QThread(),
+      PC(0x100),
       SP(0xFFFE),
       BC(0x0013),
       DE(0x00D8),
@@ -26,7 +27,8 @@ CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
       intEnable(mem.getByte(IE)),
       intFlags(mem.getByte(IF)),
       speedMult(speedMult),
-      threadRunning(threadRunning) {}
+      threadRunning(threadRunning),
+      shouldSetIME(false) {}
 
 CPU::~CPU() {
   threadRunning = false;
@@ -34,9 +36,10 @@ CPU::~CPU() {
 }
 
 void CPU::run() {
-  std::fstream fs("./log.txt", std::ios::app);
+  std::fstream fs("./log.txt", std::ios::out);
   char logLine[256];
 
+  bool delaySetIME = true;
   while (threadRunning) {
     if (!stop) {
       // get current system time
@@ -53,6 +56,22 @@ void CPU::run() {
       } else {
         cycles = 1;
       }
+
+      // delay setting IME after an EI
+      // instruction by one machine cycle
+      if (shouldSetIME) {
+        if (!delaySetIME) {
+          IME = true;
+          shouldSetIME = false;
+          delaySetIME = true;
+        } else {
+          delaySetIME = false;
+        }
+      }
+
+      // if (PC == 0x33) {
+      //   stop = true;
+      // }
 
       // wait until the time corresponding to the number
       // of cycles has passed
@@ -77,7 +96,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
   uint8 upperTwoBits = (opcode >> 6) & 0b11;
   uint8 regDest = (opcode >> 3) & 0b111;
   uint8 regSrc = opcode & 0b111;
-  uint8 regPair = (opcode >> 4) & 0b11;
+  uint8 regPair = (regDest >> 1) & 0b11;
   uint8 jumpCond = regDest & 0b11;
   uint8 loNibble = opcode & 0xF;
 
@@ -405,7 +424,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // push PC onto stack and jump to
     // 16-bit immediate address
     case 0xCD:
-      push(PC, cycles);
+      push(PC + 2, cycles);
       PC = mem.imm16(PC, cycles);
       break;
 
@@ -484,7 +503,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 1 ----
     // set interrupt master enable flag
     case 0xFB:
-      IME = true;
+      shouldSetIME = true;
       break;
 
     // HALT
@@ -752,7 +771,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // cc is met
                 case 0b100:
                   if (jumpCondMet(jumpCond)) {
-                    push(PC, cycles);
+                    push(PC + 2, cycles);
                     PC = mem.imm16(PC, cycles);
                   } else {
                     PC += 2;

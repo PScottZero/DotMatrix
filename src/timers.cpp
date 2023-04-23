@@ -2,7 +2,8 @@
 
 Timers::Timers(CPU &cpu, Memory &mem, float &speedMult, bool &stop,
                bool &threadRunning)
-    : cpu(cpu),
+    : QThread(),
+      cpu(cpu),
       div(mem.getByte(DIV)),
       tima(mem.getByte(TIMA)),
       tma(mem.getByte(TMA)),

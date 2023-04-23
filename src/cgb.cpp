@@ -8,7 +8,10 @@ CGB::CGB(Palette *palette)
       mem(),
       timers(cpu, mem, speedMult, stop, threadsRunning),
       ppu(mem, palette, speedMult, stop, threadsRunning),
-      cpu(mem, speedMult, stop, threadsRunning) {}
+      cpu(mem, speedMult, stop, threadsRunning),
+      controls(mem) {
+  mem.controls = &controls;
+}
 
 CGB::~CGB() {
   threadsRunning = false;

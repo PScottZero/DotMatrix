@@ -3,6 +3,7 @@
 #include <QImage>
 #include <QThread>
 #include <array>
+#include <thread>
 
 #include "memory.h"
 #include "palette.h"
@@ -106,7 +107,8 @@ class PPU : public QThread {
  public:
   QImage screen;
 
-  PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop, bool &threadRunning);
+  PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
+      bool &threadRunning);
   ~PPU();
 
   void run() override;

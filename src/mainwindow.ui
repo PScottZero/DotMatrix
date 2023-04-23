@@ -129,8 +129,8 @@
      <property name="title">
       <string>Speed</string>
      </property>
-     <addaction name="actionSpeed025x"/>
-     <addaction name="actionSpeed05x"/>
+     <addaction name="actionSpeed0_25x"/>
+     <addaction name="actionSpeed0_5x"/>
      <addaction name="actionSpeed1x"/>
      <addaction name="actionSpeed2x"/>
      <addaction name="actionSpeed4x"/>
@@ -169,10 +169,10 @@
      <property name="title">
       <string>Scale</string>
      </property>
-     <addaction name="actionScale05x"/>
+     <addaction name="actionScale0_5x"/>
      <addaction name="actionScale1x"/>
+     <addaction name="actionScale1_5x"/>
      <addaction name="actionScale2x"/>
-     <addaction name="actionScale3x"/>
     </widget>
     <addaction name="menuScale"/>
     <addaction name="menuSpeed"/>
@@ -191,7 +191,7 @@
     <string>Quit</string>
    </property>
   </action>
-  <action name="actionSpeed025x">
+  <action name="actionSpeed0_25x">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -199,7 +199,7 @@
     <string>0.25x</string>
    </property>
   </action>
-  <action name="actionSpeed05x">
+  <action name="actionSpeed0_5x">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -349,7 +349,7 @@
     <string>0.25x</string>
    </property>
   </action>
-  <action name="actionScale05x">
+  <action name="actionScale0_5x">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -368,20 +368,20 @@
     <string>1x</string>
    </property>
   </action>
+  <action name="actionScale1_5x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.5x</string>
+   </property>
+  </action>
   <action name="actionScale2x">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
     <string>2x</string>
-   </property>
-  </action>
-  <action name="actionScale3x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>3x</string>
    </property>
   </action>
  </widget>

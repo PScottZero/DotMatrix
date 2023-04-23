@@ -21,6 +21,7 @@ set(PROJECT_SOURCES
         src/ppu.cpp
         src/timers.cpp
         src/palette.cpp
+        src/controls.cpp
         src/mainwindow.h
         src/cgb.h
         src/cpu.h
@@ -29,6 +30,7 @@ set(PROJECT_SOURCES
         src/timers.h
         src/palette.h
         src/types.h
+        src/controls.h
         src/mainwindow.ui
 )
 

@@ -5,7 +5,8 @@ Memory::Memory()
       cart((uint8 *)malloc(CART_BYTES)),
       romBank0((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)),
       romBank1((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)),
-      dmaTransferMode(false) {}
+      dmaTransferMode(false),
+      controls(nullptr) {}
 
 Memory::~Memory() {
   free(mem);
@@ -136,6 +137,14 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   if (addr == DMA) {
     std::thread dmaTransferThread(&Memory::dmaTransfer, this);
     dmaTransferThread.detach();
+  }
+
+  // update state of controls if
+  // writing to joypad register
+  if (addr == P1) {
+    if (controls != nullptr) {
+      controls->update();
+    }
   }
 }
 

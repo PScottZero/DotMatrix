@@ -1,10 +1,10 @@
 #pragma once
 
+#include "controls.h"
 #include "cpu.h"
 #include "memory.h"
 #include "ppu.h"
 #include "timers.h"
-#include "utils.h"
 
 class CGB {
  public:
@@ -16,6 +16,7 @@ class CGB {
   Timers timers;
   PPU ppu;
   CPU cpu;
+  Controls controls;
 
   CGB(Palette *palette);
   ~CGB();

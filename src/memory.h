@@ -4,6 +4,7 @@
 #include <QThread>
 #include <fstream>
 
+#include "controls.h"
 #include "types.h"
 
 // memory size constants
@@ -93,6 +94,8 @@
 #define _OAM_SEARCH_MODE 0b10
 #define _PIXEL_TRANSFER_MODE 0b11
 
+class Controls;
+
 class Memory {
  private:
   uint8 *mem;
@@ -109,6 +112,8 @@ class Memory {
  public:
   Memory();
   ~Memory();
+
+  Controls *controls;
 
   void init();
 

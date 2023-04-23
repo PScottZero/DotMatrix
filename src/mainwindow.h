@@ -1,9 +1,13 @@
 #pragma once
 
+#include <math.h>
+
 #include <QActionGroup>
 #include <QFileDialog>
+#include <QKeyEvent>
 #include <QMainWindow>
 #include <QSignalMapper>
+#include <map>
 
 #include "./ui_mainwindow.h"
 #include "cgb.h"
@@ -31,12 +35,18 @@ class MainWindow : public QMainWindow {
   void setScale(int scale);
   void setSpeed(int speed);
 
+ protected:
+  void keyPressEvent(QKeyEvent *event) override;
+  void keyReleaseEvent(QKeyEvent *event) override;
+
  private:
   Palette palBGB, palBicycle, palChocolate, palCobalt, palGB, palGBP,
       palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
 
   Ui::MainWindow *ui;
   CGB cgb;
+
+  // std::map<int, uint8> keybindings;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);
