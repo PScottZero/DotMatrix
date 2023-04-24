@@ -28,3 +28,13 @@ void CGB::run(QString dir) {
   ppu.start();
   timers.start();
 }
+
+void CGB::runBootstrap() {
+  mem.loadROM("/home/paul/git/DotMatrix/roms/bootstrap.bin");
+  mem.loadNintendoLogo();
+  cpu.setPC(0x0000);
+  threadsRunning = true;
+  cpu.start();
+  ppu.start();
+  timers.start();
+}

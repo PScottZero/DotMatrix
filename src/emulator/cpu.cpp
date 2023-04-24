@@ -35,6 +35,10 @@ CPU::~CPU() {
   wait();
 }
 
+void CPU::setPC(uint16 addr) {
+  PC = addr;
+}
+
 void CPU::run() {
   std::fstream fs("./log.txt", std::ios::out);
   char logLine[256];
@@ -48,6 +52,10 @@ void CPU::run() {
 
       // check for interrupts
       if (IME) handleInterrupts(cycles);
+
+      if (PC == 0x753) {
+        stop = true;
+      }
 
       // run instruction at current PC
       if (!halt) {
@@ -68,10 +76,6 @@ void CPU::run() {
           delaySetIME = false;
         }
       }
-
-      // if (PC == 0x33) {
-      //   stop = true;
-      // }
 
       // wait until the time corresponding to the number
       // of cycles has passed
@@ -1291,10 +1295,10 @@ bool CPU::interruptRequested(uint8 interrupt) {
 void CPU::log(std::fstream &fs) {
   char logLine[256];
   snprintf(logLine, 256,
-           "A: %02x | BC: %04x | DE: %04x | HL: %02x | SP: %04x | PC: %04x "
-           "| IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: "
-           "%02x | CHNZ: %d%d%d%d\n",
-           A, BC, DE, HL, SP, PC, IME, mem.getByte(LCDC), mem.getByte(STAT),
+           "PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | "
+           "IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: %02x "
+           "| CHNZ: %d%d%d%d\n",
+           PC, SP, A, BC, DE, HL, IME, mem.getByte(LCDC), mem.getByte(STAT),
            mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
            subtract, zero);
   fs.write(logLine, strlen(logLine));

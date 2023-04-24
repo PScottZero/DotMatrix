@@ -79,12 +79,12 @@
 #define ROM_BANK_0_ADDR 0x0000
 #define ROM_BANK_1_ADDR 0x4000
 #define VRAM_ADDR 0x8000
-#define RAM_BANK_ADDR 0xA000
+#define EXT_RAM_ADDR 0xA000
 #define RAM_ADDR 0xC000
 #define RAM_ECHO_END_ADDR 0xDE00
 #define ECHO_RAM_ADDR 0xE000
 #define OAM_ADDR 0xFE00
-#define OAM_END_ADDR 0xFFA0
+#define OAM_END_ADDR 0xFEA0
 #define ZERO_PAGE_ADDR 0xFF00
 #define HRAM_ADDR 0xFF80
 
@@ -124,6 +124,7 @@ class Memory {
   void write(uint16 addr, uint16 val, uint8 &cycles);
   uint8 imm8(uint16 &PC, uint8 &cycles);
   uint16 imm16(uint16 &PC, uint8 &cycles);
+  bool memoryRestricted(uint16 addr);
 
   // direct memory access functions
   uint8 &getByte(uint16 addr);
@@ -133,6 +134,7 @@ class Memory {
 
   // miscellaneous functions
   void loadROM(QString dir);
+  void loadNintendoLogo();
   void mapCartMem(uint8 **romBank, uint16 startAddr);
   void dmaTransfer();
 };

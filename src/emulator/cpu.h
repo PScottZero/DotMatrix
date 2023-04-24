@@ -106,6 +106,7 @@ class CPU : public QThread {
   ~CPU();
 
   void run() override;
+  void setPC(uint16 addr);
 
   // request interrupt function
   void requestInterrupt(uint8 interrupt);

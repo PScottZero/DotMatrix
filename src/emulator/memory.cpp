@@ -62,28 +62,14 @@ void Memory::init() {
 uint8 Memory::read(uint16 addr, uint8 &cycles) {
   ++cycles;
 
-  // can only read from HRAM during dma transfer
-  if (!dmaTransferMode || (addr >= HRAM_ADDR)) {
-    // read from rom bank 0
-    if (addr >= ROM_BANK_0_ADDR && addr < ROM_BANK_1_ADDR) {
-      return *romBank0[addr];
-    }
-
-    // read from rom bank 1
-    else if (addr >= ROM_BANK_1_ADDR && addr < VRAM_ADDR) {
-      return *romBank1[addr - ROM_BANK_BYTES];
-    }
-
-    // read from memory
-    else if (addr >= VRAM_ADDR && addr < RAM_ADDR && canAccessVRAM() ||
-             addr >= RAM_ADDR && addr < OAM_ADDR ||
-             addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
-             addr >= ZERO_PAGE_ADDR) {
-      return getByte(addr);
-    }
+  // return zero if reading from a
+  // restricted memory location
+  if (memoryRestricted(addr)) {
+    return 0x00;
   }
 
-  return 0x00;
+  // read from memory
+  return getByte(addr);
 }
 
 // read 16-bit value from given memory address
@@ -95,42 +81,31 @@ uint16 Memory::read16(uint16 addr, uint8 &cycles) {
 void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   ++cycles;
 
-  // can only write to HRAM during dma transfer
-  if (!dmaTransferMode || (addr >= HRAM_ADDR)) {
-    // writing anything to DIV register
-    // will set its value to zero
-    if (addr == DIV) {
-      setByte(DIV, 0);
-    }
-
-    // only bits 6-3 of the STAT register
-    // can be written to
-    else if (addr == STAT) {
-      setByte(STAT, (getByte(STAT) & 0x87) | (val & 0x78));
-    }
-
-    // LY register is read-only
-    else if (addr == LY) {
-      return;
-    }
-
-    // write to memory
-    else if (addr >= VRAM_ADDR && addr < RAM_ADDR && canAccessVRAM() ||
-             addr >= RAM_ECHO_END_ADDR && addr < ECHO_RAM_ADDR ||
-             addr >= OAM_ADDR && addr <= OAM_END_ADDR && canAccessOAM() ||
-             addr >= ZERO_PAGE_ADDR) {
-      setByte(addr, val);
-    }
-
-    // write to ram and echo ram
-    else if (addr >= RAM_ADDR && addr < OAM_ADDR) {
-      uint16 offset = addr - (addr < ECHO_RAM_ADDR ? RAM_ADDR : ECHO_RAM_ADDR);
-      uint16 echoAddr =
-          (addr >= ECHO_RAM_ADDR ? RAM_ADDR : ECHO_RAM_ADDR) + offset;
-      setByte(addr, val);
-      setByte(echoAddr, val);
-    }
+  // return if writing to a
+  // restricted memory location
+  if (memoryRestricted(addr) || addr < VRAM_ADDR) {
+    return;
   }
+
+  // writing anything to DIV register
+  // will set its value to zero
+  if (addr == DIV) {
+    setByte(DIV, 0);
+  }
+
+  // only bits 6-3 of the STAT register
+  // can be written to
+  else if (addr == STAT) {
+    setByte(STAT, (getByte(STAT) & 0x87) | (val & 0x78));
+  }
+
+  // LY register is read-only
+  else if (addr == LY) {
+    return;
+  }
+
+  // write to memory
+  setByte(addr, val);
 
   // start dma transfer if dma
   // address was written to
@@ -146,6 +121,30 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
       controls->update();
     }
   }
+}
+
+// check if specified addr is a restricted
+// memory location
+bool Memory::memoryRestricted(uint16_t addr) {
+  // can only access HRAM during
+  // DMA transfers
+  if (dmaTransferMode && addr < HRAM_ADDR) {
+    return true;
+  }
+
+  // cannot access OAM if lcd is in
+  // pixel transfer or oam search mode
+  if (addr >= OAM_ADDR && addr <= OAM_END_ADDR && !canAccessOAM()) {
+    return true;
+  }
+
+  // cannot access VRAM if lcd is in
+  // pixel transfer mode
+  if (addr >= VRAM_ADDR && addr < RAM_ADDR && !canAccessVRAM()) {
+    return true;
+  }
+
+  return false;
 }
 
 // write 16-bit value to given memory address
@@ -170,15 +169,18 @@ uint16 Memory::imm16(uint16 &PC, uint8 &cycles) {
 // **************************************************
 // **************************************************
 
-uint8 &Memory::getByte(uint16 addr) { return mem[addr - MEM_BYTES]; }
-
-uint8 *Memory::getBytePtr(uint16 addr) { return &mem[addr - MEM_BYTES]; }
-
-void Memory::setByte(uint16 addr, uint8 val) { mem[addr - MEM_BYTES] = val; }
-
-uint16 Memory::getTwoBytes(uint16 addr) {
-  return (getByte(addr) << 8) | getByte(addr + 1);
+uint8 *Memory::getBytePtr(uint16 addr) {
+  if (addr < ROM_BANK_1_ADDR) {
+    return romBank0[addr];
+  } else if (addr < VRAM_ADDR) {
+    return romBank1[addr - ROM_BANK_BYTES];
+  }
+  return &mem[addr - MEM_BYTES];
 }
+
+uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
+
+void Memory::setByte(uint16 addr, uint8 val) { *getBytePtr(addr) = val; }
 
 // check if VRAM can be accessed,
 // can only be access outside of
@@ -209,6 +211,17 @@ void Memory::loadROM(QString dir) {
 
   mapCartMem(romBank0, 0x000000);
   mapCartMem(romBank1, 0x004000);
+}
+
+void Memory::loadNintendoLogo() {
+  const std::vector<uint8> logoData = {
+      0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83,
+      0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
+      0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63,
+      0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E};
+  for (int i = 0; i < logoData.size(); ++i) {
+    cart[0x0104 + i] = logoData[i];
+  }
 }
 
 // map cartridge memory block to rgiven om bank

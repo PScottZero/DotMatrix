@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
       palPokemon(0xFFEFFF, 0xF7B58C, 0x84739C, 0x181010),
       palVB(0x000000, 0x550000, 0xAA0000, 0xFF0000),
       palWishGB(0x612F4C, 0x7450E9, 0x5F8FCF, 0x8BE5FF),
-      cgb(&palGB),
+      cgb(&palGBP),
       ui(new Ui::MainWindow) {
   ui->setupUi(this);
 
@@ -98,6 +98,9 @@ MainWindow::MainWindow(QWidget *parent)
 
   // set main window size
   setScale(1);
+
+  // run bootstrap (testing only)
+  cgb.runBootstrap();
 }
 
 MainWindow::~MainWindow() { delete ui; }

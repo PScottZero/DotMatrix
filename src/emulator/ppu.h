@@ -62,6 +62,18 @@ typedef struct {
   bool palette;
 } sprite_t;
 
+enum PaletteType {
+  BG,
+  SPRITE0,
+  SPRITE1
+};
+
+typedef struct {
+  uint8 pixels[SCREEN_PX_WIDTH];
+  PaletteType palettes[SCREEN_PX_WIDTH];
+  uint8 spriteIndices[SCREEN_PX_WIDTH];
+} scanline_t;
+
 // tile row of eight pixels
 using TileRow = std::array<uint8, TILE_PX_DIM>;
 
@@ -79,11 +91,11 @@ class PPU : public QThread {
   bool &stop, &threadRunning;
 
   // rendering functions
-  void renderBg();
-  void renderSprites();
-  void renderWindow();
+  void renderBg(scanline_t &scanline);
+  void renderSprites(scanline_t &scanline);
+  void renderWindow(scanline_t &scanline);
   void findVisibleSprites();
-  void applyPalettes();
+  void transferScanlineToScreen(scanline_t &scanline);
 
   // read display memory functions
   TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);

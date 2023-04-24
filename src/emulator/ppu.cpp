@@ -33,6 +33,8 @@ PPU::~PPU() {
 void PPU::run() {
   while (threadRunning) {
     if (!stop && lcdEnable()) {
+      scanline_t scanline;
+
       for (uint8 lineNo = 0; lineNo < SCREEN_LINES; ++lineNo) {
         int cycleTimeNs = _NS_PER_SEC / (PPU_CLOCK_SPEED * speedMult);
         ly = lineNo;
@@ -69,10 +71,11 @@ void PPU::run() {
           // Pixel Transfer
           // ==================================================
           setMode(PIXEL_TRANSFER_MODE);
-          if (bgEnable()) renderBg();
-          if (spriteEnable()) renderSprites();
-          if (windowEnable()) renderWindow();
-          applyPalettes();
+          if (bgEnable()) renderBg(scanline);
+          if (spriteEnable()) renderSprites(scanline);
+          if (windowEnable()) renderWindow(scanline);
+          transferScanlineToScreen(scanline);
+
           std::this_thread::sleep_until(pixelTransferEnd);
 
           // ==================================================
@@ -106,61 +109,70 @@ void PPU::run() {
 // **************************************************
 // **************************************************
 
-// render background tiles
-void PPU::renderBg() {
+// render background tiles that intersect
+// the current scanline
+void PPU::renderBg(scanline_t &scanline) {
   uint16 tileMapAddr = bgMapAddr();
   uint16 tileDataAddr = bgWindowDataAddr();
 
-  // render bg row
+  // render background row
   int pxY = (scy + ly) % BG_PX_DIM;
   int pxCount = 0;
   while (pxCount < SCREEN_PX_WIDTH) {
+    // get background tile number (0 to 1023)
     int pxX = (scx + pxCount) % BG_PX_DIM;
-    int tileX = pxX / BG_TILE_DIM;
-    int tileY = pxY / BG_TILE_DIM;
-    int tileNo = tileY * BG_TILE_DIM + tileX;
-    int innerTileX = pxX % TILE_PX_DIM;
-    int innerTileY = pxY % TILE_PX_DIM;
+    int bgTileX = pxX / BG_TILE_DIM;
+    int bgTileY = pxY / BG_TILE_DIM;
+    int innerBgTileX = pxX % TILE_PX_DIM;
+    int innerBgTileY = pxY % TILE_PX_DIM;
+    int bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
 
-    // draw tile row onto screen
-    uint8 tileMap = mem.getByte(tileMapAddr + tileNo);
-    TileRow row = getTileRow(tileDataAddr, tileMap, innerTileY);
-    for (int px = 0; px < TILE_PX_DIM - innerTileX; ++px) {
-      if (pxCount < SCREEN_PX_WIDTH) {
-        screen.setPixel(pxCount, ly, row[px + innerTileX]);
-      } else {
-        break;
-      }
+    // get data tile number (0 to 256 or -128 to 127)
+    int tileNo = mem.getByte(tileMapAddr + bgTileNo);
+
+    // get row of pixels from tile
+    TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
+
+    // transfer pixel row to scanline
+    int start = pxCount == 0 ? innerBgTileX : 0;
+    int end = pxCount + 8 > 160 ? innerBgTileX : TILE_PX_DIM;
+    for (int i = start; i < end; ++i) {
+      scanline.pixels[pxCount] = row[i];
+      scanline.palettes[pxCount] = PaletteType::BG;
       ++pxCount;
     }
   }
 }
 
-// render sprites that intersect the screen
-// row that is being rendered
-void PPU::renderSprites() {
-  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
-    sprite_t sprite = visibleSprites[spriteIdx];
-    uint8 spriteRow = ly - sprite.y - 16;
-    TileRow row = getSpriteRow(sprite, spriteRow);
+// render sprites that intersect the
+// current scanline
+void PPU::renderSprites(scanline_t &scanline) {
+  // for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
+  //   sprite_t sprite = visibleSprites[spriteIdx];
+  //   uint8 spriteRow = ly - sprite.y - 16;
+  //   TileRow row = getSpriteRow(sprite, spriteRow);
 
-    // draw sprite row onto screen
-    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
-      int pxX = sprite.x + rowIdx - 8;
-      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
-        if (!sprite.priority || screen.pixel(pxX, ly) == 0) {
-          uint32 writeVal = ((sprite.palette ? 0b10 : 0b01) << 2) | row[rowIdx];
-          screen.setPixel(pxX, ly, writeVal);
-        }
-      }
-    }
-  }
+  //   // draw sprite row onto screen
+  //   for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
+  //     int pxX = sprite.x + rowIdx - 8;
+  //     if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
+  //       // if sprite priority is true, then only draw sprite
+  //       // if current scaline color is zero
+  //       if (!sprite.priority || scanline.colors[pxX] == 0) {
+  //         scanline.pixels[pxX] = row[rowIdx];
+  //         scanline.palettes[pxX] =
+  //             sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
+  //         scanline.spriteIndices[pxX] = spriteIdx;
+  //       }
+  //     }
+  //   }
+  // }
 }
 
 // render window
-void PPU::renderWindow() {
-  uint16 tileMapAddr = windowMapAddr();
-  uint16 tileDataAddr = bgWindowDataAddr();
+void PPU::renderWindow(scanline_t &scanline) {
+  // uint16 tileMapAddr = windowMapAddr();
+  // uint16 tileDataAddr = bgWindowDataAddr();
 
   // for (int i = 0; i < BG_TILE_DIM; i++) {
 
@@ -189,27 +201,22 @@ void PPU::findVisibleSprites() {
 
 // apply palette colors to current pixel
 // values in the screen buffer
-void PPU::applyPalettes() {
-  for (int x = 0; x < SCREEN_PX_WIDTH; ++x) {
-    uint32 px = screen.pixel(x, ly);
-    uint8 pxVal = px & 0b11;
-    uint8 palOption = px >> 2 & 0b11;
-    uint8 pal = 0;
-
-    switch (palOption) {
-      case 0b00:
+void PPU::transferScanlineToScreen(scanline_t &scanline) {
+  for (int px = 0; px < SCREEN_PX_WIDTH; ++px) {
+    uint8 pal;
+    switch (scanline.palettes[px]) {
+      case PaletteType::BG:
         pal = bgp;
         break;
-      case 0b01:
+      case PaletteType::SPRITE0:
         pal = obp0;
         break;
-      case 0b10:
+      case PaletteType::SPRITE1:
         pal = obp1;
         break;
     }
-
-    uint pxPalVal = (pal >> (2 * pxVal)) & 0b11;
-    screen.setPixel(x, ly, palette->data[pxPalVal]);
+    uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & 0b11;
+    screen.setPixel(px, ly, palette->data[pxPalVal]);
   }
 }
 
@@ -221,23 +228,22 @@ void PPU::applyPalettes() {
 
 // get specified row of the given tile
 TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
-  // get tile
+  // get tile row data
   int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
-  uint16 *tile = (uint16 *)mem.getBytePtr(tileAddr);
+  uint16 tileRowAddr = tileAddr + 2 * row;
+  uint8 rowDataLo = mem.getByte(tileRowAddr);
+  uint8 rowDataHi = mem.getByte(tileRowAddr + 1);
 
-  // split row data into hi and lo byte
-  uint16 rowData = *(tile + row);
-  uint8 rowDataHi = (rowData >> 8) & 0xFF;
-  uint8 rowDataLo = rowData & 0xFF;
-
-  // row (uint16) = abcdefgh ijklmnop
-  // pxData (uint8[]) = ia jb kc ld me nf og ph
+  // convert tile row data into pixel values
+  // rowDataLo = abcdefgh
+  // rowDataHi = ijklmnop
+  // tileRow = {ia, jb, kc, ld, me, nf, og, ph}
   TileRow tileRow;
-  for (int i = 0; i < TILE_PX_DIM; i++) {
-    uint8 pxIdx = TILE_PX_DIM - i - 1;
-    tileRow[i] = (rowDataHi >> pxIdx) & 0b1;
-    tileRow[i] |= (rowDataLo >> (pxIdx - 1)) & 0b10;
+  for (int px = 0; px < TILE_PX_DIM; px++) {
+    uint8 pxShift = TILE_PX_DIM - px - 1;
+    tileRow[px] = (rowDataLo >> pxShift) & 0b1;
+    tileRow[px] |= (rowDataHi >> (pxShift - 1)) & 0b10;
   }
   return tileRow;
 }
