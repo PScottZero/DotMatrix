@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "keybindingswindow.h"
+#include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -9,7 +10,7 @@ MainWindow::MainWindow(QWidget *parent)
       palChocolate(0xFFE4C2, 0xDCA456, 0xA9604C, 0x422936),
       palCobalt(0xC5DFFA, 0x5C88B8, 0x1A4778, 0x00234A),
       palGB(0x9BBC0F, 0x8BAC0F, 0x306230, 0x0F380F),
-      palGBP(0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000),
+      palGBP(0xFFFFFF, 0xAAAAAA, 0x555555, 0xAA0000),
       palInverted(0x000000, 0x545454, 0xA9A9A9, 0xFFFFFF),
       palKirby(0xF7BEF7, 0xE78686, 0x7732E7, 0x2D2B96),
       palPlatinum(0xE0F0E8, 0xA8C0B0, 0x4F7868, 0x183030),
@@ -89,7 +90,17 @@ MainWindow::MainWindow(QWidget *parent)
                    &palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
                    &palWishGB);
-  connect(paletteSigMap, &QSignalMapper::mappedObject, this, &MainWindow::setPalette);
+  connect(paletteSigMap, &QSignalMapper::mappedObject, this,
+          &MainWindow::setPalette);
+
+  // **************************************************
+  // **************************************************
+  // Debug Menu
+  // **************************************************
+  // **************************************************
+  connect(ui->actionLoadSaveState, &QAction::triggered, this, &MainWindow::loadSaveState);
+  connect(ui->actionMemoryView, &QAction::triggered, this, &MainWindow::openMemoryView);
+  connect(ui->actionRunBootstrap, &QAction::triggered, this, &MainWindow::runBootstrap);
 
   connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
 
@@ -100,7 +111,8 @@ MainWindow::MainWindow(QWidget *parent)
   setScale(1);
 
   // run bootstrap (testing only)
-  cgb.runBootstrap();
+  // cgb.runBootstrap();
+  // cgb.run("/home/paul/git/DotMatrix/roms/tests/cpu_instrs/cpu_instrs.gb");
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -147,6 +159,22 @@ void MainWindow::setPalette(QObject *palette) {
   cgb.palette = (Palette *)palette;
 }
 
+void MainWindow::openKeyBindingsWindow() {
+  KeyBindingsWindow kbWin(cgb.controls);
+  kbWin.exec();
+}
+
+void MainWindow::loadSaveState() { cgb.runFromSaveState(); }
+
+void MainWindow::runBootstrap() {
+  cgb.runBootstrap();
+}
+
+void MainWindow::openMemoryView() {
+  MemoryView memView{};
+  memView.exec();
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event) {
   cgb.controls.press(event->key());
 }
@@ -155,9 +183,4 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
     cgb.controls.release(event->key());
   }
-}
-
-void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(cgb.controls);
-  kbWin.exec();
 }

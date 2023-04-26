@@ -110,4 +110,7 @@ class CPU : public QThread {
 
   // request interrupt function
   void requestInterrupt(uint8 interrupt);
+
+  void loadState();
+  void saveState();
 };

@@ -179,8 +179,17 @@
     <addaction name="menuPalette"/>
     <addaction name="actionKeyBindings"/>
    </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionLoadSaveState"/>
+    <addaction name="actionMemoryView"/>
+    <addaction name="actionRunBootstrap"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuDebug"/>
   </widget>
   <action name="actionOpenROM">
    <property name="text">
@@ -388,6 +397,21 @@
   <action name="actionKeyBindings">
    <property name="text">
     <string>Key Bindings</string>
+   </property>
+  </action>
+  <action name="actionLoadSaveState">
+   <property name="text">
+    <string>Load Save State</string>
+   </property>
+  </action>
+  <action name="actionMemoryView">
+   <property name="text">
+    <string>Memory View</string>
+   </property>
+  </action>
+  <action name="actionRunBootstrap">
+   <property name="text">
+    <string>Run Bootstrap</string>
    </property>
   </action>
  </widget>

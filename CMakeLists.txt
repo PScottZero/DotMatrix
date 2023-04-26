@@ -30,13 +30,15 @@ set(PROJECT_SOURCES
         src/emulator/controls.cpp
         src/emulator/controls.h
         src/emulator/types.h
-        
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui
         src/ui/keybindingswindow.cpp
         src/ui/keybindingswindow.h
         src/ui/keybindingswindow.ui
+        src/ui/memoryview.cpp
+        src/ui/memoryview.h
+        src/ui/memoryview.ui
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)

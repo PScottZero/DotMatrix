@@ -34,6 +34,9 @@ class MainWindow : public QMainWindow {
   void setScale(int scale);
   void setSpeed(int speed);
   void openKeyBindingsWindow();
+  void loadSaveState();
+  void runBootstrap();
+  void openMemoryView();
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;

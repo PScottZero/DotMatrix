@@ -23,4 +23,5 @@ class CGB {
 
   void run(QString dir);
   void runBootstrap();
+  void runFromSaveState();
 };

@@ -100,8 +100,8 @@ class Memory {
  private:
   uint8 *mem;
   uint8 *cart;
-  uint8 **romBank0;
-  uint8 **romBank1;
+  uint8 *romBank0;
+  uint8 *romBank1;
 
   bool dmaTransferMode;
 
@@ -135,6 +135,9 @@ class Memory {
   // miscellaneous functions
   void loadROM(QString dir);
   void loadNintendoLogo();
-  void mapCartMem(uint8 **romBank, uint16 startAddr);
+  void mapCartMem(uint8 *romBank, uint16 startAddr);
   void dmaTransfer();
+
+  void loadState();
+  void saveState();
 };

@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "json.hpp"
 
 CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
     : QThread(),
@@ -35,12 +36,10 @@ CPU::~CPU() {
   wait();
 }
 
-void CPU::setPC(uint16 addr) {
-  PC = addr;
-}
+void CPU::setPC(uint16 addr) { PC = addr; }
 
 void CPU::run() {
-  std::fstream fs("./log.txt", std::ios::out);
+  std::fstream fs("../debug/cpu_log.txt", std::ios::out);
   char logLine[256];
 
   bool delaySetIME = true;
@@ -53,9 +52,12 @@ void CPU::run() {
       // check for interrupts
       if (IME) handleInterrupts(cycles);
 
-      if (PC == 0x753) {
-        stop = true;
-      }
+      // if (PC == 0x000c) {
+      //     saveState();
+      //     mem.saveState();
+      //     stop = true;
+      //     continue;
+      // }
 
       // run instruction at current PC
       if (!halt) {
@@ -803,9 +805,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
   uint8 upperTwoBits = (opcode >> 6) & 0b11;
   uint8 regDest = (opcode >> 3) & 0b111;
-  uint8 regSrc = (opcode >> 3) & 0b111;
-  uint8 regPair = (opcode >> 4) & 0b11;
-  uint8 loNibble = opcode & 0xF;
+  uint8 regSrc = opcode & 0b111;
 
   switch (upperTwoBits) {
     case 0b00:
@@ -1302,4 +1302,52 @@ void CPU::log(std::fstream &fs) {
            mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
            subtract, zero);
   fs.write(logLine, strlen(logLine));
+}
+
+void CPU::loadState() {
+  std::fstream fs("../debug/cpu_state.json", std::ios::in);
+  fs.seekg(0, std::ios::end);
+  int size = fs.tellg();
+  fs.seekg(0, std::ios::beg);
+
+  char readBuf[size + 1];
+  fs.read(readBuf, size);
+  readBuf[size] = 0;
+  
+  auto state = nlohmann::json::parse(std::string(readBuf));
+  PC = state["PC"];
+  SP = state["SP"];
+  A = state["A"];
+  BC = state["BC"];
+  DE = state["DE"];
+  HL = state["HL"];
+  carry = state["carry"];
+  halfCarry = state["halfCarry"];
+  subtract = state["subtract"];
+  zero = state["zero"];
+  IME = state["IME"];
+  halt = state["halt"];
+  stop = state["stop"];
+}
+
+void CPU::saveState() {
+  nlohmann::json state = {
+    {"PC", PC},
+    {"SP", SP},
+    {"A", A},
+    {"BC", BC},
+    {"DE", DE},
+    {"HL", HL},
+    {"carry", carry},
+    {"halfCarry", carry},
+    {"subtract", subtract},
+    {"zero", zero},
+    {"IME", IME},
+    {"halt", halt},
+    {"stop", stop}
+  };
+  std::string stateStr = state.dump(4);
+  std::fstream fs("../debug/cpu_state.json", std::ios::out);
+  fs.write(stateStr.c_str(), stateStr.size());
+  fs.close();
 }
