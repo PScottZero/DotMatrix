@@ -21,7 +21,6 @@ CGB::~CGB() {
 }
 
 void CGB::run(QString dir) {
-  mem.init();
   mem.loadROM(dir);
   threadsRunning = true;
   cpu.start();
@@ -29,10 +28,9 @@ void CGB::run(QString dir) {
   timers.start();
 }
 
-void CGB::runBootstrap() {
-  mem.loadROM("/home/paul/git/DotMatrix/roms/bootstrap.bin");
-  mem.loadNintendoLogo();
-  cpu.setPC(0x0000);
+void CGB::runFromSaveState() {
+  cpu.loadState();
+  mem.loadState();
   threadsRunning = true;
   cpu.start();
   ppu.start();

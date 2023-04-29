@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "keybindingswindow.h"
+#include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -16,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
       palPokemon(0xFFEFFF, 0xF7B58C, 0x84739C, 0x181010),
       palVB(0x000000, 0x550000, 0xAA0000, 0xFF0000),
       palWishGB(0x612F4C, 0x7450E9, 0x5F8FCF, 0x8BE5FF),
-      cgb(&palGBP),
+      cgb(&palCobalt),
       ui(new Ui::MainWindow) {
   ui->setupUi(this);
 
@@ -89,7 +90,16 @@ MainWindow::MainWindow(QWidget *parent)
                    &palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
                    &palWishGB);
-  connect(paletteSigMap, &QSignalMapper::mappedObject, this, &MainWindow::setPalette);
+  connect(paletteSigMap, &QSignalMapper::mappedObject, this,
+          &MainWindow::setPalette);
+
+  // **************************************************
+  // **************************************************
+  // Debug Menu
+  // **************************************************
+  // **************************************************
+  connect(ui->actionLoadSaveState, &QAction::triggered, this, &MainWindow::loadSaveState);
+  connect(ui->actionMemoryView, &QAction::triggered, this, &MainWindow::openMemoryView);
 
   connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
 
@@ -98,9 +108,6 @@ MainWindow::MainWindow(QWidget *parent)
 
   // set main window size
   setScale(1);
-
-  // run bootstrap (testing only)
-  cgb.runBootstrap();
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -111,8 +118,8 @@ void MainWindow::loadROM() {
   cgb.run(romName);
 }
 
-void MainWindow::setScreen(QImage *image) {
-  ui->screen->setPixmap(QPixmap::fromImage(*image));
+void MainWindow::setScreen(QImage image) {
+  ui->screen->setPixmap(QPixmap::fromImage(image));
 }
 
 void MainWindow::setScale(int scale) {
@@ -147,6 +154,18 @@ void MainWindow::setPalette(QObject *palette) {
   cgb.palette = (Palette *)palette;
 }
 
+void MainWindow::openKeyBindingsWindow() {
+  KeyBindingsWindow kbWin(cgb.controls);
+  kbWin.exec();
+}
+
+void MainWindow::loadSaveState() { cgb.runFromSaveState(); }
+
+void MainWindow::openMemoryView() {
+  MemoryView memView{};
+  memView.exec();
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event) {
   cgb.controls.press(event->key());
 }
@@ -155,9 +174,4 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
     cgb.controls.release(event->key());
   }
-}
-
-void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(cgb.controls);
-  kbWin.exec();
 }

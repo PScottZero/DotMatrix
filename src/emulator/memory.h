@@ -11,6 +11,7 @@
 #define MEM_BYTES 0x8000
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
+#define BOOTSTRAP_BYTES 0x100
 
 // dmg in-memory flag address constants
 #define P1 0xFF00
@@ -32,6 +33,7 @@
 #define BGP 0xFF47
 #define OBP0 0xFF48
 #define OBP1 0xFF49
+#define BOOTSTRAP 0xFF50
 #define WY 0xFF4A
 #define WX 0xFF4B
 #define OAM_START 0xFE00
@@ -100,10 +102,12 @@ class Memory {
  private:
   uint8 *mem;
   uint8 *cart;
-  uint8 **romBank0;
-  uint8 **romBank1;
+  uint8 *romBank0;
+  uint8 *romBank1;
+  uint8 bootstrap[BOOTSTRAP_BYTES];
 
   bool dmaTransferMode;
+  bool bootstrapMode;
 
   // access functions
   bool canAccessVRAM();
@@ -114,8 +118,6 @@ class Memory {
   ~Memory();
 
   Controls *controls;
-
-  void init();
 
   // memory read + write functions
   uint8 read(uint16 addr, uint8 &cycles);
@@ -130,11 +132,13 @@ class Memory {
   uint8 &getByte(uint16 addr);
   uint8 *getBytePtr(uint16 addr);
   void setByte(uint16 addr, uint8 val);
-  uint16 getTwoBytes(uint16 addr);
 
   // miscellaneous functions
   void loadROM(QString dir);
-  void loadNintendoLogo();
-  void mapCartMem(uint8 **romBank, uint16 startAddr);
+  void loadBootstrap();
+  void mapCartMem(uint8 *romBank, uint16 startAddr);
   void dmaTransfer();
+
+  void loadState();
+  void saveState();
 };

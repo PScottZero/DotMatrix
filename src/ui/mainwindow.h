@@ -29,11 +29,13 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void loadROM();
-  void setScreen(QImage *image);
+  void setScreen(QImage image);
   void setPalette(QObject *palette);
   void setScale(int scale);
   void setSpeed(int speed);
   void openKeyBindingsWindow();
+  void loadSaveState();
+  void openMemoryView();
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;

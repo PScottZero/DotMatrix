@@ -1,11 +1,15 @@
 #include "memory.h"
 
+#include "json.hpp"
+
 Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
       cart((uint8 *)malloc(CART_BYTES)),
-      romBank0((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)),
-      romBank1((uint8 **)malloc(sizeof(uint8 *) * ROM_BANK_BYTES)),
+      romBank0((uint8 *)malloc(ROM_BANK_BYTES)),
+      romBank1((uint8 *)malloc(ROM_BANK_BYTES)),
+      bootstrap(),
       dmaTransferMode(false),
+      bootstrapMode(true),
       controls(nullptr) {}
 
 Memory::~Memory() {
@@ -13,43 +17,6 @@ Memory::~Memory() {
   free(cart);
   free(romBank0);
   free(romBank1);
-}
-
-// initialize memory
-void Memory::init() {
-  mem[P1] = 0xFF;
-
-  mem[TIMA] = 0x00;
-  mem[TMA] = 0x00;
-  mem[TAC] = 0x00;
-  mem[NR10] = 0x80;
-  mem[NR11] = 0xBF;
-  mem[NR12] = 0xF3;
-  mem[NR14] = 0xBF;
-  mem[NR21] = 0x3F;
-  mem[NR22] = 0x00;
-  mem[NR24] = 0xBF;
-  mem[NR30] = 0x7F;
-  mem[NR31] = 0xFF;
-  mem[NR32] = 0x9F;
-  mem[NR34] = 0xBF;
-  mem[NR41] = 0xFF;
-  mem[NR42] = 0x00;
-  mem[NR43] = 0x00;
-  mem[NR44] = 0xBF;
-  mem[NR50] = 0x77;
-  mem[NR51] = 0xF3;
-  mem[NR52] = 0xF1;
-  mem[LCDC] = 0x91;
-  mem[SCY] = 0x00;
-  mem[SCX] = 0x00;
-  mem[LYC] = 0x00;
-  mem[BGP] = 0xFC;
-  mem[OBP0] = 0xFF;
-  mem[OBP1] = 0xFF;
-  mem[WY] = 0x00;
-  mem[WX] = 0x00;
-  mem[IE] = 0x00;
 }
 
 // **************************************************
@@ -104,6 +71,12 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
     return;
   }
 
+  // turn off boostrap if writing
+  // nonzero value to address ff50
+  else if (addr == BOOTSTRAP) {
+    bootstrapMode = false;
+  }
+
   // write to memory
   setByte(addr, val);
 
@@ -125,7 +98,7 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
 
 // check if specified addr is a restricted
 // memory location
-bool Memory::memoryRestricted(uint16_t addr) {
+bool Memory::memoryRestricted(uint16 addr) {
   // can only access HRAM during
   // DMA transfers
   if (dmaTransferMode && addr < HRAM_ADDR) {
@@ -170,10 +143,12 @@ uint16 Memory::imm16(uint16 &PC, uint8 &cycles) {
 // **************************************************
 
 uint8 *Memory::getBytePtr(uint16 addr) {
-  if (addr < ROM_BANK_1_ADDR) {
-    return romBank0[addr];
+  if (bootstrapMode && addr < BOOTSTRAP_BYTES) {
+    return &bootstrap[addr];
+  } else if (addr < ROM_BANK_1_ADDR) {
+    return &romBank0[addr];
   } else if (addr < VRAM_ADDR) {
-    return romBank1[addr - ROM_BANK_BYTES];
+    return &romBank1[addr - ROM_BANK_BYTES];
   }
   return &mem[addr - MEM_BYTES];
 }
@@ -211,23 +186,20 @@ void Memory::loadROM(QString dir) {
 
   mapCartMem(romBank0, 0x000000);
   mapCartMem(romBank1, 0x004000);
+
+  loadBootstrap();
 }
 
-void Memory::loadNintendoLogo() {
-  const std::vector<uint8> logoData = {
-      0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83,
-      0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
-      0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63,
-      0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E};
-  for (int i = 0; i < logoData.size(); ++i) {
-    cart[0x0104 + i] = logoData[i];
-  }
+void Memory::loadBootstrap() {
+  std::fstream fs("/Users/paulscott/git/DotMatrix/roms/bootstrap.bin");
+  fs.read((char *)bootstrap, BOOTSTRAP_BYTES);
+  fs.close();
 }
 
 // map cartridge memory block to rgiven om bank
-void Memory::mapCartMem(uint8 **romBank, uint16 startAddr) {
+void Memory::mapCartMem(uint8 *romBank, uint16 startAddr) {
   for (int i = 0; i < ROM_BANK_BYTES; ++i) {
-    romBank[i] = &cart[startAddr + i];
+    romBank[i] = cart[startAddr + i];
   }
 }
 
@@ -239,4 +211,19 @@ void Memory::dmaTransfer() {
     mem[OAM_ADDR + i] = mem[dmaAddr + i];
   }
   dmaTransferMode = false;
+}
+
+void Memory::loadState() {
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", std::ios::in);
+  fs.read((char *)romBank0, ROM_BANK_BYTES);
+  fs.read((char *)romBank1, ROM_BANK_BYTES);
+  fs.read((char *)mem, MEM_BYTES);
+}
+
+void Memory::saveState() {
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", std::ios::out);
+  fs.write((char *)romBank0, ROM_BANK_BYTES);
+  fs.write((char *)romBank1, ROM_BANK_BYTES);
+  fs.write((char *)mem, MEM_BYTES);
+  fs.close();
 }

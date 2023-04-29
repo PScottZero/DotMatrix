@@ -12,9 +12,7 @@
 // clock speed constants
 #define DMG_CLOCK_SPEED 0x100000  // 1MHz
 #define CGB_CLOCK_SPEED 0x200000  // 2MHz
-#ifndef NS_PER_SEC
 #define NS_PER_SEC 1000000000
-#endif
 
 // register constants
 #define NUM_REG_16 4
@@ -110,4 +108,7 @@ class CPU : public QThread {
 
   // request interrupt function
   void requestInterrupt(uint8 interrupt);
+
+  void loadState();
+  void saveState();
 };

@@ -1,13 +1,15 @@
 #include "cpu.h"
 
+#include "json.hpp"
+
 CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
     : QThread(),
-      PC(0x100),
-      SP(0xFFFE),
-      BC(0x0013),
-      DE(0x00D8),
-      HL(0x014D),
-      A(0x01),
+      PC(),
+      SP(),
+      BC(),
+      DE(),
+      HL(),
+      A(),
       B(*((uint8 *)&BC + 1)),
       C(*((uint8 *)&BC)),
       D(*((uint8 *)&DE + 1)),
@@ -35,27 +37,23 @@ CPU::~CPU() {
   wait();
 }
 
-void CPU::setPC(uint16 addr) {
-  PC = addr;
-}
+void CPU::setPC(uint16 addr) { PC = addr; }
 
 void CPU::run() {
-  std::fstream fs("./log.txt", std::ios::out);
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_log.txt",
+                  std::ios::out);
   char logLine[256];
 
   bool delaySetIME = true;
+  auto clockStart = std::chrono::system_clock::now();
+  auto clock = clockStart + std::chrono::nanoseconds(0);
   while (threadRunning) {
     if (!stop) {
       // get current system time
-      auto start = std::chrono::system_clock::now();
       uint8 cycles = 0;
 
       // check for interrupts
       if (IME) handleInterrupts(cycles);
-
-      if (PC == 0x753) {
-        stop = true;
-      }
 
       // run instruction at current PC
       if (!halt) {
@@ -80,8 +78,8 @@ void CPU::run() {
       // wait until the time corresponding to the number
       // of cycles has passed
       int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
-      auto end = start + std::chrono::nanoseconds(cycles * cycleTimeNs);
-      std::this_thread::sleep_until(end);
+      clock += std::chrono::nanoseconds(cycles * cycleTimeNs);
+      std::this_thread::sleep_until(clock);
     }
   }
   fs.close();
@@ -803,9 +801,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
   uint8 upperTwoBits = (opcode >> 6) & 0b11;
   uint8 regDest = (opcode >> 3) & 0b111;
-  uint8 regSrc = (opcode >> 3) & 0b111;
-  uint8 regPair = (opcode >> 4) & 0b11;
-  uint8 loNibble = opcode & 0xF;
+  uint8 regSrc = opcode & 0b111;
 
   switch (upperTwoBits) {
     case 0b00:
@@ -1296,10 +1292,52 @@ void CPU::log(std::fstream &fs) {
   char logLine[256];
   snprintf(logLine, 256,
            "PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | "
-           "IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | IE: %02x | IF: %02x "
+           "IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | SCX: %02x | SCY: "
+           "%02x | IE: %02x | IF: %02x "
            "| CHNZ: %d%d%d%d\n",
            PC, SP, A, BC, DE, HL, IME, mem.getByte(LCDC), mem.getByte(STAT),
-           mem.getByte(LY), mem.getByte(IE), mem.getByte(IF), carry, halfCarry,
-           subtract, zero);
+           mem.getByte(LY), mem.getByte(SCX), mem.getByte(SCY), mem.getByte(IE),
+           mem.getByte(IF), carry, halfCarry, subtract, zero);
   fs.write(logLine, strlen(logLine));
+}
+
+void CPU::loadState() {
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json",
+                  std::ios::in);
+  fs.seekg(0, std::ios::end);
+  int size = fs.tellg();
+  fs.seekg(0, std::ios::beg);
+
+  char readBuf[size + 1];
+  fs.read(readBuf, size);
+  readBuf[size] = 0;
+
+  auto state = nlohmann::json::parse(std::string(readBuf));
+  PC = state["PC"];
+  SP = state["SP"];
+  A = state["A"];
+  BC = state["BC"];
+  DE = state["DE"];
+  HL = state["HL"];
+  carry = state["carry"];
+  halfCarry = state["halfCarry"];
+  subtract = state["subtract"];
+  zero = state["zero"];
+  IME = state["IME"];
+  halt = state["halt"];
+  stop = state["stop"];
+}
+
+void CPU::saveState() {
+  nlohmann::json state = {
+      {"PC", PC},       {"SP", SP},           {"A", A},
+      {"BC", BC},       {"DE", DE},           {"HL", HL},
+      {"carry", carry}, {"halfCarry", carry}, {"subtract", subtract},
+      {"zero", zero},   {"IME", IME},         {"halt", halt},
+      {"stop", stop}};
+  std::string stateStr = state.dump(4);
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json",
+                  std::ios::out);
+  fs.write(stateStr.c_str(), stateStr.size());
+  fs.close();
 }

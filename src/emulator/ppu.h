@@ -44,12 +44,12 @@
 #define PIXEL_TRANSFER_MODE 0b11
 
 // screen memory address constants
-#define WINDOW_CODE_ADDR_0 0x9800
-#define WINDOW_CODE_ADDR_1 0x9C00
+#define WINDOW_MAP_ADDR_0 0x9800
+#define WINDOW_MAP_ADDR_1 0x9C00
 #define BG_DATA_ADDR_0 0x9000
 #define BG_DATA_ADDR_1 0x8000
-#define BG_CODE_ADDR_0 0x9800
-#define BG_CODE_ADDR_1 0x9C00
+#define BG_MAP_ADDR_0 0x9800
+#define BG_MAP_ADDR_1 0x9C00
 
 // sprite oam entry
 typedef struct {
@@ -126,5 +126,5 @@ class PPU : public QThread {
   void run() override;
 
  signals:
-  void sendScreen(QImage *);
+  void sendScreen(QImage);
 };

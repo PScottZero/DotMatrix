@@ -32,9 +32,9 @@ void Controls::update() {
   p1 |= 0xCF;
 
   std::vector<Button> buttons = {};
-  if ((p1 >> 4) & 0b1 == 0) {
+  if (((p1 >> 4) & 0b1) == 0) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if ((p1 >> 5) & 0b1 == 0) {
+  } else if (((p1 >> 5) & 0b1) == 0) {
     buttons = {A, B, SELECT, START};
   }
 

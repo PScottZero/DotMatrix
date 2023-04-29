@@ -91,7 +91,7 @@ void PPU::run() {
           if ((stat & 0b11) != V_BLANK_MODE) {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
-            emit sendScreen(&screen);
+            emit sendScreen(screen);
           }
           auto vblankStart = std::chrono::system_clock::now();
           auto vblankEnd = vblankStart + std::chrono::nanoseconds(
@@ -121,8 +121,8 @@ void PPU::renderBg(scanline_t &scanline) {
   while (pxCount < SCREEN_PX_WIDTH) {
     // get background tile number (0 to 1023)
     int pxX = (scx + pxCount) % BG_PX_DIM;
-    int bgTileX = pxX / BG_TILE_DIM;
-    int bgTileY = pxY / BG_TILE_DIM;
+    int bgTileX = pxX / TILE_PX_DIM;
+    int bgTileY = pxY / TILE_PX_DIM;
     int innerBgTileX = pxX % TILE_PX_DIM;
     int innerBgTileY = pxY % TILE_PX_DIM;
     int bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
@@ -305,7 +305,7 @@ uint8 PPU::spriteHeight() {
 }
 
 uint16 PPU::windowMapAddr() {
-  return lcdc & 0x40 ? WINDOW_CODE_ADDR_1 : WINDOW_CODE_ADDR_0;
+  return lcdc & 0x40 ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
 }
 
 uint16 PPU::bgWindowDataAddr() {
@@ -313,7 +313,7 @@ uint16 PPU::bgWindowDataAddr() {
 }
 
 uint16 PPU::bgMapAddr() {
-  return lcdc & 0x08 ? BG_CODE_ADDR_1 : BG_CODE_ADDR_0;
+  return lcdc & 0x08 ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
 }
 
 // **************************************************
