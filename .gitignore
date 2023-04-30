@@ -9,6 +9,7 @@ cgb_autogen/
 CMakeCache.txt
 CMakeLists.txt.user
 CMakeFiles/
+debug/
 Makefile
 cmake_install.cmake
 cgb
