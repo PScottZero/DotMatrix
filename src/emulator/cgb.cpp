@@ -4,13 +4,16 @@ CGB::CGB(Palette *palette)
     : speedMult(1.0),
       stop(false),
       threadsRunning(false),
+      bootstrapMode(true),
       palette(palette),
-      mem(),
-      timers(cpu, mem, speedMult, stop, threadsRunning),
-      ppu(mem, palette, speedMult, stop, threadsRunning),
-      cpu(mem, speedMult, stop, threadsRunning),
+      mem(bootstrapMode),
+      ppu(mem, palette, speedMult, stop, threadsRunning, bootstrapMode),
+      cpu(mem, speedMult, stop, threadsRunning, bootstrapMode),
+      timers(mem, speedMult, stop, threadsRunning),
       controls(mem) {
   mem.controls = &controls;
+  Interrupts::intEnable = mem.getBytePtr(IE);
+  Interrupts::intFlags = mem.getBytePtr(IF);
 }
 
 CGB::~CGB() {

@@ -2,14 +2,14 @@
 
 #include "json.hpp"
 
-Memory::Memory()
+Memory::Memory(bool &bootstrapMode)
     : mem((uint8 *)malloc(MEM_BYTES)),
       cart((uint8 *)malloc(CART_BYTES)),
       romBank0((uint8 *)malloc(ROM_BANK_BYTES)),
       romBank1((uint8 *)malloc(ROM_BANK_BYTES)),
       bootstrap(),
       dmaTransferMode(false),
-      bootstrapMode(true),
+      bootstrapMode(bootstrapMode),
       controls(nullptr) {}
 
 Memory::~Memory() {

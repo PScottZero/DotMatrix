@@ -4,6 +4,7 @@
 #include <chrono>
 
 #include "cpu.h"
+#include "interrupts.h"
 #include "memory.h"
 #include "types.h"
 
@@ -18,8 +19,6 @@ class Timers : public QThread {
   Q_OBJECT
 
  private:
-  CPU &cpu;
-
   uint8 &div, &tima, &tma, &tac;
 
   int timaFreqs[4];
@@ -35,8 +34,7 @@ class Timers : public QThread {
   uint8 timerFreq();
 
  public:
-  Timers(CPU &cpu, Memory &mem, float &speedMult, bool &stop,
-         bool &threadRunning);
+  Timers(Memory &mem, float &speedMult, bool &stop, bool &threadRunning);
   ~Timers();
 
   void run() override;

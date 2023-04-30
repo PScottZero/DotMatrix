@@ -1,9 +1,8 @@
 #include "timers.h"
 
-Timers::Timers(CPU &cpu, Memory &mem, float &speedMult, bool &stop,
+Timers::Timers(Memory &mem, float &speedMult, bool &stop,
                bool &threadRunning)
     : QThread(),
-      cpu(cpu),
       div(mem.getByte(DIV)),
       tima(mem.getByte(TIMA)),
       tma(mem.getByte(TMA)),
@@ -44,7 +43,7 @@ void Timers::updateTimers() {
       // interrupt
       if (++tima == 0) {
         tima = tma;
-        cpu.requestInterrupt(TIMER_INT);
+        Interrupts::request(TIMER_INT);
       }
       timaCycles -= timerFreq();
     }

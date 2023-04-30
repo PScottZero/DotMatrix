@@ -107,14 +107,14 @@ class Memory {
   uint8 bootstrap[BOOTSTRAP_BYTES];
 
   bool dmaTransferMode;
-  bool bootstrapMode;
+  bool &bootstrapMode;
 
   // access functions
   bool canAccessVRAM();
   bool canAccessOAM();
 
  public:
-  Memory();
+  Memory(bool &bootstrapMode);
   ~Memory();
 
   Controls *controls;

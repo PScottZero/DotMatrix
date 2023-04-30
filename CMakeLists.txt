@@ -14,7 +14,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         src/main.cpp
-        
         src/emulator/cgb.cpp
         src/emulator/cgb.h
         src/emulator/cpu.cpp
@@ -29,6 +28,10 @@ set(PROJECT_SOURCES
         src/emulator/palette.h
         src/emulator/controls.cpp
         src/emulator/controls.h
+        src/emulator/interrupts.cpp
+        src/emulator/interrupts.h
+        src/emulator/clock.cpp
+        src/emulator/clock.h
         src/emulator/types.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h

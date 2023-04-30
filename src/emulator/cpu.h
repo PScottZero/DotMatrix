@@ -7,7 +7,9 @@
 #include <fstream>
 #include <thread>
 
+#include "interrupts.h"
 #include "memory.h"
+#include "clock.h"
 
 // clock speed constants
 #define DMG_CLOCK_SPEED 0x100000  // 1MHz
@@ -25,13 +27,6 @@
 #define JUMP_NC 0b10
 #define JUMP_C 0b11
 
-// interrupt constants
-#define JOYPAD_INT 0x10
-#define SERIAL_INT 0x08
-#define TIMER_INT 0x04
-#define LCDC_INT 0x02
-#define V_BLANK_INT 0x01
-
 class CPU : public QThread {
   Q_OBJECT
 
@@ -45,11 +40,11 @@ class CPU : public QThread {
   uint16 *regmap16[NUM_REG_16];
 
   Memory &mem;
-
-  uint8 &intEnable, &intFlags;
-
+  Clock clock;
+  
   float &speedMult;
   bool &threadRunning;
+  bool &bootstrapMode;
   bool shouldSetIME;
 
   // instruction decoding functions
@@ -92,22 +87,15 @@ class CPU : public QThread {
 
   // interrupt functions
   void handleInterrupts(uint8 &cycles);
-  void enableInterrupt(uint8 interrupt);
-  void disableInterrupt(uint8 interrupt);
-  void resetInterrupt(uint8 interrupt);
-  bool interruptEnabled(uint8 interrupt);
-  bool interruptRequested(uint8 interrupt);
 
   void log(std::fstream &fs);
 
  public:
-  CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning);
+  CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning,
+      bool &bootstrapMode);
   ~CPU();
 
   void run() override;
-
-  // request interrupt function
-  void requestInterrupt(uint8 interrupt);
 
   void loadState();
   void saveState();

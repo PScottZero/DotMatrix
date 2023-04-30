@@ -1,7 +1,7 @@
 #include "ppu.h"
 
 PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
-         bool &threadRunning)
+         bool &threadRunning, bool &bootstrapMode)
     : QThread(),
       screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       lcdc(mem.getByte(LCDC)),
@@ -16,14 +16,15 @@ PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
       obp1(mem.getByte(OBP1)),
       wy(mem.getByte(WY)),
       wx(mem.getByte(WX)),
-      intFlag(mem.getByte(IF)),
       visibleSprites(),
       visibleSpriteCount(),
       speedMult(speedMult),
       mem(mem),
+      clock(),
       palette(palette),
       stop(stop),
-      threadRunning(threadRunning) {}
+      threadRunning(threadRunning),
+      bootstrapMode(bootstrapMode) {}
 
 PPU::~PPU() {
   threadRunning = false;
@@ -31,6 +32,7 @@ PPU::~PPU() {
 }
 
 void PPU::run() {
+  clock.reset();
   while (threadRunning) {
     if (!stop && lcdEnable()) {
       scanline_t scanline;
@@ -52,12 +54,12 @@ void PPU::run() {
           // horizontal timing
           auto start = std::chrono::system_clock::now();
           auto oamSearchEnd =
-              start + std::chrono::nanoseconds(OAM_SEARCH_CYCLES * cycleTimeNs);
+              start + std::chrono::nanoseconds();
           auto pixelTransferEnd =
               oamSearchEnd +
-              std::chrono::nanoseconds(PIXEL_TRANSFER_CYCLES * cycleTimeNs);
+              std::chrono::nanoseconds();
           auto hblankEnd = pixelTransferEnd + std::chrono::nanoseconds(
-                                                  H_BLANK_CYCLES * cycleTimeNs);
+                                                  );
 
           // ==================================================
           // OAM Search
@@ -65,7 +67,7 @@ void PPU::run() {
           setMode(OAM_SEARCH_MODE);
           setLCDInterrupt();
           findVisibleSprites();
-          std::this_thread::sleep_until(oamSearchEnd);
+          clock.wait(OAM_SEARCH_CYCLES * cycleTimeNs);
 
           // ==================================================
           // Pixel Transfer
@@ -75,15 +77,14 @@ void PPU::run() {
           if (spriteEnable()) renderSprites(scanline);
           if (windowEnable()) renderWindow(scanline);
           transferScanlineToScreen(scanline);
-
-          std::this_thread::sleep_until(pixelTransferEnd);
+          clock.wait(PIXEL_TRANSFER_CYCLES * cycleTimeNs);
 
           // ==================================================
           // H-Blank
           // ==================================================
           setMode(H_BLANK_MODE);
           setLCDInterrupt();
-          std::this_thread::sleep_until(hblankEnd);
+          clock.wait(H_BLANK_CYCLES * cycleTimeNs);
         } else {
           // ==================================================
           // V-Blank
@@ -91,14 +92,14 @@ void PPU::run() {
           if ((stat & 0b11) != V_BLANK_MODE) {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
+            Interrupts::request(V_BLANK_INT);
             emit sendScreen(screen);
           }
-          auto vblankStart = std::chrono::system_clock::now();
-          auto vblankEnd = vblankStart + std::chrono::nanoseconds(
-                                             V_BLANK_CYCLES * cycleTimeNs);
-          std::this_thread::sleep_until(vblankEnd);
+          clock.wait(V_BLANK_CYCLES * cycleTimeNs);
         }
       }
+    } else {
+      clock.reset();
     }
   }
 }
@@ -243,7 +244,7 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
   for (int px = 0; px < TILE_PX_DIM; px++) {
     uint8 pxShift = TILE_PX_DIM - px - 1;
     tileRow[px] = (rowDataLo >> pxShift) & 0b1;
-    tileRow[px] |= (rowDataHi >> (pxShift - 1)) & 0b10;
+    tileRow[px] |= ((rowDataHi >> pxShift) << 1) & 0b10;
   }
   return tileRow;
 }
@@ -312,9 +313,7 @@ uint16 PPU::bgWindowDataAddr() {
   return lcdc & 0x10 ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
 }
 
-uint16 PPU::bgMapAddr() {
-  return lcdc & 0x08 ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
-}
+uint16 PPU::bgMapAddr() { return lcdc & 0x08 ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0; }
 
 // **************************************************
 // **************************************************
@@ -339,6 +338,6 @@ void PPU::setLCDInterrupt() {
       ((stat & 0x20) && (stat & 0b011) == OAM_SEARCH_MODE) ||
       ((stat & 0x10) && (stat & 0b011) == V_BLANK_MODE) ||
       ((stat & 0x08) && (stat & 0b011) == H_BLANK_MODE)) {
-    intFlag |= 0x02;
+    Interrupts::request(LCDC_INT);
   }
 }

@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 
+#include "interrupts.h"
 #include "memory.h"
 #include "types.h"
 

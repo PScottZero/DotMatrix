@@ -8,6 +8,8 @@
 #include "memory.h"
 #include "palette.h"
 #include "types.h"
+#include "interrupts.h"
+#include "clock.h"
 
 // clock speed constants
 #define PPU_CLOCK_SPEED 0x100000
@@ -81,14 +83,14 @@ class PPU : public QThread {
   Q_OBJECT
 
  private:
-  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx,
-      &intFlag;
+  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   uint8 visibleSpriteCount;
   float &speedMult;
   Memory &mem;
+  Clock clock;
   Palette *palette;
-  bool &stop, &threadRunning;
+  bool &stop, &threadRunning, &bootstrapMode;
 
   // rendering functions
   void renderBg(scanline_t &scanline);
@@ -120,7 +122,7 @@ class PPU : public QThread {
   QImage screen;
 
   PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
-      bool &threadRunning);
+      bool &threadRunning, bool &bootstrapMode);
   ~PPU();
 
   void run() override;

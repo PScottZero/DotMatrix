@@ -29,20 +29,28 @@ Controls::Controls(Memory &mem)
       p1(mem.getByte(P1)) {}
 
 void Controls::update() {
+  uint8 oldP1 = p1;
   p1 |= 0xCF;
 
   std::vector<Button> buttons = {};
-  if (((p1 >> 4) & 0b1) == 0) {
+  if (!(p1 & 0x10)) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if (((p1 >> 5) & 0b1) == 0) {
+  } else if (!(p1 & 0x20)) {
     buttons = {A, B, SELECT, START};
   }
 
   for (auto button : buttons) {
+    uint8 mask = buttonToMask[button];
     if (state[button]) {
-      p1 &= ~buttonToMask[button];
+      p1 &= ~mask;
+
+      // request joypad interrupt if button
+      // goes from high to low
+      if ((p1 & mask) != (oldP1 & mask)) {
+        Interrupts::request(JOYPAD_INT);
+      }
     } else {
-      p1 |= buttonToMask[button];
+      p1 |= mask;
     }
   }
 }

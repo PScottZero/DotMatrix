@@ -2,7 +2,8 @@
 
 #include "json.hpp"
 
-CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
+CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning,
+         bool &bootstrapMode)
     : QThread(),
       PC(),
       SP(),
@@ -26,10 +27,10 @@ CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning)
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       mem(mem),
-      intEnable(mem.getByte(IE)),
-      intFlags(mem.getByte(IF)),
+      clock(),
       speedMult(speedMult),
       threadRunning(threadRunning),
+      bootstrapMode(bootstrapMode),
       shouldSetIME(false) {}
 
 CPU::~CPU() {
@@ -42,16 +43,15 @@ void CPU::run() {
                   std::ios::out);
   char logLine[256];
 
+  clock.reset();
   bool delaySetIME = true;
-  auto clockStart = std::chrono::system_clock::now();
-  auto clock = clockStart + std::chrono::nanoseconds(0);
   while (threadRunning) {
     if (!stop) {
       // get current system time
       uint8 cycles = 0;
 
       // check for interrupts
-      if (IME) handleInterrupts(cycles);
+      handleInterrupts(cycles);
 
       // run instruction at current PC
       if (!halt) {
@@ -76,8 +76,9 @@ void CPU::run() {
       // wait until the time corresponding to the number
       // of cycles has passed
       int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
-      clock += std::chrono::nanoseconds(cycles * cycleTimeNs);
-      std::this_thread::sleep_until(clock);
+      clock.wait(cycles * cycleTimeNs);
+    } else {
+      clock.reset();
     }
   }
   fs.close();
@@ -509,6 +510,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // halts the cpu and system clock
     case 0x76:
       halt = true;
+      if (!IME && Interrupts::pending()) halt = false;
       break;
 
     // STOP
@@ -534,7 +536,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     case 0xF4:
     case 0xFC:
     case 0xFD:
-      printf("Illegal opcode %02x", opcode);
+      printf("Illegal opcode %02x\n", opcode);
       break;
 
     // the following instructions are
@@ -1260,44 +1262,32 @@ void CPU::handleInterrupts(uint8 &cycles) {
     cycles += 1;
   }
 
-  uint16 intAddr = 0;
-  if (interruptRequested(V_BLANK_INT)) {
-    intAddr = 0x40;
-    resetInterrupt(V_BLANK_INT);
-  } else if (interruptRequested(LCDC_INT)) {
-    intAddr = 0x48;
-    resetInterrupt(LCDC_INT);
-  } else if (interruptRequested(TIMER_INT)) {
-    intAddr = 0x50;
-    resetInterrupt(TIMER_INT);
-  } else if (interruptRequested(SERIAL_INT)) {
-    intAddr = 0x58;
-    resetInterrupt(SERIAL_INT);
-  } else if (interruptRequested(JOYPAD_INT)) {
-    intAddr = 0x60;
-    resetInterrupt(JOYPAD_INT);
+  if (IME) {
+    uint16 intAddr = 0;
+    if (Interrupts::requestedAndEnabled(V_BLANK_INT)) {
+      intAddr = 0x40;
+      Interrupts::reset(V_BLANK_INT);
+    } else if (Interrupts::requestedAndEnabled(LCDC_INT)) {
+      intAddr = 0x48;
+      Interrupts::reset(LCDC_INT);
+    } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
+      intAddr = 0x50;
+      Interrupts::reset(TIMER_INT);
+    } else if (Interrupts::requestedAndEnabled(SERIAL_INT) || (mem.getByte(SC) & 0x81) == 0x81) {
+      intAddr = 0x58;
+      Interrupts::reset(SERIAL_INT);
+    } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
+      intAddr = 0x60;
+      Interrupts::reset(JOYPAD_INT);
+    }
+
+    if (intAddr != 0) {
+      IME = false;
+      push(PC, cycles);
+      PC = intAddr;
+      cycles += 2;
+    }
   }
-
-  if (intAddr != 0) {
-    IME = false;
-    push(PC, cycles);
-    PC = intAddr;
-    cycles += 2;
-  }
-}
-
-void CPU::enableInterrupt(uint8 interrupt) { intEnable |= interrupt; }
-
-void CPU::disableInterrupt(uint8 interrupt) { intEnable &= ~interrupt; }
-
-void CPU::requestInterrupt(uint8 interrupt) { intFlags |= interrupt; }
-
-void CPU::resetInterrupt(uint8 interrupt) { intFlags &= ~interrupt; }
-
-bool CPU::interruptEnabled(uint8 interrupt) { return intEnable & interrupt; }
-
-bool CPU::interruptRequested(uint8 interrupt) {
-  return interruptEnabled(interrupt) && (intFlags & interrupt);
 }
 
 // **************************************************
