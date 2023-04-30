@@ -1,7 +1,9 @@
 #include "timers.h"
 
-Timers::Timers(Memory &mem, float &speedMult, bool &stop,
-               bool &threadRunning)
+#include "clock.h"
+#include "interrupts.h"
+
+Timers::Timers(Memory &mem)
     : QThread(),
       div(mem.getByte(DIV)),
       tima(mem.getByte(TIMA)),
@@ -9,26 +11,20 @@ Timers::Timers(Memory &mem, float &speedMult, bool &stop,
       tac(mem.getByte(TAC)),
       timaFreqs{},
       timaCycles(),
-      divCycles(),
-      speedMult(speedMult),
-      stop(stop),
-      threadRunning(threadRunning) {}
+      divCycles() {}
 
 Timers::~Timers() {
-  threadRunning = false;
+  Clock::threadsRunning = false;
   wait();
 }
 
 void Timers::run() {
-  while (threadRunning) {
-    if (!stop) {
-      auto start = std::chrono::system_clock::now();
-      int cycleTimeNs = NS_PER_SEC / (TIMER_BASE_FREQ * speedMult);
-      auto end = start + std::chrono::nanoseconds(cycleTimeNs);
-
+  while (Clock::threadsRunning) {
+    if (!Clock::stop) {
       updateTimers();
-
-      std::this_thread::sleep_until(end);
+      Clock::wait(TIMERS_CLOCK, 1);
+    } else {
+      Clock::reset();
     }
   }
 }

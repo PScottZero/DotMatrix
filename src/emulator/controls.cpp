@@ -1,5 +1,7 @@
 #include "controls.h"
 
+#include "interrupts.h"
+
 Controls::Controls(Memory &mem)
     : keyBindings({{RIGHT, Qt::Key_D},
                    {LEFT, Qt::Key_A},
@@ -33,7 +35,7 @@ void Controls::update() {
   p1 |= 0xCF;
 
   std::vector<Button> buttons = {};
-  if (!(p1 & 0x10)) {
+  if (!(p1 & 0x10) || ((p1 & 0x30) == 0x30)) {
     buttons = {RIGHT, LEFT, UP, DOWN};
   } else if (!(p1 & 0x20)) {
     buttons = {A, B, SELECT, START};

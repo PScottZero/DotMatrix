@@ -1,7 +1,17 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// Pixel Processing Unit (PPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "ppu.h"
 
-PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
-         bool &threadRunning, bool &bootstrapMode)
+#include "clock.h"
+#include "interrupts.h"
+
+PPU::PPU(Memory &mem, Palette *palette)
     : QThread(),
       screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       lcdc(mem.getByte(LCDC)),
@@ -18,27 +28,15 @@ PPU::PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
       wx(mem.getByte(WX)),
       visibleSprites(),
       visibleSpriteCount(),
-      speedMult(speedMult),
       mem(mem),
-      clock(),
-      palette(palette),
-      stop(stop),
-      threadRunning(threadRunning),
-      bootstrapMode(bootstrapMode) {}
-
-PPU::~PPU() {
-  threadRunning = false;
-  wait();
-}
+      palette(palette) {}
 
 void PPU::run() {
-  clock.reset();
-  while (threadRunning) {
-    if (!stop && lcdEnable()) {
+  while (Clock::threadsRunning) {
+    if (!Clock::stop && lcdEnable()) {
       scanline_t scanline;
 
       for (uint8 lineNo = 0; lineNo < SCREEN_LINES; ++lineNo) {
-        int cycleTimeNs = _NS_PER_SEC / (PPU_CLOCK_SPEED * speedMult);
         ly = lineNo;
 
         // check if current line number
@@ -51,55 +49,45 @@ void PPU::run() {
         setLCDInterrupt();
 
         if (lineNo < SCREEN_PX_HEIGHT) {
-          // horizontal timing
-          auto start = std::chrono::system_clock::now();
-          auto oamSearchEnd =
-              start + std::chrono::nanoseconds();
-          auto pixelTransferEnd =
-              oamSearchEnd +
-              std::chrono::nanoseconds();
-          auto hblankEnd = pixelTransferEnd + std::chrono::nanoseconds(
-                                                  );
-
-          // ==================================================
+          // **************************************************
           // OAM Search
-          // ==================================================
+          // **************************************************
           setMode(OAM_SEARCH_MODE);
           setLCDInterrupt();
           findVisibleSprites();
-          clock.wait(OAM_SEARCH_CYCLES * cycleTimeNs);
+          Clock::wait(PPU_CLOCK, OAM_SEARCH_CYCLES);
 
-          // ==================================================
+          // **************************************************
           // Pixel Transfer
-          // ==================================================
+          // **************************************************
           setMode(PIXEL_TRANSFER_MODE);
           if (bgEnable()) renderBg(scanline);
           if (spriteEnable()) renderSprites(scanline);
           if (windowEnable()) renderWindow(scanline);
           transferScanlineToScreen(scanline);
-          clock.wait(PIXEL_TRANSFER_CYCLES * cycleTimeNs);
+          Clock::wait(PPU_CLOCK, PIXEL_TRANSFER_CYCLES);
 
-          // ==================================================
+          // **************************************************
           // H-Blank
-          // ==================================================
+          // **************************************************
           setMode(H_BLANK_MODE);
           setLCDInterrupt();
-          clock.wait(H_BLANK_CYCLES * cycleTimeNs);
+          Clock::wait(PPU_CLOCK, H_BLANK_CYCLES);
         } else {
-          // ==================================================
+          // **************************************************
           // V-Blank
-          // ==================================================
+          // **************************************************
           if ((stat & 0b11) != V_BLANK_MODE) {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
             Interrupts::request(V_BLANK_INT);
             emit sendScreen(screen);
           }
-          clock.wait(V_BLANK_CYCLES * cycleTimeNs);
+          Clock::wait(PPU_CLOCK, V_BLANK_CYCLES);
         }
       }
     } else {
-      clock.reset();
+      Clock::reset();
     }
   }
 }
@@ -148,26 +136,26 @@ void PPU::renderBg(scanline_t &scanline) {
 // render sprites that intersect the
 // current scanline
 void PPU::renderSprites(scanline_t &scanline) {
-  // for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
-  //   sprite_t sprite = visibleSprites[spriteIdx];
-  //   uint8 spriteRow = ly - sprite.y - 16;
-  //   TileRow row = getSpriteRow(sprite, spriteRow);
+  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
+    sprite_t sprite = visibleSprites[spriteIdx];
+    uint8 spriteRow = ly - sprite.y - 16;
+    TileRow row = getSpriteRow(sprite, spriteRow);
 
-  //   // draw sprite row onto screen
-  //   for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
-  //     int pxX = sprite.x + rowIdx - 8;
-  //     if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
-  //       // if sprite priority is true, then only draw sprite
-  //       // if current scaline color is zero
-  //       if (!sprite.priority || scanline.colors[pxX] == 0) {
-  //         scanline.pixels[pxX] = row[rowIdx];
-  //         scanline.palettes[pxX] =
-  //             sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
-  //         scanline.spriteIndices[pxX] = spriteIdx;
-  //       }
-  //     }
-  //   }
-  // }
+    // draw sprite row onto screen
+    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
+      int pxX = sprite.x + rowIdx - 8;
+      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
+        // if sprite priority is true, then only draw sprite
+        // if current scaline color is zero
+        if (!sprite.priority || scanline.pixels[pxX] == 0) {
+          scanline.pixels[pxX] = row[rowIdx];
+          scanline.palettes[pxX] =
+              sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
+          scanline.spriteIndices[pxX] = spriteIdx;
+        }
+      }
+    }
+  }
 }
 
 // render window

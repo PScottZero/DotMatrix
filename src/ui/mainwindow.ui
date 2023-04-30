@@ -16,11 +16,16 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="font">
+   <font>
+    <stylestrategy>NoAntialias</stylestrategy>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Dot Matrix: Game Boy Emulator</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resource.qrc">
+   <iconset>
     <normaloff>:/img/dm_icon.ico</normaloff>:/img/dm_icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -55,7 +60,7 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="../../resource.qrc">:/img/background.png</pixmap>
+     <pixmap resource="../../resource.qrc">:/assets/imgs/background.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -93,6 +98,7 @@
     <font>
      <family>DejaVu Sans Mono</family>
      <pointsize>10</pointsize>
+     <stylestrategy>NoAntialias</stylestrategy>
     </font>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -100,6 +106,7 @@
      <font>
       <family>DejaVu Sans Mono</family>
       <pointsize>10</pointsize>
+      <stylestrategy>NoAntialias</stylestrategy>
      </font>
     </property>
     <property name="title">
@@ -114,6 +121,7 @@
      <font>
       <family>DejaVu Sans Mono</family>
       <pointsize>10</pointsize>
+      <stylestrategy>NoAntialias</stylestrategy>
      </font>
     </property>
     <property name="title">
@@ -124,6 +132,7 @@
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -141,6 +150,7 @@
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -164,6 +174,7 @@
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -178,6 +189,7 @@
     <addaction name="menuSpeed"/>
     <addaction name="menuPalette"/>
     <addaction name="actionKeyBindings"/>
+    <addaction name="actionShowBootScreen"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
     <property name="title">
@@ -185,7 +197,6 @@
     </property>
     <addaction name="actionLoadSaveState"/>
     <addaction name="actionMemoryView"/>
-    <addaction name="actionRunBootstrap"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSettings"/>
@@ -194,6 +205,12 @@
   <action name="actionOpenROM">
    <property name="text">
     <string>Open ROM</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>12</pointsize>
+    </font>
    </property>
   </action>
   <action name="actionQuit">
@@ -351,14 +368,6 @@
     <string>Wish GB (By Kerrie Lake)</string>
    </property>
   </action>
-  <action name="actionScale025x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>0.25x</string>
-   </property>
-  </action>
   <action name="actionScale0_5x">
    <property name="checkable">
     <bool>true</bool>
@@ -409,9 +418,12 @@
     <string>Memory View</string>
    </property>
   </action>
-  <action name="actionRunBootstrap">
+  <action name="actionShowBootScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Run Bootstrap</string>
+    <string>Show Boot Screen</string>
    </property>
   </action>
  </widget>

@@ -3,8 +3,6 @@
 #include <QThread>
 #include <chrono>
 
-#include "cpu.h"
-#include "interrupts.h"
 #include "memory.h"
 #include "types.h"
 
@@ -25,16 +23,12 @@ class Timers : public QThread {
   int timaCycles;
   int divCycles;
 
-  float &speedMult;
-
-  bool &stop, &threadRunning;
-
   void updateTimers();
   bool timerEnabled();
   uint8 timerFreq();
 
  public:
-  Timers(Memory &mem, float &speedMult, bool &stop, bool &threadRunning);
+  Timers(Memory &mem);
   ~Timers();
 
   void run() override;

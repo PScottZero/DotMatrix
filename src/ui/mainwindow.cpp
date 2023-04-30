@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 
+#include "../emulator/bootstrap.h"
+#include "../emulator/clock.h"
 #include "keybindingswindow.h"
 #include "memoryview.h"
 
@@ -18,8 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
       palVB(0x000000, 0x550000, 0xAA0000, 0xFF0000),
       palWishGB(0x612F4C, 0x7450E9, 0x5F8FCF, 0x8BE5FF),
       ui(new Ui::MainWindow),
-      cgb(nullptr),
-      palette(&palGBP) {
+      cgb(&palGBP) {
   ui->setupUi(this);
 
   // **************************************************
@@ -36,9 +37,9 @@ MainWindow::MainWindow(QWidget *parent)
   // **************************************************
   // **************************************************
 
-  // ==================================================
+  // **************************************************
   // Scale Options
-  // ==================================================
+  // **************************************************
   auto scaleActionGroup = new QActionGroup(this);
   auto scaleSigMap = new QSignalMapper(this);
   scaleActionGroup->setExclusive(true);
@@ -48,9 +49,9 @@ MainWindow::MainWindow(QWidget *parent)
   addToActionGroup(scaleActionGroup, ui->actionScale2x, scaleSigMap, 3);
   connect(scaleSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setScale);
 
-  // ==================================================
+  // **************************************************
   // Speed Options
-  // ==================================================
+  // **************************************************
   auto speedActionGroup = new QActionGroup(this);
   auto speedSigMap = new QSignalMapper(this);
   speedActionGroup->setExclusive(true);
@@ -62,9 +63,9 @@ MainWindow::MainWindow(QWidget *parent)
   addToActionGroup(speedActionGroup, ui->actionSpeed8x, speedSigMap, 5);
   connect(speedSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setSpeed);
 
-  // ==================================================
+  // **************************************************
   // Palette Options
-  // ==================================================
+  // **************************************************
   auto paletteActionGroup = new QActionGroup(this);
   auto paletteSigMap = new QSignalMapper(this);
   paletteActionGroup->setExclusive(true);
@@ -94,6 +95,12 @@ MainWindow::MainWindow(QWidget *parent)
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
 
+  connect(ui->actionKeyBindings, &QAction::triggered, this,
+          &MainWindow::openKeyBindingsWindow);
+
+  connect(ui->actionShowBootScreen, &QAction::toggled, this,
+          &MainWindow::toggleBootScreen);
+
   // **************************************************
   // **************************************************
   // Debug Menu
@@ -104,8 +111,7 @@ MainWindow::MainWindow(QWidget *parent)
   connect(ui->actionMemoryView, &QAction::triggered, this,
           &MainWindow::openMemoryView);
 
-  connect(ui->actionKeyBindings, &QAction::triggered, this,
-          &MainWindow::openKeyBindingsWindow);
+  connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
 
   // set main window size
   setScale(1);
@@ -119,17 +125,8 @@ void MainWindow::loadROM() {
   QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), pwd,
                                                  tr("Game Boy ROMs (*.gb)"));
   if (romName != "") {
-    // stop current emulation threads
-    if (cgb != nullptr) {
-      cgb->threadsRunning = false;
-    }
-
-    // create new emulation threads
-    cgb = new CGB(palette);
-    connect(&cgb->ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
-
-    // run selected rom
-    cgb->run(romName);
+    cgb.reset();
+    cgb.run(romName);
   }
 }
 
@@ -153,7 +150,7 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setSpeed(int speed) { cgb->speedMult = pow(2, speed - 2); }
+void MainWindow::setSpeed(int speed) { Clock::speedMult = pow(2, speed - 2); }
 
 void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
                                   QSignalMapper *sigMap, int mapVal) {
@@ -170,27 +167,32 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 }
 
 void MainWindow::setPalette(QObject *palette) {
-  cgb->palette = (Palette *)palette;
+  cgb.palette = (Palette *)palette;
 }
 
 void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(cgb->controls);
+  KeyBindingsWindow kbWin(cgb.controls);
   kbWin.exec();
 }
 
-void MainWindow::loadSaveState() { cgb->runFromSaveState(); }
+void MainWindow::loadSaveState() { cgb.runFromSaveState(); }
 
 void MainWindow::openMemoryView() {
   MemoryView memView{};
   memView.exec();
 }
 
+void MainWindow::toggleBootScreen(bool showBootScreen) {
+  Bootstrap::speedMult =
+      showBootScreen ? CLOCK_FAST_FORWARD : CLOCK_NORMAL_SPEED;
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-  cgb->controls.press(event->key());
+  cgb.controls.press(event->key());
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
-    cgb->controls.release(event->key());
+    cgb.controls.release(event->key());
   }
 }

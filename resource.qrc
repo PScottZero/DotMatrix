@@ -1,7 +1,7 @@
 <RCC>
 <qresource>
-    <file>img/dm_icon.ico</file>
-    <file>img/dm_icon.icns</file>
-    <file>img/background.png</file>
+    <file>assets/imgs/background.png</file>
+    <file>assets/icons/dm_icon.ico</file>
+    <file>assets/icons/dm_icon.icns</file>
 </qresource>
 </RCC>

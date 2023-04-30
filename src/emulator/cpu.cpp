@@ -1,9 +1,18 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// Sharp LR35902 Central Processing Unit (CPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "cpu.h"
 
+#include "clock.h"
+#include "interrupts.h"
 #include "json.hpp"
 
-CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning,
-         bool &bootstrapMode)
+CPU::CPU(Memory &mem)
     : QThread(),
       PC(),
       SP(),
@@ -23,18 +32,13 @@ CPU::CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning,
       carry(true),
       IME(false),
       halt(false),
-      stop(stop),
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       mem(mem),
-      clock(),
-      speedMult(speedMult),
-      threadRunning(threadRunning),
-      bootstrapMode(bootstrapMode),
       shouldSetIME(false) {}
 
 CPU::~CPU() {
-  threadRunning = false;
+  Clock::threadsRunning = false;
   wait();
 }
 
@@ -43,10 +47,9 @@ void CPU::run() {
                   std::ios::out);
   char logLine[256];
 
-  clock.reset();
   bool delaySetIME = true;
-  while (threadRunning) {
-    if (!stop) {
+  while (Clock::threadsRunning) {
+    if (!Clock::stop) {
       // get current system time
       uint8 cycles = 0;
 
@@ -75,10 +78,9 @@ void CPU::run() {
 
       // wait until the time corresponding to the number
       // of cycles has passed
-      int cycleTimeNs = NS_PER_SEC / (DMG_CLOCK_SPEED * speedMult);
-      clock.wait(cycles * cycleTimeNs);
+      Clock::wait(CPU_CLOCK, cycles);
     } else {
-      clock.reset();
+      Clock::reset();
     }
   }
   fs.close();
@@ -115,9 +117,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
   // represented by only a single
   // 8-bit opcode value
   switch (opcode) {
-    // ==================================================
+    // **************************************************
     // 8-Bit Transfer and I/O Instructions
-    // ==================================================
+    // **************************************************
 
     // LD (HL), n
     // 3 ----
@@ -232,9 +234,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(HL--, A, cycles);
       break;
 
-    // ==================================================
+    // **************************************************
     // 16-Bit Transfer Instructions
-    // ==================================================
+    // **************************************************
 
     // LD SP, HL
     // 2 ----
@@ -261,9 +263,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       mem.write(mem.imm16(PC, cycles), SP, cycles);
       break;
 
-    // ==================================================
+    // **************************************************
     // 8-Bit Arithmetic and Logical Instructions
-    // ==================================================
+    // **************************************************
 
     // ADD A, n
     // 2 CH0Z
@@ -330,9 +332,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       sub(A, mem.imm8(PC, cycles));
       break;
 
-    // ==================================================
+    // **************************************************
     // 16-Bit Arithmetic Instructions
-    // ==================================================
+    // **************************************************
 
     // ADD SP, e
     // 4 CH00
@@ -343,9 +345,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       cycles += 2;
       break;
 
-    // ==================================================
+    // **************************************************
     // Rotate Shift Instructions
-    // ==================================================
+    // **************************************************
 
     // RLCA
     // 1 C000
@@ -381,18 +383,18 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       zero = false;
       break;
 
-    // ==================================================
+    // **************************************************
     // CB Prefixed Instructions
-    // ==================================================
+    // **************************************************
 
     // run instruction with CB prefix
     case 0xCB:
       runInstrCB(mem.imm8(PC, cycles), cycles);
       break;
 
-    // ==================================================
+    // **************************************************
     // Jump, Call, and Return Instructions
-    // ==================================================
+    // **************************************************
 
     // JP nn
     // 4 ----
@@ -444,10 +446,10 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
       ++cycles;
       break;
 
-    // ==================================================
+    // **************************************************
     // General-Purpose Arithmetic Operations and
     // CPU Control Instructions
-    // ==================================================
+    // **************************************************
 
     // DAA
     // 1 C0-Z
@@ -518,9 +520,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // halts the cpu, system clock, oscillator,
     // and lcd controller
     case 0x10:
-      if (mem.imm8(PC, cycles) == 0) {
-        stop = true;
-      }
+      Clock::stop = true;
       --cycles;
       break;
 
@@ -804,9 +804,9 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
   switch (upperTwoBits) {
     case 0b00:
       switch (regDest) {
-        // ==================================================
+        // **************************************************
         // Rotate Shift Instructions
-        // ==================================================
+        // **************************************************
 
         // RLC r / RLC (HL)
         // 2/4 C00Z
@@ -882,9 +882,9 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
       }
       break;
 
-    // ==================================================
+    // **************************************************
     // Bit Operations
-    // ==================================================
+    // **************************************************
 
     // BIT b, r / BIT b, (HL)
     // 2/3 -10Z
@@ -1257,7 +1257,7 @@ void CPU::setAF(uint16 val) {
 void CPU::handleInterrupts(uint8 &cycles) {
   // resume running cpu from halt mode if there is an
   // interrupt that needs to be serviced
-  if (halt && (mem.getByte(IF) & mem.getByte(IE) & 0x1F) != 0) {
+  if (halt && Interrupts::pending()) {
     halt = false;
     cycles += 1;
   }
@@ -1273,7 +1273,8 @@ void CPU::handleInterrupts(uint8 &cycles) {
     } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
       intAddr = 0x50;
       Interrupts::reset(TIMER_INT);
-    } else if (Interrupts::requestedAndEnabled(SERIAL_INT) || (mem.getByte(SC) & 0x81) == 0x81) {
+    } else if (Interrupts::requestedAndEnabled(SERIAL_INT) ||
+               (mem.getByte(SC) & 0x81) == 0x81) {
       intAddr = 0x58;
       Interrupts::reset(SERIAL_INT);
     } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
@@ -1333,16 +1334,16 @@ void CPU::loadState() {
   zero = state["zero"];
   IME = state["IME"];
   halt = state["halt"];
-  stop = state["stop"];
+  Clock::stop = state["stop"];
 }
 
 void CPU::saveState() {
   nlohmann::json state = {
-      {"PC", PC},       {"SP", SP},           {"A", A},
-      {"BC", BC},       {"DE", DE},           {"HL", HL},
-      {"carry", carry}, {"halfCarry", carry}, {"subtract", subtract},
-      {"zero", zero},   {"IME", IME},         {"halt", halt},
-      {"stop", stop}};
+      {"PC", PC},           {"SP", SP},           {"A", A},
+      {"BC", BC},           {"DE", DE},           {"HL", HL},
+      {"carry", carry},     {"halfCarry", carry}, {"subtract", subtract},
+      {"zero", zero},       {"IME", IME},         {"halt", halt},
+      {"stop", Clock::stop}};
   std::string stateStr = state.dump(4);
   std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json",
                   std::ios::out);

@@ -24,14 +24,14 @@ set(PROJECT_SOURCES
         src/emulator/ppu.h
         src/emulator/timers.cpp
         src/emulator/timers.h
-        src/emulator/palette.cpp
-        src/emulator/palette.h
         src/emulator/controls.cpp
         src/emulator/controls.h
         src/emulator/interrupts.cpp
         src/emulator/interrupts.h
         src/emulator/clock.cpp
         src/emulator/clock.h
+        src/emulator/bootstrap.cpp
+        src/emulator/bootstrap.h
         src/emulator/types.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
@@ -42,6 +42,8 @@ set(PROJECT_SOURCES
         src/ui/memoryview.cpp
         src/ui/memoryview.h
         src/ui/memoryview.ui
+        src/ui/palette.cpp
+        src/ui/palette.h
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)

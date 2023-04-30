@@ -11,7 +11,6 @@
 #define MEM_BYTES 0x8000
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
-#define BOOTSTRAP_BYTES 0x100
 
 // dmg in-memory flag address constants
 #define P1 0xFF00
@@ -104,17 +103,15 @@ class Memory {
   uint8 *cart;
   uint8 *romBank0;
   uint8 *romBank1;
-  uint8 bootstrap[BOOTSTRAP_BYTES];
 
   bool dmaTransferMode;
-  bool &bootstrapMode;
 
   // access functions
   bool canAccessVRAM();
   bool canAccessOAM();
 
  public:
-  Memory(bool &bootstrapMode);
+  Memory();
   ~Memory();
 
   Controls *controls;
@@ -135,7 +132,6 @@ class Memory {
 
   // miscellaneous functions
   void loadROM(QString dir);
-  void loadBootstrap();
   void mapCartMem(uint8 *romBank, uint16 startAddr);
   void dmaTransfer();
 

@@ -36,6 +36,7 @@ class MainWindow : public QMainWindow {
   void openKeyBindingsWindow();
   void loadSaveState();
   void openMemoryView();
+  void toggleBootScreen(bool showBootScreen);
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
@@ -46,8 +47,7 @@ class MainWindow : public QMainWindow {
       palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
 
   Ui::MainWindow *ui;
-  CGB *cgb;
-  Palette *palette;
+  CGB cgb;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);

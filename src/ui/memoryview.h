@@ -7,16 +7,15 @@ namespace Ui {
 class MemoryView;
 }
 
-class MemoryView : public QDialog
-{
-    Q_OBJECT
+class MemoryView : public QDialog {
+  Q_OBJECT
 
-public:
-    explicit MemoryView(QWidget *parent = nullptr);
-    ~MemoryView();
+ public:
+  explicit MemoryView(QWidget *parent = nullptr);
+  ~MemoryView();
 
-private:
-    Ui::MemoryView *ui;
+ private:
+  Ui::MemoryView *ui;
 };
 
-#endif // MEMORYVIEW_H
+#endif  // MEMORYVIEW_H

@@ -1,15 +1,14 @@
 #include "cgb.h"
 
+#include "interrupts.h"
+#include "clock.h"
+
 CGB::CGB(Palette *palette)
-    : speedMult(1.0),
-      stop(false),
-      threadsRunning(false),
-      bootstrapMode(true),
-      palette(palette),
-      mem(bootstrapMode),
-      ppu(mem, palette, speedMult, stop, threadsRunning, bootstrapMode),
-      cpu(mem, speedMult, stop, threadsRunning, bootstrapMode),
-      timers(mem, speedMult, stop, threadsRunning),
+    : palette(palette),
+      mem(),
+      ppu(mem, palette),
+      cpu(mem),
+      timers(mem),
       controls(mem) {
   mem.controls = &controls;
   Interrupts::intEnable = mem.getBytePtr(IE);
@@ -17,7 +16,7 @@ CGB::CGB(Palette *palette)
 }
 
 CGB::~CGB() {
-  threadsRunning = false;
+  Clock::threadsRunning = false;
   cpu.wait();
   ppu.wait();
   timers.wait();
@@ -25,7 +24,8 @@ CGB::~CGB() {
 
 void CGB::run(QString dir) {
   mem.loadROM(dir);
-  threadsRunning = true;
+  Clock::threadsRunning = true;
+  Clock::reset();
   cpu.start();
   ppu.start();
   timers.start();
@@ -34,8 +34,11 @@ void CGB::run(QString dir) {
 void CGB::runFromSaveState() {
   cpu.loadState();
   mem.loadState();
-  threadsRunning = true;
+  Clock::threadsRunning = true;
+  Clock::reset();
   cpu.start();
   ppu.start();
   timers.start();
 }
+
+void CGB::reset() {}

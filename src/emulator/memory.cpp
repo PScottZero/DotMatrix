@@ -2,14 +2,14 @@
 
 #include "json.hpp"
 
-Memory::Memory(bool &bootstrapMode)
+#include "bootstrap.h"
+
+Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
       cart((uint8 *)malloc(CART_BYTES)),
       romBank0((uint8 *)malloc(ROM_BANK_BYTES)),
       romBank1((uint8 *)malloc(ROM_BANK_BYTES)),
-      bootstrap(),
       dmaTransferMode(false),
-      bootstrapMode(bootstrapMode),
       controls(nullptr) {}
 
 Memory::~Memory() {
@@ -74,7 +74,7 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   // turn off boostrap if writing
   // nonzero value to address ff50
   else if (addr == BOOTSTRAP) {
-    bootstrapMode = false;
+    Bootstrap::enabled = false;
   }
 
   // write to memory
@@ -143,8 +143,8 @@ uint16 Memory::imm16(uint16 &PC, uint8 &cycles) {
 // **************************************************
 
 uint8 *Memory::getBytePtr(uint16 addr) {
-  if (bootstrapMode && addr < BOOTSTRAP_BYTES) {
-    return &bootstrap[addr];
+  if (Bootstrap::enabled && addr < BOOTSTRAP_BYTES) {
+    return Bootstrap::at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
     return &romBank0[addr];
   } else if (addr < VRAM_ADDR) {
@@ -186,14 +186,6 @@ void Memory::loadROM(QString dir) {
 
   mapCartMem(romBank0, 0x000000);
   mapCartMem(romBank1, 0x004000);
-
-  loadBootstrap();
-}
-
-void Memory::loadBootstrap() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/roms/bootstrap.bin");
-  fs.read((char *)bootstrap, BOOTSTRAP_BYTES);
-  fs.close();
 }
 
 // map cartridge memory block to rgiven om bank
@@ -206,7 +198,7 @@ void Memory::mapCartMem(uint8 *romBank, uint16 startAddr) {
 // perform dma transfer
 void Memory::dmaTransfer() {
   dmaTransferMode = true;
-  uint16 dmaAddr = mem[DMA] * 0x100;
+  uint16 dmaAddr = mem[DMA] << 8;
   for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
     mem[OAM_ADDR + i] = mem[dmaAddr + i];
   }
@@ -214,14 +206,16 @@ void Memory::dmaTransfer() {
 }
 
 void Memory::loadState() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", std::ios::in);
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin",
+                  std::ios::in);
   fs.read((char *)romBank0, ROM_BANK_BYTES);
   fs.read((char *)romBank1, ROM_BANK_BYTES);
   fs.read((char *)mem, MEM_BYTES);
 }
 
 void Memory::saveState() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", std::ios::out);
+  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin",
+                  std::ios::out);
   fs.write((char *)romBank0, ROM_BANK_BYTES);
   fs.write((char *)romBank1, ROM_BANK_BYTES);
   fs.write((char *)mem, MEM_BYTES);

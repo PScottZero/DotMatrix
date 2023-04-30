@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// Sharp LR35902 Central Processing Unit (CPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <stdio.h>
@@ -7,14 +15,7 @@
 #include <fstream>
 #include <thread>
 
-#include "interrupts.h"
 #include "memory.h"
-#include "clock.h"
-
-// clock speed constants
-#define DMG_CLOCK_SPEED 0x100000  // 1MHz
-#define CGB_CLOCK_SPEED 0x200000  // 2MHz
-#define NS_PER_SEC 1000000000
 
 // register constants
 #define NUM_REG_16 4
@@ -34,17 +35,13 @@ class CPU : public QThread {
   uint16 PC, SP, BC, DE, HL;        // 16-bit registers
   uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
 
-  bool zero, subtract, halfCarry, carry, IME, halt, &stop;  // flags
+  bool zero, subtract, halfCarry, carry, IME, halt;  // flags
 
   uint8 *regmap8[NUM_REG_8];
   uint16 *regmap16[NUM_REG_16];
 
   Memory &mem;
-  Clock clock;
-  
-  float &speedMult;
-  bool &threadRunning;
-  bool &bootstrapMode;
+
   bool shouldSetIME;
 
   // instruction decoding functions
@@ -91,8 +88,7 @@ class CPU : public QThread {
   void log(std::fstream &fs);
 
  public:
-  CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning,
-      bool &bootstrapMode);
+  CPU(Memory &mem);
   ~CPU();
 
   void run() override;

@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// PIXEL PROCESSING UNIT (PPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <QImage>
@@ -5,11 +13,9 @@
 #include <array>
 #include <thread>
 
+#include "../ui/palette.h"
 #include "memory.h"
-#include "palette.h"
 #include "types.h"
-#include "interrupts.h"
-#include "clock.h"
 
 // clock speed constants
 #define PPU_CLOCK_SPEED 0x100000
@@ -64,11 +70,7 @@ typedef struct {
   bool palette;
 } sprite_t;
 
-enum PaletteType {
-  BG,
-  SPRITE0,
-  SPRITE1
-};
+enum PaletteType { BG, SPRITE0, SPRITE1 };
 
 typedef struct {
   uint8 pixels[SCREEN_PX_WIDTH];
@@ -86,11 +88,8 @@ class PPU : public QThread {
   uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   uint8 visibleSpriteCount;
-  float &speedMult;
   Memory &mem;
-  Clock clock;
   Palette *palette;
-  bool &stop, &threadRunning, &bootstrapMode;
 
   // rendering functions
   void renderBg(scanline_t &scanline);
@@ -121,9 +120,7 @@ class PPU : public QThread {
  public:
   QImage screen;
 
-  PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
-      bool &threadRunning, bool &bootstrapMode);
-  ~PPU();
+  PPU(Memory &mem, Palette *palette);
 
   void run() override;
 
