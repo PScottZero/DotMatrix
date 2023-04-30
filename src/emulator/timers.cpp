@@ -27,8 +27,6 @@ void Timers::run() {
       int cycleTimeNs = NS_PER_SEC / (TIMER_BASE_FREQ * speedMult);
       auto end = start + std::chrono::nanoseconds(cycleTimeNs);
 
-      ++timaCycles;
-      ++divCycles;
       updateTimers();
 
       std::this_thread::sleep_until(end);
@@ -39,6 +37,7 @@ void Timers::run() {
 void Timers::updateTimers() {
   // update TIMA timer
   if (timerEnabled()) {
+    ++timaCycles;
     if (timaCycles >= timerFreq()) {
       // on TIMA overflow, set TIMA
       // to TMA and request a timer
@@ -52,6 +51,7 @@ void Timers::updateTimers() {
   }
 
   // update DIV timer
+  ++divCycles;
   if (divCycles >= DIV_CYCLES) {
     ++div;
     divCycles -= DIV_CYCLES;

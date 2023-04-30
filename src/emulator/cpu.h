@@ -63,6 +63,7 @@ class CPU : public QThread {
   // arithmetic and logical functions
   uint8 add(uint8 a, uint8 b, bool c = false);
   uint16 add(uint16 a, uint16 b);
+  uint16 addSP(int8 val);
   uint8 sub(uint8 a, uint8 b, bool c = false);
   void _and(uint8 val);
   void _or(uint8 val);
@@ -104,7 +105,6 @@ class CPU : public QThread {
   ~CPU();
 
   void run() override;
-  void setPC(uint16 addr);
 
   // request interrupt function
   void requestInterrupt(uint8 interrupt);

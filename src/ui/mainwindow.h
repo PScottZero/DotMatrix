@@ -46,7 +46,8 @@ class MainWindow : public QMainWindow {
       palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
 
   Ui::MainWindow *ui;
-  CGB cgb;
+  CGB *cgb;
+  Palette *palette;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);

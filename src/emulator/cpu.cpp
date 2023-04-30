@@ -37,8 +37,6 @@ CPU::~CPU() {
   wait();
 }
 
-void CPU::setPC(uint16 addr) { PC = addr; }
-
 void CPU::run() {
   std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_log.txt",
                   std::ios::out);
@@ -250,8 +248,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load the stack pointer + 8-bit signed
     // immediate e into register HL
     case 0xF8:
-      HL = add(SP, (int8)mem.imm8(PC, cycles));
-      zero = false;
+      HL = addSP(mem.imm8(PC, cycles));
       ++cycles;
       break;
 
@@ -341,8 +338,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // add 8-bit signed immediate e to stack pointer
     // and store result in stack pointer
     case 0xE8:
-      SP = add(SP, (int8)mem.imm8(PC, cycles));
-      zero = false;
+      SP = addSP(mem.imm8(PC, cycles));
       cycles += 2;
       break;
 
@@ -953,11 +949,11 @@ uint16 CPU::pop(uint8 &cycles) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::add(uint8 a, uint8 b, bool c) {
-  uint8 halfA = a & 0xF;
-  uint8 result = a + b + c;
-  uint16 halfResult = (halfA + (b & 0xF) + c) & 0xF;
-  carry = result < a;
-  halfCarry = halfResult < halfA;
+  uint16 resultOverflow = a + b + c;
+  uint8 result = resultOverflow & 0xFF;
+  uint8 halfResult = (a & 0xF) + (b & 0xF) + c;
+  carry = resultOverflow > 0xFF;
+  halfCarry = halfResult > 0xF;
   subtract = false;
   zero = result == 0;
   return result;
@@ -977,6 +973,20 @@ uint16 CPU::add(uint16 a, uint16 b) {
   halfCarry = halfResult < halfA;
   subtract = false;
   return result;
+}
+
+uint16 CPU::addSP(int8 val) {
+  uint16 result = SP + val;
+  if (val >= 0) {
+    carry = ((SP & 0xFF) + val) > 0xFF;
+    halfCarry = ((SP & 0xF) + (val & 0xF)) > 0xF;
+  } else {
+    carry = (result & 0xFF) < (SP & 0xFF);
+    halfCarry = (result & 0xF) < (SP & 0xF);
+  }
+  subtract = false;
+  zero = false;
+  return SP + val;
 }
 
 // subtract 8-bit number b, and optionally carry,
@@ -1107,7 +1117,8 @@ uint8 CPU::shiftLeft(uint8 val) {
 // Z - true if result is zero, false otherwise
 uint8 CPU::shiftRight(uint8 val, bool arithmetic) {
   bool bit0 = val & 0b1;
-  val = (val >> 1) & (arithmetic ? 0xFF : 0x7F);
+  uint8 msb = arithmetic ? (val & 0x80) : 0;
+  val = ((val >> 1) & 0x7F) | msb;
   carry = bit0;
   halfCarry = false;
   subtract = false;
@@ -1179,7 +1190,7 @@ bool CPU::jumpCondMet(uint8 jumpCond) {
     case JUMP_NC:
       return carry == false;
     case JUMP_C:
-      return carry = true;
+      return carry == true;
   }
   return false;
 }
@@ -1242,6 +1253,13 @@ void CPU::setAF(uint16 val) {
 // **************************************************
 
 void CPU::handleInterrupts(uint8 &cycles) {
+  // resume running cpu from halt mode if there is an
+  // interrupt that needs to be serviced
+  if (halt && (mem.getByte(IF) & mem.getByte(IE) & 0x1F) != 0) {
+    halt = false;
+    cycles += 1;
+  }
+
   uint16 intAddr = 0;
   if (interruptRequested(V_BLANK_INT)) {
     intAddr = 0x40;

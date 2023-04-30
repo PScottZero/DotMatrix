@@ -17,8 +17,9 @@ MainWindow::MainWindow(QWidget *parent)
       palPokemon(0xFFEFFF, 0xF7B58C, 0x84739C, 0x181010),
       palVB(0x000000, 0x550000, 0xAA0000, 0xFF0000),
       palWishGB(0x612F4C, 0x7450E9, 0x5F8FCF, 0x8BE5FF),
-      cgb(&palCobalt),
-      ui(new Ui::MainWindow) {
+      ui(new Ui::MainWindow),
+      cgb(nullptr),
+      palette(&palGBP) {
   ui->setupUi(this);
 
   // **************************************************
@@ -98,10 +99,10 @@ MainWindow::MainWindow(QWidget *parent)
   // Debug Menu
   // **************************************************
   // **************************************************
-  connect(ui->actionLoadSaveState, &QAction::triggered, this, &MainWindow::loadSaveState);
-  connect(ui->actionMemoryView, &QAction::triggered, this, &MainWindow::openMemoryView);
-
-  connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
+  connect(ui->actionLoadSaveState, &QAction::triggered, this,
+          &MainWindow::loadSaveState);
+  connect(ui->actionMemoryView, &QAction::triggered, this,
+          &MainWindow::openMemoryView);
 
   connect(ui->actionKeyBindings, &QAction::triggered, this,
           &MainWindow::openKeyBindingsWindow);
@@ -113,13 +114,31 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::loadROM() {
-  QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), ".",
+  // select rom to run
+  QString pwd = "/Users/paulscott/git/DotMatrix/roms/tests/cpu_instrs";
+  QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), pwd,
                                                  tr("Game Boy ROMs (*.gb)"));
-  cgb.run(romName);
+  if (romName != "") {
+    // stop current emulation threads
+    if (cgb != nullptr) {
+      cgb->threadsRunning = false;
+    }
+
+    // create new emulation threads
+    cgb = new CGB(palette);
+    connect(&cgb->ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
+
+    // run selected rom
+    cgb->run(romName);
+  }
 }
 
 void MainWindow::setScreen(QImage image) {
-  ui->screen->setPixmap(QPixmap::fromImage(image));
+  // no anti-aliasing when resizing image
+  auto pixmap = QPixmap::fromImage(image).scaled(
+      ui->screen->width(), ui->screen->height(), Qt::KeepAspectRatio,
+      Qt::FastTransformation);
+  ui->screen->setPixmap(pixmap);
 }
 
 void MainWindow::setScale(int scale) {
@@ -134,7 +153,7 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setSpeed(int speed) { cgb.speedMult = pow(2, speed - 2); }
+void MainWindow::setSpeed(int speed) { cgb->speedMult = pow(2, speed - 2); }
 
 void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
                                   QSignalMapper *sigMap, int mapVal) {
@@ -151,15 +170,15 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 }
 
 void MainWindow::setPalette(QObject *palette) {
-  cgb.palette = (Palette *)palette;
+  cgb->palette = (Palette *)palette;
 }
 
 void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(cgb.controls);
+  KeyBindingsWindow kbWin(cgb->controls);
   kbWin.exec();
 }
 
-void MainWindow::loadSaveState() { cgb.runFromSaveState(); }
+void MainWindow::loadSaveState() { cgb->runFromSaveState(); }
 
 void MainWindow::openMemoryView() {
   MemoryView memView{};
@@ -167,11 +186,11 @@ void MainWindow::openMemoryView() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-  cgb.controls.press(event->key());
+  cgb->controls.press(event->key());
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
-    cgb.controls.release(event->key());
+    cgb->controls.release(event->key());
   }
 }
