@@ -29,7 +29,6 @@ class Timers : public QThread {
 
  public:
   Timers(Memory &mem);
-  ~Timers();
 
   void run() override;
 };

@@ -8,6 +8,7 @@
 
 #include "ppu.h"
 
+#include "bootstrap.h"
 #include "clock.h"
 #include "interrupts.h"
 
@@ -81,6 +82,9 @@ void PPU::run() {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
             Interrupts::request(V_BLANK_INT);
+            // if (!(Bootstrap::enabled &&
+            //       Bootstrap::speedMult == CLOCK_FAST_FORWARD)) {
+            //             }
             emit sendScreen(screen);
           }
           Clock::wait(PPU_CLOCK, V_BLANK_CYCLES);

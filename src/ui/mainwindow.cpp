@@ -183,8 +183,7 @@ void MainWindow::openMemoryView() {
 }
 
 void MainWindow::toggleBootScreen(bool showBootScreen) {
-  Bootstrap::speedMult =
-      showBootScreen ? CLOCK_FAST_FORWARD : CLOCK_NORMAL_SPEED;
+  Bootstrap::skip = !showBootScreen;
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

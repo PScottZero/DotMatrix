@@ -13,11 +13,6 @@ Timers::Timers(Memory &mem)
       timaCycles(),
       divCycles() {}
 
-Timers::~Timers() {
-  Clock::threadsRunning = false;
-  wait();
-}
-
 void Timers::run() {
   while (Clock::threadsRunning) {
     if (!Clock::stop) {

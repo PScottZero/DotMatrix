@@ -9,7 +9,9 @@ class Bootstrap {
   static uint8 bootstrap[BOOTSTRAP_BYTES];
 
  public:
-  static float speedMult;
   static bool enabled;
+  static bool skip;
+
   static uint8 *at(uint16 addr);
+  static bool skipWait();
 };

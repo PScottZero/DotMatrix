@@ -32,6 +32,8 @@ set(PROJECT_SOURCES
         src/emulator/clock.h
         src/emulator/bootstrap.cpp
         src/emulator/bootstrap.h
+        src/emulator/log.cpp
+        src/emulator/log.h
         src/emulator/types.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h

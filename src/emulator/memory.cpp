@@ -1,8 +1,8 @@
 #include "memory.h"
 
-#include "json.hpp"
-
 #include "bootstrap.h"
+#include "clock.h"
+#include "json.hpp"
 
 Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
@@ -33,6 +33,13 @@ uint8 Memory::read(uint16 addr, uint8 &cycles) {
   // restricted memory location
   if (memoryRestricted(addr)) {
     return 0x00;
+  }
+
+  // skip waiting for screen frame in
+  // bootstrap by returning hex 90 when
+  // reading the LY register
+  if (addr == LY && Bootstrap::enabled && Bootstrap::skip) {
+    return 0x90;
   }
 
   // read from memory
@@ -73,8 +80,9 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
 
   // turn off boostrap if writing
   // nonzero value to address ff50
-  else if (addr == BOOTSTRAP) {
+  else if (addr == BOOTSTRAP && val != 0) {
     Bootstrap::enabled = false;
+    if (Bootstrap::skip) Clock::reset();
   }
 
   // write to memory

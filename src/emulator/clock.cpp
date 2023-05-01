@@ -7,8 +7,8 @@ timepoint Clock::ppuClock = Clock::cpuClock + nanoseconds(0);
 timepoint Clock::timersClock = Clock::cpuClock + nanoseconds(0);
 
 float Clock::speedMult = CLOCK_NORMAL_SPEED;
-bool Clock::threadsRunning = false;
 bool Clock::stop = false;
+bool Clock::threadsRunning = true;
 
 void Clock::wait(ClockType type, int cycles) {
   timepoint *clock = nullptr;
@@ -25,9 +25,7 @@ void Clock::wait(ClockType type, int cycles) {
   }
 
   if (clock != nullptr) {
-    float speedMult =
-        Bootstrap::enabled ? Bootstrap::speedMult : Clock::speedMult;
-    *clock += nanoseconds((int)(CYCLE_TIME_NS * cycles / speedMult));
+    *clock += nanoseconds((int)((CYCLE_TIME_NS * cycles) / Clock::speedMult));
     std::this_thread::sleep_until(*clock);
   }
 }

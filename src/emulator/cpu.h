@@ -85,11 +85,8 @@ class CPU : public QThread {
   // interrupt functions
   void handleInterrupts(uint8 &cycles);
 
-  void log(std::fstream &fs);
-
  public:
   CPU(Memory &mem);
-  ~CPU();
 
   void run() override;
 

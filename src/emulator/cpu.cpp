@@ -8,9 +8,11 @@
 
 #include "cpu.h"
 
+#include "bootstrap.h"
 #include "clock.h"
 #include "interrupts.h"
 #include "json.hpp"
+#include "log.h"
 
 CPU::CPU(Memory &mem)
     : QThread(),
@@ -37,16 +39,7 @@ CPU::CPU(Memory &mem)
       mem(mem),
       shouldSetIME(false) {}
 
-CPU::~CPU() {
-  Clock::threadsRunning = false;
-  wait();
-}
-
 void CPU::run() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_log.txt",
-                  std::ios::out);
-  char logLine[256];
-
   bool delaySetIME = true;
   while (Clock::threadsRunning) {
     if (!Clock::stop) {
@@ -58,7 +51,11 @@ void CPU::run() {
 
       // run instruction at current PC
       if (!halt) {
-        log(fs);
+        Log::logCPUState(PC, SP, A, BC, DE, HL, mem.getByte(LCDC),
+                         mem.getByte(STAT), mem.getByte(LY), mem.getByte(SCX),
+                         mem.getByte(SCY), IME, *Interrupts::intEnable,
+                         *Interrupts::intFlags, carry, halfCarry, subtract,
+                         zero);
         runInstr(mem.imm8(PC, cycles), cycles);
       } else {
         cycles = 1;
@@ -78,12 +75,11 @@ void CPU::run() {
 
       // wait until the time corresponding to the number
       // of cycles has passed
-      Clock::wait(CPU_CLOCK, cycles);
+      if (!Bootstrap::skipWait()) Clock::wait(CPU_CLOCK, cycles);
     } else {
       Clock::reset();
     }
   }
-  fs.close();
 }
 
 // **************************************************
@@ -1266,20 +1262,20 @@ void CPU::handleInterrupts(uint8 &cycles) {
     uint16 intAddr = 0;
     if (Interrupts::requestedAndEnabled(V_BLANK_INT)) {
       intAddr = 0x40;
-      Interrupts::reset(V_BLANK_INT);
+      Interrupts::reset(PC, V_BLANK_INT);
     } else if (Interrupts::requestedAndEnabled(LCDC_INT)) {
       intAddr = 0x48;
-      Interrupts::reset(LCDC_INT);
+      Interrupts::reset(PC, LCDC_INT);
     } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
       intAddr = 0x50;
-      Interrupts::reset(TIMER_INT);
+      Interrupts::reset(PC, TIMER_INT);
     } else if (Interrupts::requestedAndEnabled(SERIAL_INT) ||
                (mem.getByte(SC) & 0x81) == 0x81) {
       intAddr = 0x58;
-      Interrupts::reset(SERIAL_INT);
+      Interrupts::reset(PC, SERIAL_INT);
     } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
       intAddr = 0x60;
-      Interrupts::reset(JOYPAD_INT);
+      Interrupts::reset(PC, JOYPAD_INT);
     }
 
     if (intAddr != 0) {
@@ -1289,25 +1285,6 @@ void CPU::handleInterrupts(uint8 &cycles) {
       cycles += 2;
     }
   }
-}
-
-// **************************************************
-// **************************************************
-// Log Function
-// **************************************************
-// **************************************************
-
-void CPU::log(std::fstream &fs) {
-  char logLine[256];
-  snprintf(logLine, 256,
-           "PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | "
-           "IME: %d | LCDC: %02x | STAT: %02x | LY: %02x | SCX: %02x | SCY: "
-           "%02x | IE: %02x | IF: %02x "
-           "| CHNZ: %d%d%d%d\n",
-           PC, SP, A, BC, DE, HL, IME, mem.getByte(LCDC), mem.getByte(STAT),
-           mem.getByte(LY), mem.getByte(SCX), mem.getByte(SCY), mem.getByte(IE),
-           mem.getByte(IF), carry, halfCarry, subtract, zero);
-  fs.write(logLine, strlen(logLine));
 }
 
 void CPU::loadState() {

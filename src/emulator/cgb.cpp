@@ -1,7 +1,7 @@
 #include "cgb.h"
 
-#include "interrupts.h"
 #include "clock.h"
+#include "interrupts.h"
 
 CGB::CGB(Palette *palette)
     : palette(palette),
@@ -24,7 +24,6 @@ CGB::~CGB() {
 
 void CGB::run(QString dir) {
   mem.loadROM(dir);
-  Clock::threadsRunning = true;
   Clock::reset();
   cpu.start();
   ppu.start();
@@ -34,7 +33,6 @@ void CGB::run(QString dir) {
 void CGB::runFromSaveState() {
   cpu.loadState();
   mem.loadState();
-  Clock::threadsRunning = true;
   Clock::reset();
   cpu.start();
   ppu.start();

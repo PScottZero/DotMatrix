@@ -7,7 +7,7 @@
 using namespace std::chrono;
 
 #define CLOCK_NORMAL_SPEED 1
-#define CLOCK_FAST_FORWARD 100
+#define CLOCK_FAST_FORWARD 0.5
 
 #define DMG_CLOCK_SPEED 0x100000  // 1MHz
 #define NS_PER_SEC 1000000000
@@ -25,8 +25,8 @@ class Clock {
 
  public:
   static float speedMult;
-  static bool threadsRunning;
   static bool stop;
+  static bool threadsRunning;
 
   static void wait(ClockType type, int cycles);
   static void reset();
