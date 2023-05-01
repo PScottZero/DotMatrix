@@ -59,6 +59,8 @@
 #define BG_MAP_ADDR_0 0x9800
 #define BG_MAP_ADDR_1 0x9C00
 
+using namespace std;
+
 // sprite oam entry
 typedef struct {
   uint8 y;
@@ -79,7 +81,7 @@ typedef struct {
 } scanline_t;
 
 // tile row of eight pixels
-using TileRow = std::array<uint8, TILE_PX_DIM>;
+using TileRow = array<uint8, TILE_PX_DIM>;
 
 class PPU : public QThread {
   Q_OBJECT

@@ -1,18 +1,14 @@
 #include "cgb.h"
 
+#include "bootstrap.h"
 #include "clock.h"
 #include "interrupts.h"
 
 CGB::CGB(Palette *palette)
-    : palette(palette),
-      mem(),
-      ppu(mem, palette),
-      cpu(mem),
-      timers(mem),
-      controls(mem) {
-  mem.controls = &controls;
+    : palette(palette), mem(), ppu(mem, palette), cpu(mem), timers(mem) {
   Interrupts::intEnable = mem.getBytePtr(IE);
   Interrupts::intFlags = mem.getBytePtr(IF);
+  Controls::p1 = mem.getBytePtr(P1);
 }
 
 CGB::~CGB() {
@@ -39,4 +35,13 @@ void CGB::runFromSaveState() {
   timers.start();
 }
 
-void CGB::reset() {}
+void CGB::reset() {
+  Clock::threadsRunning = false;
+  cpu.wait();
+  ppu.wait();
+  timers.wait();
+  Clock::threadsRunning = true;
+  cpu.reset();
+  mem.reset();
+  Bootstrap::enabled = true;
+}

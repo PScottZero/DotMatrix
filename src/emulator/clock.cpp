@@ -1,6 +1,6 @@
 #include "clock.h"
 
-#include "bootstrap.h"
+#include "log.h"
 
 timepoint Clock::cpuClock = system_clock::now();
 timepoint Clock::ppuClock = Clock::cpuClock + nanoseconds(0);
@@ -26,7 +26,8 @@ void Clock::wait(ClockType type, int cycles) {
 
   if (clock != nullptr) {
     *clock += nanoseconds((int)((CYCLE_TIME_NS * cycles) / Clock::speedMult));
-    std::this_thread::sleep_until(*clock);
+    this_thread::sleep_until(*clock);
+    Log::logClock(type, *clock);
   }
 }
 

@@ -25,7 +25,7 @@ class Timers : public QThread {
 
   void updateTimers();
   bool timerEnabled();
-  uint8 timerFreq();
+  int timerFreq();
 
  public:
   Timers(Memory &mem);

@@ -89,6 +89,7 @@ class CPU : public QThread {
   CPU(Memory &mem);
 
   void run() override;
+  void reset();
 
   void loadState();
   void saveState();

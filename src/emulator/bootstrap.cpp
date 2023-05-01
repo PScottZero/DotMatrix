@@ -1,7 +1,5 @@
 #include "bootstrap.h"
 
-#include "clock.h"
-
 bool Bootstrap::enabled = true;
 bool Bootstrap::skip = true;
 

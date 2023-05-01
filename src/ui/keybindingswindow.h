@@ -27,8 +27,8 @@ class KeyBindingsWindow : public QDialog {
   Controls &controls;
   Button selectedButton;
   bool acceptKeyPress;
-  std::map<Button, QLabel *> buttonKeyLabels;
-  std::map<Button, QPushButton *> setKeyButtons;
+  map<Button, QLabel *> buttonKeyLabels;
+  map<Button, QPushButton *> setKeyButtons;
 
   void startBind(Button button);
 };

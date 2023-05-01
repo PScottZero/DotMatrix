@@ -49,6 +49,13 @@ void CPU::run() {
       // check for interrupts
       handleInterrupts(cycles);
 
+      if (mem.getByte(OAM_ADDR + 12) == 0x80) {
+        saveState();
+        mem.saveState();
+        Clock::stop = true;
+        break;
+      }
+
       // run instruction at current PC
       if (!halt) {
         Log::logCPUState(PC, SP, A, BC, DE, HL, mem.getByte(LCDC),
@@ -80,6 +87,11 @@ void CPU::run() {
       Clock::reset();
     }
   }
+}
+
+void CPU::reset() {
+  PC = SP = A = BC = DE = HL = 0;
+  carry = halfCarry = subtract = zero = IME = shouldSetIME = halt = false;
 }
 
 // **************************************************
@@ -437,6 +449,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 4 ----
     // return from interrupt
     case 0xD9:
+      Log::logInterruptReturn(PC);
       PC = pop(cycles);
       IME = true;
       ++cycles;
@@ -493,6 +506,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 1 ----
     // reset interrupt master enable flag
     case 0xF3:
+      Log::logInterruptDisable(PC);
       IME = false;
       break;
 
@@ -500,6 +514,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 1 ----
     // set interrupt master enable flag
     case 0xFB:
+      Log::logInterruptEnable(PC);
       shouldSetIME = true;
       break;
 
@@ -1269,8 +1284,7 @@ void CPU::handleInterrupts(uint8 &cycles) {
     } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
       intAddr = 0x50;
       Interrupts::reset(PC, TIMER_INT);
-    } else if (Interrupts::requestedAndEnabled(SERIAL_INT) ||
-               (mem.getByte(SC) & 0x81) == 0x81) {
+    } else if (Interrupts::requestedAndEnabled(SERIAL_INT)) {
       intAddr = 0x58;
       Interrupts::reset(PC, SERIAL_INT);
     } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
@@ -1280,6 +1294,7 @@ void CPU::handleInterrupts(uint8 &cycles) {
 
     if (intAddr != 0) {
       IME = false;
+      Log::logInterruptDisable(PC);
       push(PC, cycles);
       PC = intAddr;
       cycles += 2;
@@ -1288,17 +1303,16 @@ void CPU::handleInterrupts(uint8 &cycles) {
 }
 
 void CPU::loadState() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json",
-                  std::ios::in);
-  fs.seekg(0, std::ios::end);
+  fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::in);
+  fs.seekg(0, ios::end);
   int size = fs.tellg();
-  fs.seekg(0, std::ios::beg);
+  fs.seekg(0, ios::beg);
 
   char readBuf[size + 1];
   fs.read(readBuf, size);
   readBuf[size] = 0;
 
-  auto state = nlohmann::json::parse(std::string(readBuf));
+  auto state = nlohmann::json::parse(string(readBuf));
   PC = state["PC"];
   SP = state["SP"];
   A = state["A"];
@@ -1321,9 +1335,8 @@ void CPU::saveState() {
       {"carry", carry},     {"halfCarry", carry}, {"subtract", subtract},
       {"zero", zero},       {"IME", IME},         {"halt", halt},
       {"stop", Clock::stop}};
-  std::string stateStr = state.dump(4);
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json",
-                  std::ios::out);
+  string stateStr = state.dump(4);
+  fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::out);
   fs.write(stateStr.c_str(), stateStr.size());
   fs.close();
 }

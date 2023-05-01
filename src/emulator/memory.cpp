@@ -2,6 +2,7 @@
 
 #include "bootstrap.h"
 #include "clock.h"
+#include "controls.h"
 #include "json.hpp"
 
 Memory::Memory()
@@ -9,8 +10,7 @@ Memory::Memory()
       cart((uint8 *)malloc(CART_BYTES)),
       romBank0((uint8 *)malloc(ROM_BANK_BYTES)),
       romBank1((uint8 *)malloc(ROM_BANK_BYTES)),
-      dmaTransferMode(false),
-      controls(nullptr) {}
+      dmaTransferMode(false) {}
 
 Memory::~Memory() {
   free(mem);
@@ -91,16 +91,14 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   // start dma transfer if dma
   // address was written to
   if (addr == DMA) {
-    std::thread dmaTransferThread(&Memory::dmaTransfer, this);
+    thread dmaTransferThread(&Memory::dmaTransfer, this);
     dmaTransferThread.detach();
   }
 
   // update state of controls if
   // writing to joypad register
   if (addr == P1) {
-    if (controls != nullptr) {
-      controls->update();
-    }
+    Controls::update();
   }
 }
 
@@ -169,15 +167,15 @@ void Memory::setByte(uint16 addr, uint8 val) { *getBytePtr(addr) = val; }
 // can only be access outside of
 // pixel transfer mode
 bool Memory::canAccessVRAM() {
-  return (mem[STAT] & 0b11) != _PIXEL_TRANSFER_MODE;
+  return (getByte(STAT) & 0b11) != _PIXEL_TRANSFER_MODE;
 }
 
 // check if OAM memory can be accessed,
 // can only be accesses outside of
 // pixel transfer and oam search mode
 bool Memory::canAccessOAM() {
-  return (mem[STAT] & 0b11) != _PIXEL_TRANSFER_MODE &&
-         (mem[STAT] & 0b11) != _OAM_SEARCH_MODE;
+  return (getByte(STAT) & 0b11) != _PIXEL_TRANSFER_MODE &&
+         (getByte(STAT) & 0b11) != _OAM_SEARCH_MODE;
 }
 
 // **************************************************
@@ -188,7 +186,7 @@ bool Memory::canAccessOAM() {
 
 // load rom at the given directory into memory
 void Memory::loadROM(QString dir) {
-  std::fstream fs(dir.toStdString());
+  fstream fs(dir.toStdString());
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
@@ -206,26 +204,33 @@ void Memory::mapCartMem(uint8 *romBank, uint16 startAddr) {
 // perform dma transfer
 void Memory::dmaTransfer() {
   dmaTransferMode = true;
-  uint16 dmaAddr = mem[DMA] << 8;
+  uint16 dmaAddr = getByte(DMA) << 8;
   for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
-    mem[OAM_ADDR + i] = mem[dmaAddr + i];
+    setByte(OAM_ADDR + i, getByte(dmaAddr + i));
   }
   dmaTransferMode = false;
 }
 
 void Memory::loadState() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin",
-                  std::ios::in);
+  fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", ios::in);
   fs.read((char *)romBank0, ROM_BANK_BYTES);
   fs.read((char *)romBank1, ROM_BANK_BYTES);
   fs.read((char *)mem, MEM_BYTES);
 }
 
 void Memory::saveState() {
-  std::fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin",
-                  std::ios::out);
+  fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", ios::out);
   fs.write((char *)romBank0, ROM_BANK_BYTES);
   fs.write((char *)romBank1, ROM_BANK_BYTES);
   fs.write((char *)mem, MEM_BYTES);
   fs.close();
+}
+
+void Memory::reset() {
+  for (int i = 0; i < MEM_BYTES; ++i) {
+    mem[i] = 0;
+  }
+  dmaTransferMode = false;
+  mapCartMem(romBank0, 0x000000);
+  mapCartMem(romBank1, 0x004000);
 }

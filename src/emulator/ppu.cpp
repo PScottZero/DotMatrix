@@ -8,7 +8,6 @@
 
 #include "ppu.h"
 
-#include "bootstrap.h"
 #include "clock.h"
 #include "interrupts.h"
 
@@ -82,9 +81,6 @@ void PPU::run() {
             setMode(V_BLANK_MODE);
             setLCDInterrupt();
             Interrupts::request(V_BLANK_INT);
-            // if (!(Bootstrap::enabled &&
-            //       Bootstrap::speedMult == CLOCK_FAST_FORWARD)) {
-            //             }
             emit sendScreen(screen);
           }
           Clock::wait(PPU_CLOCK, V_BLANK_CYCLES);
@@ -142,7 +138,7 @@ void PPU::renderBg(scanline_t &scanline) {
 void PPU::renderSprites(scanline_t &scanline) {
   for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
     sprite_t sprite = visibleSprites[spriteIdx];
-    uint8 spriteRow = ly - sprite.y - 16;
+    uint8 spriteRow = (ly + 16) - sprite.y;
     TileRow row = getSpriteRow(sprite, spriteRow);
 
     // draw sprite row onto screen
@@ -178,8 +174,8 @@ void PPU::findVisibleSprites() {
   visibleSpriteCount = 0;
   for (uint8 oamIdx = 0; oamIdx < OAM_ENTRY_COUNT; oamIdx++) {
     sprite_t oamEntry = getSpriteOAM(oamIdx);
-    if (oamEntry.y >= ly + SPRITE_PX_HEIGHT_TALL &&
-        oamEntry.y < ly + SPRITE_PX_HEIGHT_TALL + spriteHeight() &&
+    if ((ly + SPRITE_PX_HEIGHT_TALL) >= oamEntry.y &&
+        (ly + SPRITE_PX_HEIGHT_TALL) < (oamEntry.y + spriteHeight()) &&
         oamEntry.x != 0) {
       visibleSprites[visibleSpriteCount] = oamEntry;
       ++visibleSpriteCount;

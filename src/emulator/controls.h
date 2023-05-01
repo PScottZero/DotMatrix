@@ -4,8 +4,9 @@
 #include <map>
 #include <vector>
 
-#include "memory.h"
 #include "types.h"
+
+using namespace std;
 
 enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 
@@ -19,26 +20,21 @@ enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 #define SELECT_MASK 0x4
 #define START_MASK 0x8
 
-class Memory;
-
 class Controls {
  private:
-  std::map<Button, bool> state;
-
-  uint8 &p1;
-
-  std::map<int, Button> invertKeybindingsMap();
+  static map<Button, bool> state;
+  static map<int, Button> invertKeybindingsMap();
 
  public:
-  std::map<Button, int> keyBindings;
-  std::map<int, Button> keyBindingsInv;
-  std::map<Button, uint8> buttonToMask;
+  static map<Button, int> keyBindings;
+  static map<int, Button> keyBindingsInv;
+  const static map<Button, uint8> buttonToMask;
 
-  Controls(Memory &mem);
+  static uint8 *p1;
 
-  void update();
+  static void update();
 
-  void press(int key);
-  void release(int key);
-  void bind(int key, Button button);
+  static void press(int key);
+  static void release(int key);
+  static void bind(int key, Button button);
 };

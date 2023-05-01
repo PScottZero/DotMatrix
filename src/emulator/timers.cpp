@@ -9,7 +9,7 @@ Timers::Timers(Memory &mem)
       tima(mem.getByte(TIMA)),
       tma(mem.getByte(TMA)),
       tac(mem.getByte(TAC)),
-      timaFreqs{},
+      timaFreqs{TIMA_CYCLES_00, TIMA_CYCLES_01, TIMA_CYCLES_10, TIMA_CYCLES_11},
       timaCycles(),
       divCycles() {}
 
@@ -27,8 +27,7 @@ void Timers::run() {
 void Timers::updateTimers() {
   // update TIMA timer
   if (timerEnabled()) {
-    ++timaCycles;
-    if (timaCycles >= timerFreq()) {
+    if (++timaCycles >= timerFreq()) {
       // on TIMA overflow, set TIMA
       // to TMA and request a timer
       // interrupt
@@ -41,8 +40,7 @@ void Timers::updateTimers() {
   }
 
   // update DIV timer
-  ++divCycles;
-  if (divCycles >= DIV_CYCLES) {
+  if (++divCycles >= DIV_CYCLES) {
     ++div;
     divCycles -= DIV_CYCLES;
   }
@@ -50,4 +48,4 @@ void Timers::updateTimers() {
 
 bool Timers::timerEnabled() { return tac & 0x04; }
 
-uint8 Timers::timerFreq() { return timaFreqs[tac & 0b11]; }
+int Timers::timerFreq() { return timaFreqs[tac & 0b11]; }
