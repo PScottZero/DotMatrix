@@ -9,7 +9,6 @@
 #pragma once
 
 #include <QImage>
-#include <QThread>
 #include <array>
 #include <thread>
 
@@ -20,9 +19,10 @@
 // clock speed constants
 #define PPU_CLOCK_SPEED 0x100000
 #define OAM_SEARCH_CYCLES 20
-#define PIXEL_TRANSFER_CYCLES 43
-#define H_BLANK_CYCLES 51
+#define PIXEL_TRANSFER_CYCLES OAM_SEARCH_CYCLES + 43
+#define H_BLANK_CYCLES PIXEL_TRANSFER_CYCLES + 51
 #define V_BLANK_CYCLES 114
+#define SCANLINE_CYCLES 114
 #define _NS_PER_SEC 1000000000
 
 // px constants
@@ -83,15 +83,14 @@ typedef struct {
 // tile row of eight pixels
 using TileRow = array<uint8, TILE_PX_DIM>;
 
-class PPU : public QThread {
-  Q_OBJECT
-
+class PPU {
  private:
   uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   uint8 visibleSpriteCount;
   Memory &mem;
   Palette *palette;
+  uint8 ppuCycles;
 
   // rendering functions
   void renderBg(scanline_t &scanline);
@@ -117,15 +116,14 @@ class PPU : public QThread {
 
   // stat register functions
   void setMode(uint8 mode);
+  uint8 getMode();
   void setLCDInterrupt();
 
  public:
   QImage screen;
+  bool frameRendered;
 
   PPU(Memory &mem, Palette *palette);
 
-  void run() override;
-
- signals:
-  void sendScreen(QImage);
+  void step(uint8 cycles);
 };

@@ -7,28 +7,23 @@
 #include "types.h"
 
 #define TIMER_BASE_FREQ 0x100000  // 1MHz
-#define TIMA_CYCLES_00 256
-#define TIMA_CYCLES_01 4
-#define TIMA_CYCLES_10 16
-#define TIMA_CYCLES_11 64
-#define DIV_CYCLES 64
+#define TAC_00 0x03FF
+#define TAC_01 0x000F
+#define TAC_10 0x003F
+#define TAC_11 0x00FF
 
-class Timers : public QThread {
-  Q_OBJECT
+#define DIV_MASK 0xFF00
 
+class Timers {
  private:
-  uint8 &div, &tima, &tma, &tac;
+  static const uint16 internalCounterMasks[4];
 
-  int timaFreqs[4];
-  int timaCycles;
-  int divCycles;
-
-  void updateTimers();
-  bool timerEnabled();
-  int timerFreq();
+  static bool timerEnabled();
+  static uint8 timerFreq();
 
  public:
-  Timers(Memory &mem);
+  static uint8 *div, *tima, *tma, *tac;
+  static uint16 internalCounter;
 
-  void run() override;
+  static void step(int cycles);
 };

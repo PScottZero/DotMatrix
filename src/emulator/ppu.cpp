@@ -8,12 +8,11 @@
 
 #include "ppu.h"
 
-#include "clock.h"
+#include "bootstrap.h"
 #include "interrupts.h"
 
 PPU::PPU(Memory &mem, Palette *palette)
-    : QThread(),
-      screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
+    : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       lcdc(mem.getByte(LCDC)),
       stat(mem.getByte(STAT)),
       scy(mem.getByte(SCY)),
@@ -29,66 +28,83 @@ PPU::PPU(Memory &mem, Palette *palette)
       visibleSprites(),
       visibleSpriteCount(),
       mem(mem),
-      palette(palette) {}
+      palette(palette),
+      ppuCycles(),
+      frameRendered(false) {}
 
-void PPU::run() {
-  while (Clock::threadsRunning) {
-    if (!Clock::stop && lcdEnable()) {
-      scanline_t scanline;
+void PPU::step(uint8 cycles) {
+  if (lcdEnable()) {
+    ppuCycles += cycles;
 
-      for (uint8 lineNo = 0; lineNo < SCREEN_LINES; ++lineNo) {
-        ly = lineNo;
+    if (ppuCycles > SCANLINE_CYCLES) {
+      if (++ly >= SCREEN_LINES) ly = 0;
 
-        // check if current line number
-        // is equal to the value in LYC
-        if (ly == lyc) {
-          stat |= 0x04;
-        } else {
-          stat &= 0xFB;
-        }
+      // check if current line number
+      // is equal to the value in LYC
+      if (ly == lyc) {
+        stat |= 0x04;
         setLCDInterrupt();
+      } else {
+        stat &= 0xFB;
+      }
 
-        if (lineNo < SCREEN_PX_HEIGHT) {
-          // **************************************************
-          // OAM Search
-          // **************************************************
+      ppuCycles %= SCANLINE_CYCLES;
+    }
+
+    if (ly < SCREEN_PX_HEIGHT) {
+      // **************************************************
+      // OAM Search
+      // **************************************************
+      if (ppuCycles < OAM_SEARCH_CYCLES) {
+        if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
           setLCDInterrupt();
-          findVisibleSprites();
-          Clock::wait(PPU_CLOCK, OAM_SEARCH_CYCLES);
+          if (!Bootstrap::skipWait()) {
+            findVisibleSprites();
+          }
+        }
+      }
 
-          // **************************************************
-          // Pixel Transfer
-          // **************************************************
+      // **************************************************
+      // Pixel Transfer
+      // **************************************************
+      else if (ppuCycles < PIXEL_TRANSFER_CYCLES) {
+        if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
-          if (bgEnable()) renderBg(scanline);
-          if (spriteEnable()) renderSprites(scanline);
-          if (windowEnable()) renderWindow(scanline);
-          transferScanlineToScreen(scanline);
-          Clock::wait(PPU_CLOCK, PIXEL_TRANSFER_CYCLES);
+          setLCDInterrupt();
+          if (!Bootstrap::skipWait()) {
+            scanline_t scanline;
+            if (bgEnable()) renderBg(scanline);
+            if (spriteEnable()) renderSprites(scanline);
+            if (windowEnable()) renderWindow(scanline);
+            transferScanlineToScreen(scanline);
+          }
+        }
+      }
 
-          // **************************************************
-          // H-Blank
-          // **************************************************
+      // **************************************************
+      // H-Blank
+      // **************************************************
+      else if (ppuCycles < H_BLANK_CYCLES) {
+        if (getMode() != H_BLANK_MODE) {
           setMode(H_BLANK_MODE);
           setLCDInterrupt();
-          Clock::wait(PPU_CLOCK, H_BLANK_CYCLES);
-        } else {
-          // **************************************************
-          // V-Blank
-          // **************************************************
-          if ((stat & 0b11) != V_BLANK_MODE) {
-            setMode(V_BLANK_MODE);
-            setLCDInterrupt();
-            Interrupts::request(V_BLANK_INT);
-            emit sendScreen(screen);
-          }
-          Clock::wait(PPU_CLOCK, V_BLANK_CYCLES);
         }
       }
     } else {
-      Clock::reset();
+      // **************************************************
+      // V-Blank
+      // **************************************************
+      if (getMode() != V_BLANK_MODE) {
+        setMode(V_BLANK_MODE);
+        setLCDInterrupt();
+        Interrupts::request(V_BLANK_INT);
+        frameRendered = true;
+      }
     }
+  } else {
+    ly = 0;
+    ppuCycles = 0;
   }
 }
 
@@ -318,6 +334,8 @@ void PPU::setMode(uint8 mode) {
   stat &= 0xFC;
   stat |= mode;
 }
+
+uint8 PPU::getMode() { return stat & 0b11; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register

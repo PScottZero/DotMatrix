@@ -1,9 +1,9 @@
 #include "memory.h"
 
 #include "bootstrap.h"
-#include "clock.h"
 #include "controls.h"
 #include "json.hpp"
+#include "timers.h"
 
 Memory::Memory()
     : mem((uint8 *)malloc(MEM_BYTES)),
@@ -38,7 +38,7 @@ uint8 Memory::read(uint16 addr, uint8 &cycles) {
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && Bootstrap::enabled && Bootstrap::skip) {
+  if (addr == LY && Bootstrap::skipWait()) {
     return 0x90;
   }
 
@@ -62,8 +62,10 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   }
 
   // writing anything to DIV register
-  // will set its value to zero
+  // will reset the internal counter
+  // and the DIV register
   if (addr == DIV) {
+    Timers::internalCounter = 0;
     setByte(DIV, 0);
   }
 
@@ -82,7 +84,6 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   // nonzero value to address ff50
   else if (addr == BOOTSTRAP && val != 0) {
     Bootstrap::enabled = false;
-    if (Bootstrap::skip) Clock::reset();
   }
 
   // write to memory

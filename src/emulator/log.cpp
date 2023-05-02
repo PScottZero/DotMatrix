@@ -1,98 +1,70 @@
 #include "log.h"
 
-#include <chrono>
-
 #include "interrupts.h"
 
-fstream Log::cpuLog("/Users/paulscott/git/DotMatrix/debug/cpu_log.txt",
-                    ios::out);
-fstream Log::intLog("/Users/paulscott/git/DotMatrix/debug/interrupt_log.txt",
-                    ios::out);
-fstream Log::clockLog("/Users/paulscott/git/DotMatrix/debug/clock_log.txt",
-                      ios::out);
+fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
 
-mutex Log::cpuLogMutex;
-mutex Log::intLogMutex;
-mutex Log::clockLogMutex;
+fstream Log::opLog("/Users/paulscott/git/DotMatrix/debug/op_log.txt", ios::out);
 
 const map<uint8, string> Log::intName = {
     {V_BLANK_INT, "VBLANK"}, {LCDC_INT, "LCDC"},     {TIMER_INT, "TIMER"},
     {SERIAL_INT, "SERIAL"},  {JOYPAD_INT, "JOYPAD"},
 };
 
-const map<ClockType, string> Log::clockName = {
-    {ClockType::CPU_CLOCK, "CPU"},
-    {ClockType::PPU_CLOCK, "PPU"},
-    {ClockType::TIMERS_CLOCK, "TIMERS"},
-};
-
 void Log::logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,
-                      uint16 HL, uint8 lcdc, uint8 stat, uint8 ly, uint8 scx,
-                      uint8 scy, bool IME, uint8 intEnable, uint8 intFlags,
-                      bool carry, bool halfCarry, bool subtract, bool zero) {
+                      uint16 HL, bool carry, bool halfCarry, bool subtract,
+                      bool zero, bool IME, uint8 intEnable, uint8 intFlags,
+                      uint8 lcdc, uint8 stat, uint8 ly) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES,
-           "PC: %04x | SP: %04x | A: %02x | BC: %04x | DE: %04x | HL: %02x | "
-           "LCDC: %02x | STAT: %02x | LY: %02x | SCX: %02x | SCY: %02x | "
-           "IME: %d | IE: %02x | IF: %02x | CHNZ: %d%d%d%d\n",
-           PC, SP, A, BC, DE, HL, lcdc, stat, ly, scx, scy, IME, intEnable,
-           intFlags, carry, halfCarry, subtract, zero);
-  cpuLogMutex.lock();
-  Log::cpuLog.write(logLine, strlen(logLine));
-  cpuLogMutex.unlock();
+           "CPU >>> PC: %04X | SP: %04X | A: %02X | BC: %04X | DE: %04X | HL: "
+           "%04X | CHNZ: %d%d%d%d | IME: %d | IE: %02X | IF: %02X | LCDC: %02X "
+           "| STAT: %02X | LY: %02X\n",
+           PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero, IME,
+           intEnable, intFlags, lcdc, stat, ly);
+  log.write(logLine, strlen(logLine));
+}
+
+void Log::logCPUCycles(uint8 opcode, uint8 cbOpcode, uint8 cycles) {
+  char logLine[LINE_BYTES];
+  if (opcode == 0xCB) {
+    snprintf(logLine, LINE_BYTES, "OPCODE %02X %02X TOOK %d CYCLES\n", opcode,
+             cbOpcode, cycles);
+  } else {
+    snprintf(logLine, LINE_BYTES, "OPCODE %02X TOOK %d CYCLES\n", opcode,
+             cycles);
+  }
+  opLog.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptEnable(uint16 PC) {
   char logLine[LINE_BYTES];
-  snprintf(logLine, LINE_BYTES, "ENABLED INTERRUPTS @ PC %04x\n", PC);
-  intLogMutex.lock();
-  Log::intLog.write(logLine, strlen(logLine));
-  intLogMutex.unlock();
+  snprintf(logLine, LINE_BYTES, "INT >>> ENABLED INTERRUPTS AT PC %04X\n", PC);
+  log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptDisable(uint16 PC) {
   char logLine[LINE_BYTES];
-  snprintf(logLine, LINE_BYTES, "DISABLED INTERRUPTS @ PC %04x\n", PC);
-  intLogMutex.lock();
-  Log::intLog.write(logLine, strlen(logLine));
-  intLogMutex.unlock();
+  snprintf(logLine, LINE_BYTES, "INT >>> DISABLED INTERRUPTS AT PC %04X\n", PC);
+  log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptRequest(uint8 interrupt) {
   char logLine[LINE_BYTES];
-  snprintf(logLine, LINE_BYTES, "REQUESTED %s\n",
+  snprintf(logLine, LINE_BYTES, "INT >>> REQUESTED %s\n",
            intName.at(interrupt).c_str());
-  intLogMutex.lock();
-  Log::intLog.write(logLine, strlen(logLine));
-  intLogMutex.unlock();
+  log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptService(uint16 PC, uint8 interrupt) {
   char logLine[LINE_BYTES];
-  snprintf(logLine, LINE_BYTES, "SERVICED %s @ PC %04x\n",
+  snprintf(logLine, LINE_BYTES, "INT >>> SERVICED %s AT PC %04X\n",
            intName.at(interrupt).c_str(), PC);
-  intLogMutex.lock();
-  Log::intLog.write(logLine, strlen(logLine));
-  intLogMutex.unlock();
+  log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptReturn(uint16 PC) {
   char logLine[LINE_BYTES];
-  snprintf(logLine, LINE_BYTES, "RETURNED TO PC %04x\n", PC);
-  intLogMutex.lock();
-  Log::intLog.write(logLine, strlen(logLine));
-  intLogMutex.unlock();
-}
-
-void Log::logClock(ClockType type, timepoint time) {
-  char logLine[LINE_BYTES];
-  auto now = chrono::system_clock::now().time_since_epoch().count();
-  auto clock = chrono::time_point_cast<chrono::microseconds>(time)
-                   .time_since_epoch()
-                   .count();
-  snprintf(logLine, LINE_BYTES, "%s %lld %lld\n", clockName.at(type).c_str(),
-           now, clock);
-  clockLogMutex.lock();
-  Log::clockLog.write(logLine, strlen(logLine));
-  clockLogMutex.unlock();
+  snprintf(logLine, LINE_BYTES, "INT >>> RETURNED TO PC %04X\n", PC);
+  log.write(logLine, strlen(logLine));
 }

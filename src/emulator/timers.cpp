@@ -1,51 +1,36 @@
 #include "timers.h"
 
-#include "clock.h"
 #include "interrupts.h"
 
-Timers::Timers(Memory &mem)
-    : QThread(),
-      div(mem.getByte(DIV)),
-      tima(mem.getByte(TIMA)),
-      tma(mem.getByte(TMA)),
-      tac(mem.getByte(TAC)),
-      timaFreqs{TIMA_CYCLES_00, TIMA_CYCLES_01, TIMA_CYCLES_10, TIMA_CYCLES_11},
-      timaCycles(),
-      divCycles() {}
+uint16 Timers::internalCounter = 0;
 
-void Timers::run() {
-  while (Clock::threadsRunning) {
-    if (!Clock::stop) {
-      updateTimers();
-      Clock::wait(TIMERS_CLOCK, 1);
-    } else {
-      Clock::reset();
-    }
-  }
-}
+uint8 *Timers::div = nullptr;
+uint8 *Timers::tima = nullptr;
+uint8 *Timers::tma = nullptr;
+uint8 *Timers::tac = nullptr;
 
-void Timers::updateTimers() {
+const uint16 Timers::internalCounterMasks[4]{TAC_00, TAC_01, TAC_10, TAC_11};
+
+void Timers::step(int cycles) {
+  // increment internal counter and
+  // update DIV register
+  uint16 oldInternalCounter = internalCounter;
+  internalCounter += 4 * cycles;
+  *div = (internalCounter & DIV_MASK) >> 8;
+
   // update TIMA timer
   if (timerEnabled()) {
-    if (++timaCycles >= timerFreq()) {
-      // on TIMA overflow, set TIMA
-      // to TMA and request a timer
-      // interrupt
-      if (++tima == 0) {
-        tima = tma;
+    uint16 oldCounter = oldInternalCounter & internalCounterMasks[timerFreq()];
+    uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
+    if (counter < oldCounter) {
+      if (++*tima == 0) {
+        *tima = *tma;
         Interrupts::request(TIMER_INT);
       }
-      timaCycles -= timerFreq();
     }
-  }
-
-  // update DIV timer
-  if (++divCycles >= DIV_CYCLES) {
-    ++div;
-    divCycles -= DIV_CYCLES;
   }
 }
 
-bool Timers::timerEnabled() { return tac & 0x04; }
+bool Timers::timerEnabled() { return *tac & 0x04; }
 
-int Timers::timerFreq() { return timaFreqs[tac & 0b11]; }
+uint8 Timers::timerFreq() { return *tac & 0b11; }

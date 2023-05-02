@@ -28,21 +28,19 @@
 #define JUMP_NC 0b10
 #define JUMP_C 0b11
 
-class CPU : public QThread {
-  Q_OBJECT
-
+class CPU {
  private:
   uint16 PC, SP, BC, DE, HL;        // 16-bit registers
   uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
 
-  bool zero, subtract, halfCarry, carry, IME, halt;  // flags
+  bool zero, subtract, halfCarry, carry, IME, halt, &stop;  // flags
 
   uint8 *regmap8[NUM_REG_8];
   uint16 *regmap16[NUM_REG_16];
 
   Memory &mem;
 
-  bool shouldSetIME;
+  bool shouldSetIME, delaySetIME, triggerHaltBug;
 
   // instruction decoding functions
   void runInstr(uint8 instr, uint8 &cycles);
@@ -86,9 +84,9 @@ class CPU : public QThread {
   void handleInterrupts(uint8 &cycles);
 
  public:
-  CPU(Memory &mem);
+  CPU(Memory &mem, bool &stop);
 
-  void run() override;
+  uint8 step();
   void reset();
 
   void loadState();

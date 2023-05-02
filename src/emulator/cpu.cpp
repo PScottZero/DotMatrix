@@ -9,14 +9,12 @@
 #include "cpu.h"
 
 #include "bootstrap.h"
-#include "clock.h"
 #include "interrupts.h"
 #include "json.hpp"
 #include "log.h"
 
-CPU::CPU(Memory &mem)
-    : QThread(),
-      PC(),
+CPU::CPU(Memory &mem, bool &stop)
+    : PC(),
       SP(),
       BC(),
       DE(),
@@ -34,59 +32,52 @@ CPU::CPU(Memory &mem)
       carry(true),
       IME(false),
       halt(false),
+      stop(stop),
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       mem(mem),
-      shouldSetIME(false) {}
+      shouldSetIME(false),
+      delaySetIME(true),
+      triggerHaltBug(false) {}
 
-void CPU::run() {
-  bool delaySetIME = true;
-  while (Clock::threadsRunning) {
-    if (!Clock::stop) {
-      // get current system time
-      uint8 cycles = 0;
+uint8 CPU::step() {
+  uint8 cycles = 0;
 
-      // check for interrupts
-      handleInterrupts(cycles);
+  // check for interrupts
+  handleInterrupts(cycles);
 
-      if (mem.getByte(OAM_ADDR + 12) == 0x80) {
-        saveState();
-        mem.saveState();
-        Clock::stop = true;
-        break;
-      }
+  // run instruction at current PC
+  if (!halt && !stop) {
+    Log::logCPUState(PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero,
+                     IME, *Interrupts::intEnable, *Interrupts::intFlags,
+                     mem.getByte(LCDC), mem.getByte(STAT), mem.getByte(LY));
 
-      // run instruction at current PC
-      if (!halt) {
-        Log::logCPUState(PC, SP, A, BC, DE, HL, mem.getByte(LCDC),
-                         mem.getByte(STAT), mem.getByte(LY), mem.getByte(SCX),
-                         mem.getByte(SCY), IME, *Interrupts::intEnable,
-                         *Interrupts::intFlags, carry, halfCarry, subtract,
-                         zero);
-        runInstr(mem.imm8(PC, cycles), cycles);
-      } else {
-        cycles = 1;
-      }
+    uint8 opcode = mem.imm8(PC, cycles);
+    uint8 imm8 = mem.getByte(PC);
+    if (triggerHaltBug) {
+      --PC;
+      triggerHaltBug = false;
+    }
+    runInstr(opcode, cycles);
 
-      // delay setting IME after an EI
-      // instruction by one machine cycle
-      if (shouldSetIME) {
-        if (!delaySetIME) {
-          IME = true;
-          shouldSetIME = false;
-          delaySetIME = true;
-        } else {
-          delaySetIME = false;
-        }
-      }
+    Log::logCPUCycles(opcode, imm8, cycles);
+  } else {
+    cycles = 1;
+  }
 
-      // wait until the time corresponding to the number
-      // of cycles has passed
-      if (!Bootstrap::skipWait()) Clock::wait(CPU_CLOCK, cycles);
+  // delay setting IME after an EI
+  // instruction by one machine cycle
+  if (shouldSetIME) {
+    if (!delaySetIME) {
+      IME = true;
+      shouldSetIME = false;
+      delaySetIME = true;
     } else {
-      Clock::reset();
+      delaySetIME = false;
     }
   }
+
+  return cycles;
 }
 
 void CPU::reset() {
@@ -449,8 +440,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 4 ----
     // return from interrupt
     case 0xD9:
-      Log::logInterruptReturn(PC);
       PC = pop(cycles);
+      Log::logInterruptReturn(PC);
       IME = true;
       ++cycles;
       break;
@@ -506,7 +497,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 1 ----
     // reset interrupt master enable flag
     case 0xF3:
-      Log::logInterruptDisable(PC);
+      Log::logInterruptDisable(PC - 1);
       IME = false;
       break;
 
@@ -514,7 +505,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 1 ----
     // set interrupt master enable flag
     case 0xFB:
-      Log::logInterruptEnable(PC);
+      Log::logInterruptEnable(PC - 1);
       shouldSetIME = true;
       break;
 
@@ -523,7 +514,10 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // halts the cpu and system clock
     case 0x76:
       halt = true;
-      if (!IME && Interrupts::pending()) halt = false;
+      if (!IME && Interrupts::pending()) {
+        halt = false;
+        triggerHaltBug = true;
+      }
       break;
 
     // STOP
@@ -531,7 +525,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // halts the cpu, system clock, oscillator,
     // and lcd controller
     case 0x10:
-      Clock::stop = true;
+      stop = true;
       --cycles;
       break;
 
@@ -1294,7 +1288,6 @@ void CPU::handleInterrupts(uint8 &cycles) {
 
     if (intAddr != 0) {
       IME = false;
-      Log::logInterruptDisable(PC);
       push(PC, cycles);
       PC = intAddr;
       cycles += 2;
@@ -1325,16 +1318,16 @@ void CPU::loadState() {
   zero = state["zero"];
   IME = state["IME"];
   halt = state["halt"];
-  Clock::stop = state["stop"];
+  stop = state["stop"];
 }
 
 void CPU::saveState() {
   nlohmann::json state = {
-      {"PC", PC},           {"SP", SP},           {"A", A},
-      {"BC", BC},           {"DE", DE},           {"HL", HL},
-      {"carry", carry},     {"halfCarry", carry}, {"subtract", subtract},
-      {"zero", zero},       {"IME", IME},         {"halt", halt},
-      {"stop", Clock::stop}};
+      {"PC", PC},       {"SP", SP},           {"A", A},
+      {"BC", BC},       {"DE", DE},           {"HL", HL},
+      {"carry", carry}, {"halfCarry", carry}, {"subtract", subtract},
+      {"zero", zero},   {"IME", IME},         {"halt", halt},
+      {"stop", stop}};
   string stateStr = state.dump(4);
   fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::out);
   fs.write(stateStr.c_str(), stateStr.size());

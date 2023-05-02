@@ -1,7 +1,6 @@
 #include "mainwindow.h"
 
 #include "../emulator/bootstrap.h"
-#include "../emulator/clock.h"
 #include "keybindingswindow.h"
 #include "memoryview.h"
 
@@ -111,7 +110,7 @@ MainWindow::MainWindow(QWidget *parent)
   connect(ui->actionMemoryView, &QAction::triggered, this,
           &MainWindow::openMemoryView);
 
-  connect(&cgb.ppu, &PPU::sendScreen, this, &MainWindow::setScreen);
+  connect(&cgb, &CGB::sendScreen, this, &MainWindow::setScreen);
 
   // set main window size
   setScale(1);
@@ -126,7 +125,8 @@ void MainWindow::loadROM() {
                                                  tr("Game Boy ROMs (*.gb)"));
   if (romName != "") {
     cgb.reset();
-    cgb.run(romName);
+    cgb.loadROM(romName);
+    cgb.start();
   }
 }
 
@@ -150,7 +150,7 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setSpeed(int speed) { Clock::speedMult = pow(2, speed - 2); }
+void MainWindow::setSpeed(int speed) { cgb.speedMult = pow(2, speed - 2); }
 
 void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
                                   QSignalMapper *sigMap, int mapVal) {
@@ -171,11 +171,11 @@ void MainWindow::setPalette(QObject *palette) {
 }
 
 void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(cgb.controls);
+  KeyBindingsWindow kbWin{};
   kbWin.exec();
 }
 
-void MainWindow::loadSaveState() { cgb.runFromSaveState(); }
+void MainWindow::loadSaveState() {}
 
 void MainWindow::openMemoryView() {
   MemoryView memView{};
@@ -187,11 +187,11 @@ void MainWindow::toggleBootScreen(bool showBootScreen) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-  cgb.controls.press(event->key());
+  Controls::press(event->key());
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
-    cgb.controls.release(event->key());
+    Controls::release(event->key());
   }
 }

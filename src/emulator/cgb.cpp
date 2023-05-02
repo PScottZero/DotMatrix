@@ -1,47 +1,59 @@
 #include "cgb.h"
 
 #include "bootstrap.h"
-#include "clock.h"
 #include "interrupts.h"
 
+using namespace std;
+using namespace chrono;
+
 CGB::CGB(Palette *palette)
-    : palette(palette), mem(), ppu(mem, palette), cpu(mem), timers(mem) {
+    : stop(false),
+      speedMult(1),
+      palette(palette),
+      mem(),
+      ppu(mem, palette),
+      cpu(mem, stop) {
   Interrupts::intEnable = mem.getBytePtr(IE);
   Interrupts::intFlags = mem.getBytePtr(IF);
   Controls::p1 = mem.getBytePtr(P1);
+  Timers::div = mem.getBytePtr(DIV);
+  Timers::tima = mem.getBytePtr(TIMA);
+  Timers::tma = mem.getBytePtr(TMA);
+  Timers::tac = mem.getBytePtr(TAC);
 }
 
 CGB::~CGB() {
-  Clock::threadsRunning = false;
-  cpu.wait();
-  ppu.wait();
-  timers.wait();
+  terminate();
+  wait();
 }
 
-void CGB::run(QString dir) {
-  mem.loadROM(dir);
-  Clock::reset();
-  cpu.start();
-  ppu.start();
-  timers.start();
+void CGB::run() {
+  auto clock = system_clock::now();
+  while (isRunning()) {
+    uint8 cycles = cpu.step();
+    ppu.step(cycles);
+    Timers::step(cycles);
+
+    if (!Bootstrap::skipWait()) {
+      if (ppu.frameRendered) {
+        emit sendScreen(ppu.screen);
+        int frameDuration = FRAME_DURATION / speedMult;
+        clock += microseconds(frameDuration);
+        this_thread::sleep_until(clock);
+        ppu.frameRendered = false;
+      }
+    } else {
+      clock = system_clock::now();
+    }
+  }
 }
 
-void CGB::runFromSaveState() {
-  cpu.loadState();
-  mem.loadState();
-  Clock::reset();
-  cpu.start();
-  ppu.start();
-  timers.start();
-}
+void CGB::loadROM(const QString dir) { mem.loadROM(dir); }
 
 void CGB::reset() {
-  Clock::threadsRunning = false;
-  cpu.wait();
-  ppu.wait();
-  timers.wait();
-  Clock::threadsRunning = true;
+  terminate();
+  wait();
   cpu.reset();
   mem.reset();
-  Bootstrap::enabled = true;
+  Timers::internalCounter = 0;
 }

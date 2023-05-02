@@ -4,10 +4,9 @@
 
 #include "ui_keybindingswindow.h"
 
-KeyBindingsWindow::KeyBindingsWindow(Controls &controls, QWidget *parent)
+KeyBindingsWindow::KeyBindingsWindow(QWidget *parent)
     : QDialog(parent),
       ui(new Ui::KeyBindingsWindow),
-      controls(controls),
       selectedButton(UP),
       acceptKeyPress(false),
       buttonKeyLabels(),
@@ -40,7 +39,7 @@ void KeyBindingsWindow::startBind(Button button) {
 
 void KeyBindingsWindow::keyPressEvent(QKeyEvent *event) {
   if (acceptKeyPress) {
-    controls.bind(event->key(), selectedButton);
+    Controls::bind(event->key(), selectedButton);
     acceptKeyPress = false;
     QKeySequence seq(event->key());
     buttonKeyLabels[selectedButton]->setText(seq.toString());
