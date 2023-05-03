@@ -11,7 +11,8 @@ uint8 MBC::ramBankNum = 0;
 #include "memory.h"
 
 void MBC::processMBCRequest(uint16 addr, uint8 val) {
-  if (bankType == MBC1) {
+  if (bankType == MBC1 || bankType == MBC1_RAM ||
+      bankType == MBC1_RAM_BATTERY) {
     // RAM enable register
     if (addr <= RAM_ENABLE) {
       if ((val & 0x0F) == 0x0A) {
@@ -91,6 +92,8 @@ bool MBC::bankTypeImplemented() {
   switch (bankType) {
     case ROM_ONLY:
     case MBC1:
+    case MBC1_RAM:
+    case MBC1_RAM_BATTERY:
       return true;
     default:
       return false;
