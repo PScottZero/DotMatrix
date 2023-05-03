@@ -43,9 +43,6 @@ class MainWindow : public QMainWindow {
   void keyReleaseEvent(QKeyEvent *event) override;
 
  private:
-  Palette palBGB, palBicycle, palChocolate, palCobalt, palGB, palGBP,
-      palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
-
   Ui::MainWindow *ui;
   CGB cgb;
 

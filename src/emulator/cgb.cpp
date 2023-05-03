@@ -1,15 +1,20 @@
 #include "cgb.h"
 
+#include <QMessageBox>
+
 #include "bootstrap.h"
+#include "controls.h"
 #include "interrupts.h"
+#include "mbc.h"
+#include "timers.h"
 
 using namespace std;
 using namespace chrono;
 
 CGB::CGB(Palette *palette)
-    : stop(false),
+    : running(false),
+      stop(false),
       speedMult(1),
-      palette(palette),
       mem(),
       ppu(mem, palette),
       cpu(mem, stop) {
@@ -23,13 +28,21 @@ CGB::CGB(Palette *palette)
 }
 
 CGB::~CGB() {
-  terminate();
+  running = false;
   wait();
+
+  free(Memory::mem);
+  free(Memory::cart);
+  free(Memory::exram);
+  free(Memory::romBank0);
+  free(Memory::romBank1);
+  free(Memory::exramBank);
 }
 
 void CGB::run() {
+  running = true;
   auto clock = system_clock::now();
-  while (isRunning()) {
+  while (running) {
     uint8 cycles = cpu.step();
     ppu.step(cycles);
     Timers::step(cycles);
@@ -48,12 +61,24 @@ void CGB::run() {
   }
 }
 
-void CGB::loadROM(const QString dir) { mem.loadROM(dir); }
+bool CGB::loadROM(const QString dir) {
+  Memory::loadROM(dir);
+  MBC::bankType = Memory::getByte(BANK_TYPE);
+  MBC::cartSize = Memory::getByte(CART_SIZE);
+  if (!MBC::bankTypeImplemented()) {
+    QMessageBox mbox{};
+    auto message = "Bank type " + MBC::bankTypeStr() + " is not supported";
+    mbox.setText(QString::fromStdString(message));
+    mbox.exec();
+    return false;
+  }
+  return true;
+}
 
 void CGB::reset() {
-  terminate();
+  running = false;
   wait();
   cpu.reset();
-  mem.reset();
+  Memory::reset();
   Timers::internalCounter = 0;
 }

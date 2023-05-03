@@ -12,7 +12,7 @@
 #include <array>
 #include <thread>
 
-#include "../ui/palette.h"
+#include "../ui/palettes.h"
 #include "memory.h"
 #include "types.h"
 
@@ -89,7 +89,6 @@ class PPU {
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   uint8 visibleSpriteCount;
   Memory &mem;
-  Palette *palette;
   uint8 ppuCycles;
 
   // rendering functions
@@ -122,6 +121,7 @@ class PPU {
  public:
   QImage screen;
   bool frameRendered;
+  Palette *palette;
 
   PPU(Memory &mem, Palette *palette);
 

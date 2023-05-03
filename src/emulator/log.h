@@ -13,7 +13,6 @@ using namespace std;
 class Log {
  private:
   static fstream log;
-  static fstream opLog;
   static const map<uint8, string> intName;
 
  public:

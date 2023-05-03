@@ -4,8 +4,6 @@
 
 fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
 
-fstream Log::opLog("/Users/paulscott/git/DotMatrix/debug/op_log.txt", ios::out);
-
 const map<uint8, string> Log::intName = {
     {V_BLANK_INT, "VBLANK"}, {LCDC_INT, "LCDC"},     {TIMER_INT, "TIMER"},
     {SERIAL_INT, "SERIAL"},  {JOYPAD_INT, "JOYPAD"},
@@ -28,13 +26,13 @@ void Log::logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,
 void Log::logCPUCycles(uint8 opcode, uint8 cbOpcode, uint8 cycles) {
   char logLine[LINE_BYTES];
   if (opcode == 0xCB) {
-    snprintf(logLine, LINE_BYTES, "OPCODE %02X %02X TOOK %d CYCLES\n", opcode,
-             cbOpcode, cycles);
+    snprintf(logLine, LINE_BYTES, "CPU >>> OPCODE %02X %02X TOOK %d CYCLES\n",
+             opcode, cbOpcode, cycles);
   } else {
-    snprintf(logLine, LINE_BYTES, "OPCODE %02X TOOK %d CYCLES\n", opcode,
-             cycles);
+    snprintf(logLine, LINE_BYTES, "CPU >>> OPCODE %02X TOOK %d CYCLES\n",
+             opcode, cycles);
   }
-  opLog.write(logLine, strlen(logLine));
+  log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptEnable(uint16 PC) {

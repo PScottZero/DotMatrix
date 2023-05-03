@@ -6,12 +6,17 @@
 
 #include "types.h"
 
-// memory size constants
+// memory sizes
 #define MEM_BYTES 0x8000
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
+#define RAM_BANK_BYTES 0x2000
+#define NUM_RAM_BANKS 4
 
-// dmg in-memory flag address constants
+// dmg in-memory flag addresses
+#define SGB_MODE 0x0146
+#define BANK_TYPE 0x0147
+#define CART_SIZE 0x0148
 #define P1 0xFF00
 #define SB 0xFF01
 #define SC 0xFF02
@@ -61,6 +66,7 @@
 #define WAVEFORM_END 0xFF3F
 
 // cgb in-memory flag address constants
+#define CGB_MODE 0x0143
 #define KEY1 0xFF4D
 #define RP 0xFF56
 #define VBK 0xFF4F
@@ -96,42 +102,43 @@
 
 class Memory {
  private:
-  uint8 *mem;
-  uint8 *cart;
-  uint8 *romBank0;
-  uint8 *romBank1;
+  static bool dmaTransferMode;
 
-  bool dmaTransferMode;
+  static bool memoryRestricted(uint16 addr);
+
+  static void dmaTransfer();
 
   // access functions
-  bool canAccessVRAM();
-  bool canAccessOAM();
+  static bool canAccessVRAM();
+  static bool canAccessOAM();
 
  public:
-  Memory();
-  ~Memory();
+  static uint8 *mem;
+  static uint8 *cart;
+  static uint8 *exram;
+  static uint8 *romBank0;
+  static uint8 *romBank1;
+  static uint8 **exramBank;
 
   // memory read + write functions
-  uint8 read(uint16 addr, uint8 &cycles);
-  uint16 read16(uint16 addr, uint8 &cycles);
-  void write(uint16 addr, uint8 val, uint8 &cycles);
-  void write(uint16 addr, uint16 val, uint8 &cycles);
-  uint8 imm8(uint16 &PC, uint8 &cycles);
-  uint16 imm16(uint16 &PC, uint8 &cycles);
-  bool memoryRestricted(uint16 addr);
+  static uint8 read(uint16 addr, uint8 &cycles);
+  static uint16 read16(uint16 addr, uint8 &cycles);
+  static void write(uint16 addr, uint8 val, uint8 &cycles);
+  static void write(uint16 addr, uint16 val, uint8 &cycles);
+  static uint8 imm8(uint16 &PC, uint8 &cycles);
+  static uint16 imm16(uint16 &PC, uint8 &cycles);
 
   // direct memory access functions
-  uint8 &getByte(uint16 addr);
-  uint8 *getBytePtr(uint16 addr);
-  void setByte(uint16 addr, uint8 val);
+  static uint8 &getByte(uint16 addr);
+  static uint8 *getBytePtr(uint16 addr);
 
   // miscellaneous functions
-  void loadROM(QString dir);
-  void mapCartMem(uint8 *romBank, uint16 startAddr);
-  void dmaTransfer();
+  static void loadROM(QString dir);
+  static void mapCartMem(uint8 *romBank, uint8 bankNum);
+  static void mapEXRAM(uint8 bankNum);
 
-  void loadState();
-  void saveState();
+  static void loadState();
+  static void saveState();
 
-  void reset();
+  static void reset();
 };

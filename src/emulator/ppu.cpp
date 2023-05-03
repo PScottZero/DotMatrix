@@ -105,6 +105,7 @@ void PPU::step(uint8 cycles) {
   } else {
     ly = 0;
     ppuCycles = 0;
+    setMode(H_BLANK_MODE);
   }
 }
 
@@ -163,7 +164,8 @@ void PPU::renderSprites(scanline_t &scanline) {
       if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
         // if sprite priority is true, then only draw sprite
         // if current scaline color is zero
-        if (!sprite.priority || scanline.pixels[pxX] == 0) {
+        if ((!sprite.priority || scanline.pixels[pxX] == 0) &&
+            row[rowIdx] != 0) {
           scanline.pixels[pxX] = row[rowIdx];
           scanline.palettes[pxX] =
               sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;

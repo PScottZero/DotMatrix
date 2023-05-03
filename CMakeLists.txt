@@ -30,6 +30,8 @@ set(PROJECT_SOURCES
         src/emulator/interrupts.h
         src/emulator/bootstrap.cpp
         src/emulator/bootstrap.h
+        src/emulator/mbc.cpp
+        src/emulator/mbc.h
         src/emulator/log.cpp
         src/emulator/log.h
         src/emulator/types.h
@@ -42,8 +44,8 @@ set(PROJECT_SOURCES
         src/ui/memoryview.cpp
         src/ui/memoryview.h
         src/ui/memoryview.ui
-        src/ui/palette.cpp
-        src/ui/palette.h
+        src/ui/palettes.cpp
+        src/ui/palettes.h
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)

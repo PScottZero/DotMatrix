@@ -1,25 +1,13 @@
 #include "mainwindow.h"
 
+#include <QDir>
+
 #include "../emulator/bootstrap.h"
 #include "keybindingswindow.h"
 #include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),
-      palBGB(0xE0F8D0, 0x88C070, 0x346856, 0x081820),
-      palBicycle(0xF0F0F0, 0x8F9BF6, 0xAB4645, 0x161616),
-      palChocolate(0xFFE4C2, 0xDCA456, 0xA9604C, 0x422936),
-      palCobalt(0xC5DFFA, 0x5C88B8, 0x1A4778, 0x00234A),
-      palGB(0x9BBC0F, 0x8BAC0F, 0x306230, 0x0F380F),
-      palGBP(0xFFFFFF, 0xAAAAAA, 0x555555, 0x000000),
-      palInverted(0x000000, 0x545454, 0xA9A9A9, 0xFFFFFF),
-      palKirby(0xF7BEF7, 0xE78686, 0x7732E7, 0x2D2B96),
-      palPlatinum(0xE0F0E8, 0xA8C0B0, 0x4F7868, 0x183030),
-      palPokemon(0xFFEFFF, 0xF7B58C, 0x84739C, 0x181010),
-      palVB(0x000000, 0x550000, 0xAA0000, 0xFF0000),
-      palWishGB(0x612F4C, 0x7450E9, 0x5F8FCF, 0x8BE5FF),
-      ui(new Ui::MainWindow),
-      cgb(&palGBP) {
+    : QMainWindow(parent), ui(new Ui::MainWindow), cgb(&Palettes::palGBP) {
   ui->setupUi(this);
 
   // **************************************************
@@ -68,29 +56,30 @@ MainWindow::MainWindow(QWidget *parent)
   auto paletteActionGroup = new QActionGroup(this);
   auto paletteSigMap = new QSignalMapper(this);
   paletteActionGroup->setExclusive(true);
-  addToActionGroup(paletteActionGroup, ui->actionBGB, paletteSigMap, &palBGB);
+  addToActionGroup(paletteActionGroup, ui->actionBGB, paletteSigMap,
+                   &Palettes::palBGB);
   addToActionGroup(paletteActionGroup, ui->actionBicycle, paletteSigMap,
-                   &palBicycle);
+                   &Palettes::palBicycle);
   addToActionGroup(paletteActionGroup, ui->actionChocolate, paletteSigMap,
-                   &palChocolate);
+                   &Palettes::palChocolate);
   addToActionGroup(paletteActionGroup, ui->actionCobalt, paletteSigMap,
-                   &palCobalt);
+                   &Palettes::palCobalt);
   addToActionGroup(paletteActionGroup, ui->actionGameBoy, paletteSigMap,
-                   &palGB);
+                   &Palettes::palGB);
   addToActionGroup(paletteActionGroup, ui->actionGameBoyPocket, paletteSigMap,
-                   &palGBP);
+                   &Palettes::palGBP);
   addToActionGroup(paletteActionGroup, ui->actionInverted, paletteSigMap,
-                   &palInverted);
+                   &Palettes::palInverted);
   addToActionGroup(paletteActionGroup, ui->actionKirby, paletteSigMap,
-                   &palKirby);
+                   &Palettes::palKirby);
   addToActionGroup(paletteActionGroup, ui->actionPlatinum, paletteSigMap,
-                   &palPlatinum);
+                   &Palettes::palPlatinum);
   addToActionGroup(paletteActionGroup, ui->actionPokemon, paletteSigMap,
-                   &palPokemon);
+                   &Palettes::palPokemon);
   addToActionGroup(paletteActionGroup, ui->actionVirtualBoy, paletteSigMap,
-                   &palVB);
+                   &Palettes::palVB);
   addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
-                   &palWishGB);
+                   &Palettes::palWishGB);
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
 
@@ -120,13 +109,12 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::loadROM() {
   // select rom to run
-  QString pwd = "/Users/paulscott/git/DotMatrix/roms/tests/cpu_instrs";
-  QString romName = QFileDialog::getOpenFileName(this, tr("Open File"), pwd,
-                                                 tr("Game Boy ROMs (*.gb)"));
+  QString romName = QFileDialog::getOpenFileName(
+      this, tr("Open File"), QDir::currentPath(), tr("Game Boy ROMs (*.gb)"));
   if (romName != "") {
     cgb.reset();
-    cgb.loadROM(romName);
-    cgb.start();
+    bool romSupported = cgb.loadROM(romName);
+    if (romSupported) cgb.start();
   }
 }
 
@@ -167,7 +155,7 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 }
 
 void MainWindow::setPalette(QObject *palette) {
-  cgb.palette = (Palette *)palette;
+  cgb.ppu.palette = (Palette *)palette;
 }
 
 void MainWindow::openKeyBindingsWindow() {

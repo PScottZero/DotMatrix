@@ -3,7 +3,6 @@
 #include <QThread>
 #include <chrono>
 
-#include "memory.h"
 #include "types.h"
 
 #define TIMER_BASE_FREQ 0x100000  // 1MHz

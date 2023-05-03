@@ -2,22 +2,16 @@
 
 #include "bootstrap.h"
 #include "controls.h"
-#include "json.hpp"
+#include "mbc.h"
 #include "timers.h"
 
-Memory::Memory()
-    : mem((uint8 *)malloc(MEM_BYTES)),
-      cart((uint8 *)malloc(CART_BYTES)),
-      romBank0((uint8 *)malloc(ROM_BANK_BYTES)),
-      romBank1((uint8 *)malloc(ROM_BANK_BYTES)),
-      dmaTransferMode(false) {}
-
-Memory::~Memory() {
-  free(mem);
-  free(cart);
-  free(romBank0);
-  free(romBank1);
-}
+uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
+uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
+uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * NUM_RAM_BANKS);
+uint8 *Memory::romBank0 = (uint8 *)malloc(ROM_BANK_BYTES);
+uint8 *Memory::romBank1 = (uint8 *)malloc(ROM_BANK_BYTES);
+uint8 **Memory::exramBank = (uint8 **)malloc(sizeof(uint8 *) * RAM_BANK_BYTES);
+bool Memory::dmaTransferMode = false;
 
 // **************************************************
 // **************************************************
@@ -61,18 +55,21 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
     return;
   }
 
+  // check for MBC requests
+  MBC::processMBCRequest(addr, val);
+
   // writing anything to DIV register
   // will reset the internal counter
   // and the DIV register
   if (addr == DIV) {
     Timers::internalCounter = 0;
-    setByte(DIV, 0);
+    getByte(DIV) = 0;
   }
 
   // only bits 6-3 of the STAT register
   // can be written to
   else if (addr == STAT) {
-    setByte(STAT, (getByte(STAT) & 0x87) | (val & 0x78));
+    getByte(STAT) = (getByte(STAT) & 0x87) | (val & 0x78);
   }
 
   // LY register is read-only
@@ -87,18 +84,18 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   }
 
   // write to memory
-  setByte(addr, val);
+  getByte(addr) = val;
 
   // start dma transfer if dma
   // address was written to
   if (addr == DMA) {
-    thread dmaTransferThread(&Memory::dmaTransfer, this);
+    thread dmaTransferThread(&Memory::dmaTransfer);
     dmaTransferThread.detach();
   }
 
   // update state of controls if
   // writing to joypad register
-  if (addr == P1) {
+  else if (addr == P1) {
     Controls::update();
   }
 }
@@ -121,6 +118,12 @@ bool Memory::memoryRestricted(uint16 addr) {
   // cannot access VRAM if lcd is in
   // pixel transfer mode
   if (addr >= VRAM_ADDR && addr < RAM_ADDR && !canAccessVRAM()) {
+    return true;
+  }
+
+  // cannot access external ram if ram
+  // is not enabled by MBC
+  if (addr >= EXT_RAM_ADDR && addr < RAM_ADDR && !MBC::ramEnabled) {
     return true;
   }
 
@@ -162,8 +165,6 @@ uint8 *Memory::getBytePtr(uint16 addr) {
 
 uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
 
-void Memory::setByte(uint16 addr, uint8 val) { *getBytePtr(addr) = val; }
-
 // check if VRAM can be accessed,
 // can only be access outside of
 // pixel transfer mode
@@ -191,14 +192,23 @@ void Memory::loadROM(QString dir) {
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
-  mapCartMem(romBank0, 0x000000);
-  mapCartMem(romBank1, 0x004000);
+  mapCartMem(romBank0, 0);
+  mapCartMem(romBank1, 1);
 }
 
-// map cartridge memory block to rgiven om bank
-void Memory::mapCartMem(uint8 *romBank, uint16 startAddr) {
+// map memory rom bank to cartridge rom bank
+void Memory::mapCartMem(uint8 *romBank, uint8 bankNum) {
+  uint32 startAddr = ROM_BANK_BYTES * bankNum;
   for (int i = 0; i < ROM_BANK_BYTES; ++i) {
     romBank[i] = cart[startAddr + i];
+  }
+}
+
+// map memory external ram bank to external ram bank
+void Memory::mapEXRAM(uint8 bankNum) {
+  uint16 startAddr = RAM_BANK_BYTES * bankNum;
+  for (int i = 0; i < RAM_BANK_BYTES; ++i) {
+    exramBank[i] = &exram[startAddr + i];
   }
 }
 
@@ -207,7 +217,7 @@ void Memory::dmaTransfer() {
   dmaTransferMode = true;
   uint16 dmaAddr = getByte(DMA) << 8;
   for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
-    setByte(OAM_ADDR + i, getByte(dmaAddr + i));
+    getByte(OAM_ADDR + i) = getByte(dmaAddr + i);
   }
   dmaTransferMode = false;
 }
@@ -232,6 +242,6 @@ void Memory::reset() {
     mem[i] = 0;
   }
   dmaTransferMode = false;
-  mapCartMem(romBank0, 0x000000);
-  mapCartMem(romBank1, 0x004000);
+  mapCartMem(romBank0, 0);
+  mapCartMem(romBank1, 1);
 }

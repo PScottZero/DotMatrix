@@ -12,3 +12,9 @@ class Palette : public QObject {
 
   Palette(uint color00, uint color01, uint color10, uint color11);
 };
+
+class Palettes {
+ public:
+  static Palette palBGB, palBicycle, palChocolate, palCobalt, palGB, palGBP,
+      palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
+};
