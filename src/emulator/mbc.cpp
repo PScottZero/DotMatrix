@@ -124,8 +124,8 @@ bool MBC::bankTypeHasRAM() {
 uint8 MBC::romBank0BankNum() { return bankMode ? ramBankNum << 5 : 0; }
 
 uint8 MBC::romBank1BankNum() {
-  uint8 mask = cartSize != 0 ? (pow(2, cartSize - 1) - 1) : 0;
-  return ramBankNum << 5 | (romBankNum & mask);
+  // uint8 mask = cartSize != 0 ? (pow(2, cartSize - 1) - 1) : 0;
+  return ramBankNum << 5 | (romBankNum);
 }
 
 uint8 MBC::exramBankNum() { return bankMode ? ramBankNum : 0; }

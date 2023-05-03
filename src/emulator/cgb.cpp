@@ -5,6 +5,7 @@
 #include "bootstrap.h"
 #include "controls.h"
 #include "interrupts.h"
+#include "log.h"
 #include "mbc.h"
 #include "timers.h"
 
@@ -20,6 +21,7 @@ CGB::CGB(Palette *palette)
       cpu(mem, stop) {
   Interrupts::intEnable = mem.getBytePtr(IE);
   Interrupts::intFlags = mem.getBytePtr(IF);
+  *Interrupts::intFlags |= 0xE0;
   Controls::p1 = mem.getBytePtr(P1);
   Timers::div = mem.getBytePtr(DIV);
   Timers::tima = mem.getBytePtr(TIMA);
@@ -43,13 +45,18 @@ void CGB::run() {
   running = true;
   auto clock = system_clock::now();
   while (running) {
+    Log::logStr((char *)string("CPU\n").c_str());
     uint8 cycles = cpu.step();
+    Log::logStr((char *)string("PPU\n").c_str());
     ppu.step(cycles);
+    Log::logStr((char *)string("TIMERS\n").c_str());
     Timers::step(cycles);
 
     if (!Bootstrap::skipWait()) {
       if (ppu.frameRendered) {
+        Log::logStr((char *)string("SENDING SCREEN\n").c_str());
         emit sendScreen(ppu.screen);
+        Log::logStr((char *)string("SENT SCREEN\n").c_str());
         int frameDuration = FRAME_DURATION / speedMult;
         clock += microseconds(frameDuration);
         this_thread::sleep_until(clock);
@@ -81,4 +88,5 @@ void CGB::reset() {
   cpu.reset();
   Memory::reset();
   Timers::internalCounter = 0;
+  Memory::getByte(DIV) = 0;
 }

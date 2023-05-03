@@ -140,8 +140,9 @@ void PPU::renderBg(scanline_t &scanline) {
     TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
 
     // transfer pixel row to scanline
+    int oldPxCount = pxCount;
     int start = pxCount == 0 ? innerBgTileX : 0;
-    int end = pxCount + 8 > 160 ? innerBgTileX : TILE_PX_DIM;
+    int end = pxCount + 8 > 160 ? innerBgTileX + 1 : TILE_PX_DIM;
     for (int i = start; i < end; ++i) {
       scanline.pixels[pxCount] = row[i];
       scanline.palettes[pxCount] = PaletteType::BG;

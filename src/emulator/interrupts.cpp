@@ -19,4 +19,4 @@ bool Interrupts::requestedAndEnabled(uint8 interrupt) {
   return (*intEnable & *intFlags & interrupt);
 }
 
-bool Interrupts::pending() { return (*intEnable) & (*intFlags) & 0x1f; }
+bool Interrupts::pending() { return *intEnable & *intFlags & 0x1f; }

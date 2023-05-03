@@ -105,8 +105,6 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
   bool prevCarry = carry;
   bool prevZero = zero;
 
-  regmap8[MEM_HL] = mem.getBytePtr(HL);
-
   // instruction comment format:
   // INSTR PARAM1, PARAM2
   // #cycles carry/half-carry/subtract/zero
@@ -603,18 +601,24 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // 1/3 -H0Z
                 // increment register r (or memory at HL)
                 case 0b100:
-                  *regmap8[regDest] = add(*regmap8[regDest], 1);
+                  if (regDest == MEM_HL) {
+                    mem.write(HL, add(mem.read(HL, cycles), 1), cycles);
+                  } else {
+                    *regmap8[regDest] = add(*regmap8[regDest], 1);
+                  }
                   carry = prevCarry;
-                  if (regDest == MEM_HL) cycles += 2;
                   break;
 
                 // DEC r / DEC (HL)
                 // 1/3 -H1Z
                 // decrement register r (or memory at HL)
                 case 0b101:
-                  *regmap8[regDest] = sub(*regmap8[regDest], 1);
+                  if (regDest == MEM_HL) {
+                    mem.write(HL, sub(mem.read(HL, cycles), 1), cycles);
+                  } else {
+                    *regmap8[regDest] = sub(*regmap8[regDest], 1);
+                  }
                   carry = prevCarry;
-                  if (regDest == MEM_HL) cycles += 2;
                   break;
 
                 // LD r, n / LD (HL), n
@@ -622,8 +626,11 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // load 8-bit immediate n into register r
                 // (or memory at HL)
                 case 0b110:
-                  *regmap8[regDest] = mem.imm8(PC, cycles);
-                  if (regDest == MEM_HL) ++cycles;
+                  if (regDest == MEM_HL) {
+                    mem.write(HL, mem.imm8(PC, cycles), cycles);
+                  } else {
+                    *regmap8[regDest] = mem.imm8(PC, cycles);
+                  }
                   break;
               }
               break;
@@ -635,8 +642,13 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
           // 1/2/2 ----
           // load value of register r' (or memory at HL)
           // into register r (or memory at HL)
-          *regmap8[regDest] = *regmap8[regSrc];
-          if (regSrc == MEM_HL || regDest == MEM_HL) ++cycles;
+          if (regSrc == MEM_HL) {
+            *regmap8[regDest] = mem.read(HL, cycles);
+          } else if (regDest == MEM_HL) {
+            mem.write(HL, *regmap8[regSrc], cycles);
+          } else {
+            *regmap8[regDest] = *regmap8[regSrc];
+          }
           break;
 
         case 0b10:
@@ -647,8 +659,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // accumulator and store result
             // in accumulator
             case 0b000:
-              A = add(A, *regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              A = add(A, regSrc == MEM_HL ? mem.read(HL, cycles)
+                                          : *regmap8[regSrc]);
               break;
 
             // ADC A, r / ADC A, (HL)
@@ -657,8 +669,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // carry to accumulator and store result
             // in accumulator
             case 0b001:
-              A = add(A, *regmap8[regSrc], carry);
-              if (regSrc == MEM_HL) ++cycles;
+              A = add(
+                  A, regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc],
+                  carry);
               break;
 
             // SUB A, r / SUB A, (HL)
@@ -667,8 +680,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // from accumulator and store result
             // in accumulator
             case 0b010:
-              A = sub(A, *regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              A = sub(A, regSrc == MEM_HL ? mem.read(HL, cycles)
+                                          : *regmap8[regSrc]);
               break;
 
             // SBC A, r / SBC A, (HL)
@@ -677,8 +690,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // carry from accumulator and store result
             // in accumulator
             case 0b011:
-              A = sub(A, *regmap8[regSrc], carry);
-              if (regSrc == MEM_HL) ++cycles;
+              A = sub(
+                  A, regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc],
+                  carry);
               break;
 
             // AND A, r / AND A, (HL)
@@ -686,8 +700,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // and register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b100:
-              _and(*regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              _and(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
               break;
 
             // XOR A, r / XOR A, (HL)
@@ -695,8 +708,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // xor register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b101:
-              _xor(*regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              _xor(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
               break;
 
             // OR A, r / OR A, (HL)
@@ -704,8 +716,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // or register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b110:
-              _or(*regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              _or(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
               break;
 
             // CP A, r / CP A, (HL)
@@ -713,8 +724,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // compare register r (or memory at HL)
             // with accumulator
             case 0b111:
-              sub(A, *regmap8[regSrc]);
-              if (regSrc == MEM_HL) ++cycles;
+              sub(A,
+                  regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
               break;
           }
           break;
@@ -818,8 +829,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // rotate register r (or memory at HL)
         // to the left
         case 0b000:
-          *regmap8[regSrc] = rotateLeft(*regmap8[regSrc]);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, rotateLeft(mem.read(HL, cycles)), cycles);
+          } else {
+            *regmap8[regSrc] = rotateLeft(*regmap8[regSrc]);
+          }
           break;
 
         // RRC r / RRC (HL)
@@ -827,8 +841,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // rotate register r (or memory at HL)
         // to the right
         case 0b001:
-          *regmap8[regSrc] = rotateRight(*regmap8[regSrc]);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, rotateRight(mem.read(HL, cycles)), cycles);
+          } else {
+            *regmap8[regSrc] = rotateRight(*regmap8[regSrc]);
+          }
           break;
 
         // RL r / RL (HL)
@@ -836,8 +853,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // rotate register r (or memory at HL)
         // to the left through carry
         case 0b010:
-          *regmap8[regSrc] = rotateLeft(*regmap8[regSrc], true);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, rotateLeft(mem.read(HL, cycles), true), cycles);
+          } else {
+            *regmap8[regSrc] = rotateLeft(*regmap8[regSrc], true);
+          }
           break;
 
         // RR r / RR (HL)
@@ -845,8 +865,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // rotate register r (or memory at HL)
         // to the right through carry
         case 0b011:
-          *regmap8[regSrc] = rotateRight(*regmap8[regSrc], true);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, rotateRight(mem.read(HL, cycles), true), cycles);
+          } else {
+            *regmap8[regSrc] = rotateRight(*regmap8[regSrc], true);
+          }
           break;
 
         // SLA r / SLA (HL)
@@ -854,8 +877,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // shift register r (or memory at HL)
         // to the left
         case 0b100:
-          *regmap8[regSrc] = shiftLeft(*regmap8[regSrc]);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, shiftLeft(mem.read(HL, cycles)), cycles);
+          } else {
+            *regmap8[regSrc] = shiftLeft(*regmap8[regSrc]);
+          }
           break;
 
         // SRA r / SRA (HL)
@@ -863,8 +889,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // shift register r (or memory at HL)
         // to the right arithmetically
         case 0b101:
-          *regmap8[regSrc] = shiftRight(*regmap8[regSrc], true);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, shiftRight(mem.read(HL, cycles), true), cycles);
+          } else {
+            *regmap8[regSrc] = shiftRight(*regmap8[regSrc], true);
+          }
           break;
 
         // SWAP r / SWAP (HL)
@@ -872,8 +901,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // swap lower and upper nibbles of
         // register r (or memory at HL)
         case 0b110:
-          *regmap8[regSrc] = swap(*regmap8[regSrc]);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, swap(mem.read(HL, cycles)), cycles);
+          } else {
+            *regmap8[regSrc] = swap(*regmap8[regSrc]);
+          }
           break;
 
         // SRL r / SRL (HL)
@@ -881,8 +913,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // shift register r (or memory at HL)
         // to the right logically
         case 0b111:
-          *regmap8[regSrc] = shiftRight(*regmap8[regSrc]);
-          if (regSrc == MEM_HL) cycles += 2;
+          if (regSrc == MEM_HL) {
+            mem.write(HL, shiftRight(mem.read(HL, cycles)), cycles);
+          } else {
+            *regmap8[regSrc] = shiftRight(*regmap8[regSrc]);
+          }
           break;
       }
       break;
@@ -896,8 +931,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // copies complement of bit b of register r
     // (or memory at HL) into zero flag
     case 0b01:
-      bit(*regmap8[regSrc], regDest);
-      if (regSrc == MEM_HL) ++cycles;
+      bit(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc], regDest);
       break;
 
     // RES b, r / RES b, (HL)
@@ -905,8 +939,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // set bit b of register r (or memory at HL)
     // to zero
     case 0b10:
-      *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 0);
-      if (regSrc == MEM_HL) cycles += 2;
+      if (regSrc == MEM_HL) {
+        mem.write(HL, set(mem.read(HL, cycles), regDest, 0), cycles);
+      } else {
+        *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 0);
+      }
       break;
 
     // SET b, r / BIT b, (HL)
@@ -914,8 +951,11 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // set bit b of register r (or memory at HL)
     // to one
     case 0b11:
-      *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 1);
-      if (regSrc == MEM_HL) cycles += 2;
+      if (regSrc == MEM_HL) {
+        mem.write(HL, set(mem.read(HL, cycles), regDest, 1), cycles);
+      } else {
+        *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 1);
+      }
       break;
   }
 }

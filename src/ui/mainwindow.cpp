@@ -109,8 +109,9 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::loadROM() {
   // select rom to run
-  QString romName = QFileDialog::getOpenFileName(
-      this, tr("Open File"), QDir::currentPath(), tr("Game Boy ROMs (*.gb)"));
+  QString romName =
+      QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(),
+                                   tr("Game Boy ROMs (*.gb *.gbc)"));
   if (romName != "") {
     cgb.reset();
     bool romSupported = cgb.loadROM(romName);

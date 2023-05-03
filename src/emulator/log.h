@@ -26,4 +26,5 @@ class Log {
   static void logInterruptRequest(uint8 interrupt);
   static void logInterruptService(uint16 PC, uint8 interrupt);
   static void logInterruptReturn(uint16 PC);
+  static void logStr(char *str);
 };

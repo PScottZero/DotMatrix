@@ -2,6 +2,7 @@
 
 #include "bootstrap.h"
 #include "controls.h"
+#include "interrupts.h"
 #include "mbc.h"
 #include "timers.h"
 
@@ -49,14 +50,14 @@ uint16 Memory::read16(uint16 addr, uint8 &cycles) {
 void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   ++cycles;
 
+  // check for MBC requests
+  MBC::processMBCRequest(addr, val);
+
   // return if writing to a
   // restricted memory location
   if (memoryRestricted(addr) || addr < VRAM_ADDR) {
     return;
   }
-
-  // check for MBC requests
-  MBC::processMBCRequest(addr, val);
 
   // writing anything to DIV register
   // will reset the internal counter
@@ -86,9 +87,13 @@ void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
   // write to memory
   getByte(addr) = val;
 
+  if (addr == IF) {
+    getByte(addr) |= 0xE0;
+  }
+
   // start dma transfer if dma
   // address was written to
-  if (addr == DMA) {
+  else if (addr == DMA) {
     thread dmaTransferThread(&Memory::dmaTransfer);
     dmaTransferThread.detach();
   }
@@ -241,6 +246,7 @@ void Memory::reset() {
   for (int i = 0; i < MEM_BYTES; ++i) {
     mem[i] = 0;
   }
+  *Interrupts::intFlags |= 0xE0;
   dmaTransferMode = false;
   mapCartMem(romBank0, 0);
   mapCartMem(romBank1, 1);

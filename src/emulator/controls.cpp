@@ -25,7 +25,7 @@ void Controls::update() {
   *Controls::p1 |= 0xCF;
 
   vector<Button> buttons = {};
-  if (!(*Controls::p1 & 0x10)) {
+  if (!(*Controls::p1 & 0x10) || (*Controls::p1 & 0x30) == 0x30) {
     buttons = {RIGHT, LEFT, UP, DOWN};
   } else if (!(*Controls::p1 & 0x20)) {
     buttons = {A, B, SELECT, START};
