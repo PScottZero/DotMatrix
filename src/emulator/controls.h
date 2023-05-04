@@ -30,7 +30,7 @@ class Controls {
   static map<int, Button> keyBindingsInv;
   const static map<Button, uint8> buttonToMask;
 
-  static uint8 *p1;
+  static uint8 &p1;
 
   static void update();
 

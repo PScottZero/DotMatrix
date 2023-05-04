@@ -1,6 +1,7 @@
 #include "controls.h"
 
 #include "interrupts.h"
+#include "memory.h"
 
 map<Button, int> Controls::keyBindings = {
     {RIGHT, Qt::Key_D},  {LEFT, Qt::Key_A}, {UP, Qt::Key_W},
@@ -18,31 +19,31 @@ map<Button, bool> Controls::state = {
     {RIGHT, false}, {LEFT, false}, {UP, false},     {DOWN, false},
     {A, false},     {B, false},    {SELECT, false}, {START, false}};
 
-uint8 *Controls::p1 = nullptr;
+uint8 &Controls::p1 = Memory::getByte(P1);
 
 void Controls::update() {
-  uint8 oldP1 = *Controls::p1;
-  *Controls::p1 |= 0xCF;
+  uint8 oldP1 = Controls::p1;
+  Controls::p1 |= 0xCF;
 
   vector<Button> buttons = {};
-  if (!(*Controls::p1 & 0x10) || (*Controls::p1 & 0x30) == 0x30) {
+  if (!(Controls::p1 & 0x10) || (Controls::p1 & 0x30) == 0x30) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if (!(*Controls::p1 & 0x20)) {
+  } else if (!(Controls::p1 & 0x20)) {
     buttons = {A, B, SELECT, START};
   }
 
   for (auto button : buttons) {
     uint8 mask = Controls::buttonToMask.at(button);
     if (Controls::state[button]) {
-      *Controls::p1 &= ~mask;
+      Controls::p1 &= ~mask;
 
       // request joypad interrupt if button
       // goes from high to low
-      if ((*Controls::p1 & mask) != (oldP1 & mask)) {
+      if ((Controls::p1 & mask) != (oldP1 & mask)) {
         Interrupts::request(JOYPAD_INT);
       }
     } else {
-      *Controls::p1 |= mask;
+      Controls::p1 |= mask;
     }
   }
 }

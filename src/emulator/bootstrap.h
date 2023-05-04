@@ -12,6 +12,7 @@ class Bootstrap {
   static bool enabled;
   static bool skip;
 
-  static uint8 *at(uint16 addr);
+  static uint8 &at(uint16 addr);
   static bool skipWait();
+  static void reset();
 };

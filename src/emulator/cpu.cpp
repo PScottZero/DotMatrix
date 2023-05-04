@@ -8,61 +8,85 @@
 
 #include "cpu.h"
 
-#include "bootstrap.h"
+#include "cgb.h"
+#include "cyclecounter.h"
 #include "interrupts.h"
 #include "json.hpp"
 #include "log.h"
+#include "memory.h"
 
-CPU::CPU(Memory &mem, bool &stop)
-    : PC(),
-      SP(),
-      BC(),
-      DE(),
-      HL(),
-      A(),
-      B(*((uint8 *)&BC + 1)),
-      C(*((uint8 *)&BC)),
-      D(*((uint8 *)&DE + 1)),
-      E(*((uint8 *)&DE)),
-      H(*((uint8 *)&HL + 1)),
-      L(*((uint8 *)&HL)),
-      zero(true),
-      subtract(false),
-      halfCarry(true),
-      carry(true),
-      IME(false),
-      halt(false),
-      stop(stop),
-      regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
-      regmap16{&BC, &DE, &HL, &SP},
-      mem(mem),
-      shouldSetIME(false),
-      delaySetIME(true),
-      triggerHaltBug(false) {}
+// initialize program counter
+// and stack pointer
+uint16 CPU::PC = 0;
+uint16 CPU::SP = 0;
 
-uint8 CPU::step() {
-  uint8 cycles = 0;
+// initialize registers
+uint8 CPU::A = 0;
+uint16 CPU::BC = 0;
+uint16 CPU::DE = 0;
+uint16 CPU::HL = 0;
+
+// initialize references to
+// 8-bit registers that make
+// up the 16-bit registers
+// BC, DE, and HL
+uint8 &CPU::B = *((uint8 *)&BC + 1);
+uint8 &CPU::C = *((uint8 *)&BC);
+uint8 &CPU::D = *((uint8 *)&DE + 1);
+uint8 &CPU::E = *((uint8 *)&DE);
+uint8 &CPU::H = *((uint8 *)&HL + 1);
+uint8 &CPU::L = *((uint8 *)&HL);
+
+// initialize flags
+bool CPU::carry = false;
+bool CPU::halfCarry = false;
+bool CPU::subtract = false;
+bool CPU::zero = false;
+bool CPU::IME = false;
+bool CPU::halt = false;
+bool CPU::shouldSetIME = false;
+bool CPU::delaySetIME = true;
+bool CPU::triggerHaltBug = false;
+
+// initialize register maps
+//
+// some instructions use 3-bits of
+// the instruction to select an 8-bit
+// register (B, C, D, E, H, L, N/A, A)
+//
+// other instructions using 2-bits of
+// the instruction to select a 16-bit
+// register (BC, DE, HL, SP/AF)
+uint8 *CPU::regmap8[NUM_REG_8]{&CPU::B, &CPU::C, &CPU::D, &CPU::E,
+                               &CPU::H, &CPU::L, nullptr, &CPU::A};
+uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
+
+// perform CPU step by performing
+// a single instruction
+void CPU::step() {
+  CycleCounter::cpuCycles = 0;
 
   // check for interrupts
-  handleInterrupts(cycles);
+  handleInterrupts();
 
   // run instruction at current PC
-  if (!halt && !stop) {
+  if (!halt && !CGB::stop) {
     Log::logCPUState(PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero,
-                     IME, *Interrupts::intEnable, *Interrupts::intFlags,
-                     mem.getByte(LCDC), mem.getByte(STAT), mem.getByte(LY));
+                     IME, Interrupts::intEnable, Interrupts::intFlags,
+                     Memory::getByte(LCDC), Memory::getByte(STAT),
+                     Memory::getByte(LY));
 
-    uint8 opcode = mem.imm8(PC, cycles);
-    uint8 imm8 = mem.getByte(PC);
+    uint8 opcode = Memory::imm8(PC);
+    uint8 imm8 = Memory::getByte(PC);
     if (triggerHaltBug) {
       --PC;
       triggerHaltBug = false;
     }
-    runInstr(opcode, cycles);
+    runInstr(opcode);
 
-    Log::logCPUCycles(opcode, imm8, cycles);
+    Log::logCPUCycles(opcode, imm8, CycleCounter::cpuCycles);
   } else {
-    cycles = 1;
+    CycleCounter::addCycles(1);
   }
 
   // delay setting IME after an EI
@@ -76,13 +100,13 @@ uint8 CPU::step() {
       delaySetIME = false;
     }
   }
-
-  return cycles;
 }
 
 void CPU::reset() {
   PC = SP = A = BC = DE = HL = 0;
-  carry = halfCarry = subtract = zero = IME = shouldSetIME = halt = false;
+  carry = halfCarry = subtract = zero = IME = halt = shouldSetIME =
+      triggerHaltBug = false;
+  delaySetIME = true;
 }
 
 // **************************************************
@@ -93,7 +117,7 @@ void CPU::reset() {
 
 // run the instruction specified by the given
 // 8-bit opcode
-void CPU::runInstr(uint8 opcode, uint8 &cycles) {
+void CPU::runInstr(uint8 opcode) {
   // break 8-bit opcode into parts
   uint8 upperTwoBits = (opcode >> 6) & 0b11;
   uint8 regDest = (opcode >> 3) & 0b111;
@@ -122,35 +146,35 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 3 ----
     // load 8-bit immediate n into memory at HL
     case 0x36:
-      mem.write(HL, mem.imm8(PC, cycles), cycles);
+      Memory::write(HL, Memory::imm8(PC));
       break;
 
     // LD A, (BC)
     // 2 ----
     // load memory at BC into accumulator
     case 0x0A:
-      A = mem.read(BC, cycles);
+      A = Memory::read(BC);
       break;
 
     // LD A, (DE)
     // 2 ----
     // load memory at DE into accumulator
     case 0x1A:
-      A = mem.read(DE, cycles);
+      A = Memory::read(DE);
       break;
 
     // LD A, (C)
     // 2 ----
     // load memory at FF00 + C into accumulator
     case 0xF2:
-      A = mem.read(ZERO_PAGE_ADDR + C, cycles);
+      A = Memory::read(ZERO_PAGE_ADDR + C);
       break;
 
     // LD (C), A
     // 2 ----
     // load accumulator into memory at FF00 + C
     case 0xE2:
-      mem.write(ZERO_PAGE_ADDR + C, A, cycles);
+      Memory::write(ZERO_PAGE_ADDR + C, A);
       break;
 
     // LD A, (n)
@@ -158,7 +182,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load memory at FF00 + 8-bit immediate n
     // into accumulator
     case 0xF0:
-      A = mem.read(ZERO_PAGE_ADDR + mem.imm8(PC, cycles), cycles);
+      A = Memory::read(ZERO_PAGE_ADDR + Memory::imm8(PC));
       break;
 
     // LD (n), A
@@ -166,7 +190,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load accumulator into memory at
     // FF00 + 8-bit immediate n
     case 0xE0:
-      mem.write(ZERO_PAGE_ADDR + mem.imm8(PC, cycles), A, cycles);
+      Memory::write(ZERO_PAGE_ADDR + Memory::imm8(PC), A);
       break;
 
     // LD A, (nn)
@@ -174,7 +198,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load memory at 16-bit immediate nn
     // into accumulator
     case 0xFA:
-      A = mem.read(mem.imm16(PC, cycles), cycles);
+      A = Memory::read(Memory::imm16(PC));
       break;
 
     // LD (nn), A
@@ -182,7 +206,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load accumulator into memory at
     // 16-bit immediate nn
     case 0xEA:
-      mem.write(mem.imm16(PC, cycles), A, cycles);
+      Memory::write(Memory::imm16(PC), A);
       break;
 
     // LD A, (HLI)
@@ -190,7 +214,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load memory at HL into accumulator
     // then increment HL
     case 0x2A:
-      A = mem.read(HL++, cycles);
+      A = Memory::read(HL++);
       break;
 
     // LD A, (HLD)
@@ -198,21 +222,21 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load memory at HL into accumulator
     // then decrement HL
     case 0x3A:
-      A = mem.read(HL--, cycles);
+      A = Memory::read(HL--);
       break;
 
     // LD (BC), A
     // 2 ----
     // load accumulator into memory at BC
     case 0x02:
-      mem.write(BC, A, cycles);
+      Memory::write(BC, A);
       break;
 
     // LD (DE), A
     // 2 ----
     // load accumulator into memory at DE
     case 0x12:
-      mem.write(DE, A, cycles);
+      Memory::write(DE, A);
       break;
 
     // LD (HLI), A
@@ -220,7 +244,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load accumulator into memory at HL
     // then increment HL
     case 0x22:
-      mem.write(HL++, A, cycles);
+      Memory::write(HL++, A);
       break;
 
     // LD (HLD), A
@@ -228,7 +252,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load accumulator into memory at HL
     // then decrement HL
     case 0x32:
-      mem.write(HL--, A, cycles);
+      Memory::write(HL--, A);
       break;
 
     // **************************************************
@@ -240,7 +264,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load register HL into the stack pointer
     case 0xF9:
       SP = HL;
-      ++cycles;
+      CycleCounter::addCycles(1);
       break;
 
     // LDHL SP, e
@@ -248,8 +272,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load the stack pointer + 8-bit signed
     // immediate e into register HL
     case 0xF8:
-      HL = addSP(mem.imm8(PC, cycles));
-      ++cycles;
+      HL = addSP(Memory::imm8(PC));
+      CycleCounter::addCycles(1);
       break;
 
     // LD (nn), SP
@@ -257,7 +281,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // load the stack pointer into memory at
     // 16-bit immediate nn
     case 0x08:
-      mem.write(mem.imm16(PC, cycles), SP, cycles);
+      Memory::write(Memory::imm16(PC), SP);
       break;
 
     // **************************************************
@@ -269,7 +293,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // add 8-bit immediate n to accumulator and
     // store result in accumulator
     case 0xC6:
-      A = add(A, mem.imm8(PC, cycles));
+      A = add(A, Memory::imm8(PC));
       break;
 
     // ADC A, n
@@ -278,7 +302,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // accumulator and store result
     // in accumulator
     case 0xCE:
-      A = add(A, mem.imm8(PC, cycles), carry);
+      A = add(A, Memory::imm8(PC), carry);
       break;
 
     // SUB A, n
@@ -286,7 +310,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // subtract 8-bit immediate n to accumulator
     // and store result in accumulator
     case 0xD6:
-      A = sub(A, mem.imm8(PC, cycles));
+      A = sub(A, Memory::imm8(PC));
       break;
 
     // SBC A, n
@@ -295,7 +319,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // accumulator and store result
     // in accumulator
     case 0xDE:
-      A = sub(A, mem.imm8(PC, cycles), carry);
+      A = sub(A, Memory::imm8(PC), carry);
       break;
 
     // AND A, n
@@ -303,7 +327,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // and 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xE6:
-      _and(mem.imm8(PC, cycles));
+      _and(Memory::imm8(PC));
       break;
 
     // XOR A, n
@@ -311,7 +335,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // xor 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xEE:
-      _xor(mem.imm8(PC, cycles));
+      _xor(Memory::imm8(PC));
       break;
 
     // OR A, n
@@ -319,14 +343,14 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // or 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xF6:
-      _or(mem.imm8(PC, cycles));
+      _or(Memory::imm8(PC));
       break;
 
     // CP A, n
     // 2 CH1Z
     // compare 8-bit immediate n with accumulator
     case 0xFE:
-      sub(A, mem.imm8(PC, cycles));
+      sub(A, Memory::imm8(PC));
       break;
 
     // **************************************************
@@ -338,8 +362,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // add 8-bit signed immediate e to stack pointer
     // and store result in stack pointer
     case 0xE8:
-      SP = addSP(mem.imm8(PC, cycles));
-      cycles += 2;
+      SP = addSP(Memory::imm8(PC));
+      CycleCounter::addCycles(2);
       break;
 
     // **************************************************
@@ -386,7 +410,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
     // run instruction with CB prefix
     case 0xCB:
-      runInstrCB(mem.imm8(PC, cycles), cycles);
+      runInstrCB(Memory::imm8(PC));
       break;
 
     // **************************************************
@@ -397,8 +421,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // 4 ----
     // jump to 16-bit immediate address nn
     case 0xC3:
-      PC = mem.imm16(PC, cycles);
-      ++cycles;
+      PC = Memory::imm16(PC);
+      CycleCounter::addCycles(1);
       break;
 
     // JR e
@@ -406,8 +430,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // jump to address PC + 8-bit signed
     // immediate e
     case 0x18:
-      PC += (int8)mem.imm8(PC, cycles);
-      ++cycles;
+      PC += (int8)Memory::imm8(PC);
+      CycleCounter::addCycles(1);
       break;
 
     // JP (HL)
@@ -422,26 +446,26 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // push PC onto stack and jump to
     // 16-bit immediate address
     case 0xCD:
-      push(PC + 2, cycles);
-      PC = mem.imm16(PC, cycles);
+      push(PC + 2);
+      PC = Memory::imm16(PC);
       break;
 
     // RET
     // 4 ----
     // return from subroutine
     case 0xC9:
-      PC = pop(cycles);
-      ++cycles;
+      PC = pop();
+      CycleCounter::addCycles(1);
       break;
 
     // RETI
     // 4 ----
     // return from interrupt
     case 0xD9:
-      PC = pop(cycles);
+      PC = pop();
       Log::logInterruptReturn(PC);
       IME = true;
-      ++cycles;
+      CycleCounter::addCycles(1);
       break;
 
     // **************************************************
@@ -523,8 +547,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
     // halts the cpu, system clock, oscillator,
     // and lcd controller
     case 0x10:
-      stop = true;
-      --cycles;
+      CGB::stop = true;
       break;
 
     // illegal opcodes
@@ -553,7 +576,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // 3 ----
             // load 16-bit immediate nn into register pair dd
             case 0x1:
-              *regmap16[regPair] = mem.imm16(PC, cycles);
+              *regmap16[regPair] = Memory::imm16(PC);
               break;
 
             // INC ss
@@ -561,7 +584,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // increment register pair ss
             case 0x3:
               ++*regmap16[regPair];
-              ++cycles;
+              CycleCounter::addCycles(1);
               break;
 
             // ADD HL, ss
@@ -571,7 +594,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             case 0x9:
               HL = add(HL, *regmap16[regPair]);
               zero = prevZero;
-              ++cycles;
+              CycleCounter::addCycles(1);
               break;
 
             // DEC ss
@@ -589,12 +612,11 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // immediate e if jump condition cc is met
                 case 0b000:
                   if (jumpCondMet(jumpCond)) {
-                    PC += (int8)mem.imm8(PC, cycles);
-                    ++cycles;
+                    PC += (int8)Memory::imm8(PC);
                   } else {
                     ++PC;
-                    cycles += 1;
                   }
+                  CycleCounter::addCycles(1);
                   break;
 
                 // INC r / INC (HL)
@@ -602,7 +624,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // increment register r (or memory at HL)
                 case 0b100:
                   if (regDest == MEM_HL) {
-                    mem.write(HL, add(mem.read(HL, cycles), 1), cycles);
+                    Memory::write(HL, add(Memory::read(HL), 1));
                   } else {
                     *regmap8[regDest] = add(*regmap8[regDest], 1);
                   }
@@ -614,7 +636,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // decrement register r (or memory at HL)
                 case 0b101:
                   if (regDest == MEM_HL) {
-                    mem.write(HL, sub(mem.read(HL, cycles), 1), cycles);
+                    Memory::write(HL, sub(Memory::read(HL), 1));
                   } else {
                     *regmap8[regDest] = sub(*regmap8[regDest], 1);
                   }
@@ -627,9 +649,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // (or memory at HL)
                 case 0b110:
                   if (regDest == MEM_HL) {
-                    mem.write(HL, mem.imm8(PC, cycles), cycles);
+                    Memory::write(HL, Memory::imm8(PC));
                   } else {
-                    *regmap8[regDest] = mem.imm8(PC, cycles);
+                    *regmap8[regDest] = Memory::imm8(PC);
                   }
                   break;
               }
@@ -643,9 +665,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
           // load value of register r' (or memory at HL)
           // into register r (or memory at HL)
           if (regSrc == MEM_HL) {
-            *regmap8[regDest] = mem.read(HL, cycles);
+            *regmap8[regDest] = Memory::read(HL);
           } else if (regDest == MEM_HL) {
-            mem.write(HL, *regmap8[regSrc], cycles);
+            Memory::write(HL, *regmap8[regSrc]);
           } else {
             *regmap8[regDest] = *regmap8[regSrc];
           }
@@ -659,8 +681,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // accumulator and store result
             // in accumulator
             case 0b000:
-              A = add(A, regSrc == MEM_HL ? mem.read(HL, cycles)
-                                          : *regmap8[regSrc]);
+              A = add(A,
+                      regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
 
             // ADC A, r / ADC A, (HL)
@@ -669,9 +691,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // carry to accumulator and store result
             // in accumulator
             case 0b001:
-              A = add(
-                  A, regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc],
-                  carry);
+              A = add(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc],
+                      carry);
               break;
 
             // SUB A, r / SUB A, (HL)
@@ -680,8 +701,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // from accumulator and store result
             // in accumulator
             case 0b010:
-              A = sub(A, regSrc == MEM_HL ? mem.read(HL, cycles)
-                                          : *regmap8[regSrc]);
+              A = sub(A,
+                      regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
 
             // SBC A, r / SBC A, (HL)
@@ -690,9 +711,8 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // carry from accumulator and store result
             // in accumulator
             case 0b011:
-              A = sub(
-                  A, regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc],
-                  carry);
+              A = sub(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc],
+                      carry);
               break;
 
             // AND A, r / AND A, (HL)
@@ -700,7 +720,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // and register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b100:
-              _and(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
+              _and(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
 
             // XOR A, r / XOR A, (HL)
@@ -708,7 +728,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // xor register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b101:
-              _xor(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
+              _xor(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
 
             // OR A, r / OR A, (HL)
@@ -716,7 +736,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // or register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b110:
-              _or(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
+              _or(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
 
             // CP A, r / CP A, (HL)
@@ -724,8 +744,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // compare register r (or memory at HL)
             // with accumulator
             case 0b111:
-              sub(A,
-                  regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc]);
+              sub(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
               break;
           }
           break;
@@ -738,9 +757,9 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // content in register pair qq
             case 0x1:
               if (regPair != 0b11) {
-                *regmap16[regPair] = pop(cycles);
+                *regmap16[regPair] = pop();
               } else {
-                setAF(pop(cycles));
+                setAF(pop());
               }
               break;
 
@@ -748,7 +767,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
             // 4 ----
             // push register pair qq onto stack
             case 0x5:
-              push(regPair != 0b11 ? *regmap16[regPair] : getAF(), cycles);
+              push(regPair != 0b11 ? *regmap16[regPair] : getAF());
               break;
 
             default:
@@ -759,10 +778,10 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // cc is met
                 case 0b000:
                   if (jumpCondMet(jumpCond)) {
-                    PC = pop(cycles);
-                    cycles += 2;
+                    PC = pop();
+                    CycleCounter::addCycles(2);
                   } else {
-                    ++cycles;
+                    CycleCounter::addCycles(1);
                   }
                   break;
 
@@ -772,11 +791,11 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // cc is met
                 case 0b010:
                   if (jumpCondMet(jumpCond)) {
-                    PC = mem.imm16(PC, cycles);
-                    ++cycles;
+                    PC = Memory::imm16(PC);
+                    CycleCounter::addCycles(1);
                   } else {
                     PC += 2;
-                    cycles += 2;
+                    CycleCounter::addCycles(2);
                   }
                   break;
 
@@ -787,11 +806,11 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // cc is met
                 case 0b100:
                   if (jumpCondMet(jumpCond)) {
-                    push(PC + 2, cycles);
-                    PC = mem.imm16(PC, cycles);
+                    push(PC + 2);
+                    PC = Memory::imm16(PC);
                   } else {
                     PC += 2;
-                    cycles += 2;
+                    CycleCounter::addCycles(2);
                   }
                   break;
 
@@ -799,7 +818,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
                 // 4 ----
                 // call subroutine in zero page memory
                 case 0b111:
-                  push(PC, cycles);
+                  push(PC);
                   PC = 0x8 * regDest;
                   break;
               }
@@ -812,7 +831,7 @@ void CPU::runInstr(uint8 opcode, uint8 &cycles) {
 
 // run the CB prefixed instruction specified
 // by the given 8-bit opcode
-void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
+void CPU::runInstrCB(uint8 opcode) {
   uint8 upperTwoBits = (opcode >> 6) & 0b11;
   uint8 regDest = (opcode >> 3) & 0b111;
   uint8 regSrc = opcode & 0b111;
@@ -830,7 +849,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the left
         case 0b000:
           if (regSrc == MEM_HL) {
-            mem.write(HL, rotateLeft(mem.read(HL, cycles)), cycles);
+            Memory::write(HL, rotateLeft(Memory::read(HL)));
           } else {
             *regmap8[regSrc] = rotateLeft(*regmap8[regSrc]);
           }
@@ -842,7 +861,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the right
         case 0b001:
           if (regSrc == MEM_HL) {
-            mem.write(HL, rotateRight(mem.read(HL, cycles)), cycles);
+            Memory::write(HL, rotateRight(Memory::read(HL)));
           } else {
             *regmap8[regSrc] = rotateRight(*regmap8[regSrc]);
           }
@@ -854,7 +873,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the left through carry
         case 0b010:
           if (regSrc == MEM_HL) {
-            mem.write(HL, rotateLeft(mem.read(HL, cycles), true), cycles);
+            Memory::write(HL, rotateLeft(Memory::read(HL), true));
           } else {
             *regmap8[regSrc] = rotateLeft(*regmap8[regSrc], true);
           }
@@ -866,7 +885,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the right through carry
         case 0b011:
           if (regSrc == MEM_HL) {
-            mem.write(HL, rotateRight(mem.read(HL, cycles), true), cycles);
+            Memory::write(HL, rotateRight(Memory::read(HL), true));
           } else {
             *regmap8[regSrc] = rotateRight(*regmap8[regSrc], true);
           }
@@ -878,7 +897,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the left
         case 0b100:
           if (regSrc == MEM_HL) {
-            mem.write(HL, shiftLeft(mem.read(HL, cycles)), cycles);
+            Memory::write(HL, shiftLeft(Memory::read(HL)));
           } else {
             *regmap8[regSrc] = shiftLeft(*regmap8[regSrc]);
           }
@@ -890,7 +909,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the right arithmetically
         case 0b101:
           if (regSrc == MEM_HL) {
-            mem.write(HL, shiftRight(mem.read(HL, cycles), true), cycles);
+            Memory::write(HL, shiftRight(Memory::read(HL), true));
           } else {
             *regmap8[regSrc] = shiftRight(*regmap8[regSrc], true);
           }
@@ -902,7 +921,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // register r (or memory at HL)
         case 0b110:
           if (regSrc == MEM_HL) {
-            mem.write(HL, swap(mem.read(HL, cycles)), cycles);
+            Memory::write(HL, swap(Memory::read(HL)));
           } else {
             *regmap8[regSrc] = swap(*regmap8[regSrc]);
           }
@@ -914,7 +933,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
         // to the right logically
         case 0b111:
           if (regSrc == MEM_HL) {
-            mem.write(HL, shiftRight(mem.read(HL, cycles)), cycles);
+            Memory::write(HL, shiftRight(Memory::read(HL)));
           } else {
             *regmap8[regSrc] = shiftRight(*regmap8[regSrc]);
           }
@@ -931,7 +950,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // copies complement of bit b of register r
     // (or memory at HL) into zero flag
     case 0b01:
-      bit(regSrc == MEM_HL ? mem.read(HL, cycles) : *regmap8[regSrc], regDest);
+      bit(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc], regDest);
       break;
 
     // RES b, r / RES b, (HL)
@@ -940,7 +959,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // to zero
     case 0b10:
       if (regSrc == MEM_HL) {
-        mem.write(HL, set(mem.read(HL, cycles), regDest, 0), cycles);
+        Memory::write(HL, set(Memory::read(HL), regDest, 0));
       } else {
         *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 0);
       }
@@ -952,7 +971,7 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
     // to one
     case 0b11:
       if (regSrc == MEM_HL) {
-        mem.write(HL, set(mem.read(HL, cycles), regDest, 1), cycles);
+        Memory::write(HL, set(Memory::read(HL), regDest, 1));
       } else {
         *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 1);
       }
@@ -967,16 +986,16 @@ void CPU::runInstrCB(uint8 opcode, uint8 &cycles) {
 // **************************************************
 
 // push the 16-bit number val onto the stack
-void CPU::push(uint16 val, uint8 &cycles) {
-  ++cycles;
+void CPU::push(uint16 val) {
   SP -= 2;
-  mem.write(SP, val, cycles);
+  Memory::write(SP, val);
+  CycleCounter::addCycles(1);
 }
 
 // pop from the stack and return popped
 // 16-bit number
-uint16 CPU::pop(uint8 &cycles) {
-  uint16 val = mem.read16(SP, cycles);
+uint16 CPU::pop() {
+  uint16 val = Memory::read16(SP);
   SP += 2;
   return val;
 }
@@ -1299,12 +1318,12 @@ void CPU::setAF(uint16 val) {
 // **************************************************
 // **************************************************
 
-void CPU::handleInterrupts(uint8 &cycles) {
+void CPU::handleInterrupts() {
   // resume running cpu from halt mode if there is an
   // interrupt that needs to be serviced
   if (halt && Interrupts::pending()) {
     halt = false;
-    cycles += 1;
+    CycleCounter::addCycles(1);
   }
 
   if (IME) {
@@ -1328,9 +1347,9 @@ void CPU::handleInterrupts(uint8 &cycles) {
 
     if (intAddr != 0) {
       IME = false;
-      push(PC, cycles);
+      push(PC);
       PC = intAddr;
-      cycles += 2;
+      CycleCounter::addCycles(2);
     }
   }
 }
@@ -1358,16 +1377,16 @@ void CPU::loadState() {
   zero = state["zero"];
   IME = state["IME"];
   halt = state["halt"];
-  stop = state["stop"];
+  CGB::stop = state["stop"];
 }
 
 void CPU::saveState() {
   nlohmann::json state = {
-      {"PC", PC},       {"SP", SP},           {"A", A},
-      {"BC", BC},       {"DE", DE},           {"HL", HL},
-      {"carry", carry}, {"halfCarry", carry}, {"subtract", subtract},
-      {"zero", zero},   {"IME", IME},         {"halt", halt},
-      {"stop", stop}};
+      {"PC", PC},         {"SP", SP},           {"A", A},
+      {"BC", BC},         {"DE", DE},           {"HL", HL},
+      {"carry", carry},   {"halfCarry", carry}, {"subtract", subtract},
+      {"zero", zero},     {"IME", IME},         {"halt", halt},
+      {"stop", CGB::stop}};
   string stateStr = state.dump(4);
   fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::out);
   fs.write(stateStr.c_str(), stateStr.size());

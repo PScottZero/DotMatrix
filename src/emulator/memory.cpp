@@ -2,8 +2,9 @@
 
 #include "bootstrap.h"
 #include "controls.h"
+#include "cyclecounter.h"
 #include "interrupts.h"
-#include "mbc.h"
+#include "mbc/mbc.h"
 #include "timers.h"
 
 uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
@@ -21,8 +22,8 @@ bool Memory::dmaTransferMode = false;
 // **************************************************
 
 // read 8-bit value from given memory address
-uint8 Memory::read(uint16 addr, uint8 &cycles) {
-  ++cycles;
+uint8 Memory::read(uint16 addr) {
+  CycleCounter::addCycles(1);
 
   // return zero if reading from a
   // restricted memory location
@@ -42,16 +43,16 @@ uint8 Memory::read(uint16 addr, uint8 &cycles) {
 }
 
 // read 16-bit value from given memory address
-uint16 Memory::read16(uint16 addr, uint8 &cycles) {
-  return read(addr, cycles) | (read(addr + 1, cycles) << 8);
+uint16 Memory::read16(uint16 addr) {
+  return read(addr) | (read(addr + 1) << 8);
 }
 
 // write 8-bit value to given memory address
-void Memory::write(uint16 addr, uint8 val, uint8 &cycles) {
-  ++cycles;
+void Memory::write(uint16 addr, uint8 val) {
+  CycleCounter::addCycles(1);
 
-  // check for MBC requests
-  MBC::processMBCRequest(addr, val);
+  // check for MBC writes
+  MBC::write(addr, val);
 
   // return if writing to a
   // restricted memory location
@@ -122,13 +123,13 @@ bool Memory::memoryRestricted(uint16 addr) {
 
   // cannot access VRAM if lcd is in
   // pixel transfer mode
-  if (addr >= VRAM_ADDR && addr < RAM_ADDR && !canAccessVRAM()) {
+  if (addr >= VRAM_ADDR && addr < EXT_RAM_ADDR && !canAccessVRAM()) {
     return true;
   }
 
-  // cannot access external ram if ram
+  // cannot access external ram if it
   // is not enabled by MBC
-  if (addr >= EXT_RAM_ADDR && addr < RAM_ADDR && !MBC::ramEnabled) {
+  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
     return true;
   }
 
@@ -136,39 +137,35 @@ bool Memory::memoryRestricted(uint16 addr) {
 }
 
 // write 16-bit value to given memory address
-void Memory::write(uint16 addr, uint16 val, uint8 &cycles) {
-  write(addr, (uint8)(val & 0xFF), cycles);
-  write(addr + 1, (uint8)((val >> 8) & 0xFF), cycles);
+void Memory::write(uint16 addr, uint16 val) {
+  write(addr, (uint8)(val & 0xFF));
+  write(addr + 1, (uint8)((val >> 8) & 0xFF));
 }
 
 // get 8-bit immediate value
-uint8 Memory::imm8(uint16 &PC, uint8 &cycles) { return read(PC++, cycles); }
+uint8 Memory::imm8(uint16 &PC) { return read(PC++); }
 
 // get 16-bit immediate value
-uint16 Memory::imm16(uint16 &PC, uint8 &cycles) {
-  uint16 val = read16(PC++, cycles);
+uint16 Memory::imm16(uint16 &PC) {
+  uint16 val = read16(PC++);
   ++PC;
   return val;
 }
 
-// **************************************************
-// **************************************************
-// Direct Memory Access Functions
-// **************************************************
-// **************************************************
-
-uint8 *Memory::getBytePtr(uint16 addr) {
+// get byte at specified address directly
+// (no read/write intercepts)
+uint8 &Memory::getByte(uint16 addr) {
   if (Bootstrap::enabled && addr < BOOTSTRAP_BYTES) {
     return Bootstrap::at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
-    return &romBank0[addr];
+    return romBank0[addr];
   } else if (addr < VRAM_ADDR) {
-    return &romBank1[addr - ROM_BANK_BYTES];
+    return romBank1[addr - ROM_BANK_1_ADDR];
+  } else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR) {
+    return *exramBank[addr - EXT_RAM_ADDR];
   }
-  return &mem[addr - MEM_BYTES];
+  return mem[addr - VRAM_ADDR];
 }
-
-uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
 
 // check if VRAM can be accessed,
 // can only be access outside of
@@ -199,6 +196,7 @@ void Memory::loadROM(QString dir) {
 
   mapCartMem(romBank0, 0);
   mapCartMem(romBank1, 1);
+  mapEXRAM(0);
 }
 
 // map memory rom bank to cartridge rom bank
@@ -243,11 +241,21 @@ void Memory::saveState() {
 }
 
 void Memory::reset() {
+  // clear memory
   for (int i = 0; i < MEM_BYTES; ++i) {
     mem[i] = 0;
   }
-  *Interrupts::intFlags |= 0xE0;
+
+  // clear external ram
+  for (int i = 0; i < RAM_BANK_BYTES * NUM_RAM_BANKS; ++i) {
+    exram[i] = 0;
+  }
+
+  // TODO load external ram after clearing
+
+  Interrupts::intFlags |= 0xE0;
   dmaTransferMode = false;
   mapCartMem(romBank0, 0);
   mapCartMem(romBank1, 1);
+  mapEXRAM(0);
 }

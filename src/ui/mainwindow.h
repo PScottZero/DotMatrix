@@ -10,6 +10,7 @@
 
 #include "../emulator/cgb.h"
 #include "./ui_mainwindow.h"
+#include "palettes.h"
 
 #define WINDOW_BASE_WIDTH 640
 #define WINDOW_BASE_HEIGHT 576

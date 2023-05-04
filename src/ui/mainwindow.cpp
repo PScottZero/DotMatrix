@@ -3,11 +3,12 @@
 #include <QDir>
 
 #include "../emulator/bootstrap.h"
+#include "../emulator/ppu.h"
 #include "keybindingswindow.h"
 #include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), cgb(&Palettes::palGBP) {
+    : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
   ui->setupUi(this);
 
   // **************************************************
@@ -139,7 +140,7 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setSpeed(int speed) { cgb.speedMult = pow(2, speed - 2); }
+void MainWindow::setSpeed(int speed) { CGB::speedMult = pow(2, speed - 2); }
 
 void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
                                   QSignalMapper *sigMap, int mapVal) {
@@ -156,7 +157,7 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 }
 
 void MainWindow::setPalette(QObject *palette) {
-  cgb.ppu.palette = (Palette *)palette;
+  PPU::palette = (Palette *)palette;
 }
 
 void MainWindow::openKeyBindingsWindow() {

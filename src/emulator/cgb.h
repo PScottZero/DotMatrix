@@ -1,10 +1,7 @@
 #pragma once
 
+#include <QImage>
 #include <QThread>
-
-#include "cpu.h"
-#include "memory.h"
-#include "ppu.h"
 
 #define FRAME_RATE 59.7275
 #define US_PER_SEC 1000000.0
@@ -13,20 +10,19 @@
 class CGB : public QThread {
   Q_OBJECT
 
- public:
-  bool running;
-  bool stop;
-  float speedMult;
-  Memory mem;
-  PPU ppu;
-  CPU cpu;
+ private:
+  QImage screen;
 
-  CGB(Palette *palette);
+ public:
+  static bool stop;
+  static float speedMult;
+
+  CGB();
   ~CGB();
 
   void run() override;
-  bool loadROM(const QString dir);
   void reset();
+  bool loadROM(const QString dir);
 
  signals:
   void sendScreen(QImage);

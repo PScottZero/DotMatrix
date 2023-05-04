@@ -21,8 +21,9 @@ class Timers {
   static uint8 timerFreq();
 
  public:
-  static uint8 *div, *tima, *tma, *tac;
+  static uint8 &div, &tima, &tma, &tac;
   static uint16 internalCounter;
 
-  static void step(int cycles);
+  static void step();
+  static void reset();
 };

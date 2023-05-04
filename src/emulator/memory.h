@@ -86,7 +86,7 @@
 #define ROM_BANK_1_ADDR 0x4000
 #define VRAM_ADDR 0x8000
 #define EXT_RAM_ADDR 0xA000
-#define RAM_ADDR 0xC000
+#define WORK_RAM_ADDR 0xC000
 #define RAM_ECHO_END_ADDR 0xDE00
 #define ECHO_RAM_ADDR 0xE000
 #define OAM_ADDR 0xFE00
@@ -121,16 +121,13 @@ class Memory {
   static uint8 **exramBank;
 
   // memory read + write functions
-  static uint8 read(uint16 addr, uint8 &cycles);
-  static uint16 read16(uint16 addr, uint8 &cycles);
-  static void write(uint16 addr, uint8 val, uint8 &cycles);
-  static void write(uint16 addr, uint16 val, uint8 &cycles);
-  static uint8 imm8(uint16 &PC, uint8 &cycles);
-  static uint16 imm16(uint16 &PC, uint8 &cycles);
-
-  // direct memory access functions
+  static uint8 read(uint16 addr);
+  static uint16 read16(uint16 addr);
+  static void write(uint16 addr, uint8 val);
+  static void write(uint16 addr, uint16 val);
+  static uint8 imm8(uint16 &PC);
+  static uint16 imm16(uint16 &PC);
   static uint8 &getByte(uint16 addr);
-  static uint8 *getBytePtr(uint16 addr);
 
   // miscellaneous functions
   static void loadROM(QString dir);

@@ -9,34 +9,41 @@
 #include "ppu.h"
 
 #include "bootstrap.h"
+#include "cyclecounter.h"
 #include "interrupts.h"
+#include "memory.h"
 
-PPU::PPU(Memory &mem, Palette *palette)
-    : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
-      lcdc(mem.getByte(LCDC)),
-      stat(mem.getByte(STAT)),
-      scy(mem.getByte(SCY)),
-      scx(mem.getByte(SCX)),
-      ly(mem.getByte(LY)),
-      lyc(mem.getByte(LYC)),
-      dma(mem.getByte(DMA)),
-      bgp(mem.getByte(BGP)),
-      obp0(mem.getByte(OBP0)),
-      obp1(mem.getByte(OBP1)),
-      wy(mem.getByte(WY)),
-      wx(mem.getByte(WX)),
-      visibleSprites(),
-      visibleSpriteCount(),
-      mem(mem),
-      palette(palette),
-      ppuCycles(),
-      frameRendered(false) {}
+QImage *PPU::screen = nullptr;
 
-void PPU::step(uint8 cycles) {
+// initialize references to in-memory
+// registers used by the PPU
+uint8 &PPU::lcdc = Memory::getByte(LCDC);
+uint8 &PPU::stat = Memory::getByte(STAT);
+uint8 &PPU::scy = Memory::getByte(SCY);
+uint8 &PPU::scx = Memory::getByte(SCX);
+uint8 &PPU::ly = Memory::getByte(LY);
+uint8 &PPU::lyc = Memory::getByte(LYC);
+uint8 &PPU::dma = Memory::getByte(DMA);
+uint8 &PPU::bgp = Memory::getByte(BGP);
+uint8 &PPU::obp0 = Memory::getByte(OBP0);
+uint8 &PPU::obp1 = Memory::getByte(OBP1);
+uint8 &PPU::wx = Memory::getByte(WX);
+uint8 &PPU::wy = Memory::getByte(WY);
+
+// initialize visible sprite
+// array and count
+sprite_t PPU::visibleSprites[MAX_SPRITES_PER_LINE]{};
+uint8 PPU::visibleSpriteCount = 0;
+
+// initialize palette
+Palette *PPU::palette = &Palettes::palGBP;
+
+// initialize frame rendered flag
+bool PPU::frameRendered = false;
+
+void PPU::step() {
   if (lcdEnable()) {
-    ppuCycles += cycles;
-
-    if (ppuCycles > SCANLINE_CYCLES) {
+    if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
       if (++ly >= SCREEN_LINES) ly = 0;
 
       // check if current line number
@@ -48,14 +55,14 @@ void PPU::step(uint8 cycles) {
         stat &= 0xFB;
       }
 
-      ppuCycles %= SCANLINE_CYCLES;
+      CycleCounter::ppuCycles %= SCANLINE_CYCLES;
     }
 
     if (ly < SCREEN_PX_HEIGHT) {
       // **************************************************
       // OAM Search
       // **************************************************
-      if (ppuCycles < OAM_SEARCH_CYCLES) {
+      if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
         if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
           setLCDInterrupt();
@@ -68,7 +75,7 @@ void PPU::step(uint8 cycles) {
       // **************************************************
       // Pixel Transfer
       // **************************************************
-      else if (ppuCycles < PIXEL_TRANSFER_CYCLES) {
+      else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
           setLCDInterrupt();
@@ -85,7 +92,7 @@ void PPU::step(uint8 cycles) {
       // **************************************************
       // H-Blank
       // **************************************************
-      else if (ppuCycles < H_BLANK_CYCLES) {
+      else if (CycleCounter::ppuCycles < H_BLANK_CYCLES) {
         if (getMode() != H_BLANK_MODE) {
           setMode(H_BLANK_MODE);
           setLCDInterrupt();
@@ -104,8 +111,9 @@ void PPU::step(uint8 cycles) {
     }
   } else {
     ly = 0;
-    ppuCycles = 0;
     setMode(H_BLANK_MODE);
+    screen->fill(palette->data[0]);
+    CycleCounter::ppuCycles = 0;
   }
 }
 
@@ -134,7 +142,7 @@ void PPU::renderBg(scanline_t &scanline) {
     int bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
 
     // get data tile number (0 to 256 or -128 to 127)
-    int tileNo = mem.getByte(tileMapAddr + bgTileNo);
+    int tileNo = Memory::getByte(tileMapAddr + bgTileNo);
 
     // get row of pixels from tile
     TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
@@ -147,6 +155,10 @@ void PPU::renderBg(scanline_t &scanline) {
       scanline.pixels[pxCount] = row[i];
       scanline.palettes[pxCount] = PaletteType::BG;
       ++pxCount;
+    }
+
+    if (pxCount == oldPxCount) {
+      break;
     }
   }
 }
@@ -224,7 +236,7 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
         break;
     }
     uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & 0b11;
-    screen.setPixel(px, ly, palette->data[pxPalVal]);
+    screen->setPixel(px, ly, palette->data[pxPalVal]);
   }
 }
 
@@ -240,8 +252,8 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
   int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
   uint16 tileRowAddr = tileAddr + 2 * row;
-  uint8 rowDataLo = mem.getByte(tileRowAddr);
-  uint8 rowDataHi = mem.getByte(tileRowAddr + 1);
+  uint8 rowDataLo = Memory::getByte(tileRowAddr);
+  uint8 rowDataHi = Memory::getByte(tileRowAddr + 1);
 
   // convert tile row data into pixel values
   // rowDataLo = abcdefgh
@@ -280,12 +292,12 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
   uint16 spriteAddr = OAM_ADDR + spriteIdx * OAM_ENTRY_BYTES;
 
   // get sprite position and pattern
-  sprite.y = mem.getByte(spriteAddr);
-  sprite.x = mem.getByte(spriteAddr + 1);
-  sprite.pattern = mem.getByte(spriteAddr + 2);
+  sprite.y = Memory::getByte(spriteAddr);
+  sprite.x = Memory::getByte(spriteAddr + 1);
+  sprite.pattern = Memory::getByte(spriteAddr + 2);
 
   // get sprite flags
-  uint8 flags = mem.getByte(spriteAddr + 3);
+  uint8 flags = Memory::getByte(spriteAddr + 3);
   sprite.priority = flags & 0x80;
   sprite.flipY = flags & 0x40;
   sprite.flipX = flags & 0x20;

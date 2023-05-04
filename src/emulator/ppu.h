@@ -13,7 +13,6 @@
 #include <thread>
 
 #include "../ui/palettes.h"
-#include "memory.h"
 #include "types.h"
 
 // clock speed constants
@@ -85,45 +84,42 @@ using TileRow = array<uint8, TILE_PX_DIM>;
 
 class PPU {
  private:
-  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx;
-  sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
-  uint8 visibleSpriteCount;
-  Memory &mem;
-  uint8 ppuCycles;
+  static uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1,
+      &wy, &wx;
+  static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
+  static uint8 visibleSpriteCount;
 
   // rendering functions
-  void renderBg(scanline_t &scanline);
-  void renderSprites(scanline_t &scanline);
-  void renderWindow(scanline_t &scanline);
-  void findVisibleSprites();
-  void transferScanlineToScreen(scanline_t &scanline);
+  static void renderBg(scanline_t &scanline);
+  static void renderSprites(scanline_t &scanline);
+  static void renderWindow(scanline_t &scanline);
+  static void findVisibleSprites();
+  static void transferScanlineToScreen(scanline_t &scanline);
 
   // read display memory functions
-  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
-  TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
-  sprite_t getSpriteOAM(uint8 spriteIdx);
+  static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
+  static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
+  static sprite_t getSpriteOAM(uint8 spriteIdx);
 
   // lcdc register functions
-  bool lcdEnable();
-  bool bgEnable();
-  bool windowEnable();
-  bool spriteEnable();
-  uint8 spriteHeight();
-  uint16 windowMapAddr();
-  uint16 bgWindowDataAddr();
-  uint16 bgMapAddr();
+  static bool lcdEnable();
+  static bool bgEnable();
+  static bool windowEnable();
+  static bool spriteEnable();
+  static uint8 spriteHeight();
+  static uint16 windowMapAddr();
+  static uint16 bgWindowDataAddr();
+  static uint16 bgMapAddr();
 
   // stat register functions
-  void setMode(uint8 mode);
-  uint8 getMode();
-  void setLCDInterrupt();
+  static void setMode(uint8 mode);
+  static uint8 getMode();
+  static void setLCDInterrupt();
 
  public:
-  QImage screen;
-  bool frameRendered;
-  Palette *palette;
+  static QImage *screen;
+  static bool frameRendered;
+  static Palette *palette;
 
-  PPU(Memory &mem, Palette *palette);
-
-  void step(uint8 cycles);
+  static void step();
 };

@@ -3,34 +3,24 @@
 #include <QMessageBox>
 
 #include "bootstrap.h"
-#include "controls.h"
-#include "interrupts.h"
-#include "log.h"
-#include "mbc.h"
+#include "cpu.h"
+#include "mbc/mbc.h"
+#include "memory.h"
+#include "ppu.h"
 #include "timers.h"
 
 using namespace std;
 using namespace chrono;
 
-CGB::CGB(Palette *palette)
-    : running(false),
-      stop(false),
-      speedMult(1),
-      mem(),
-      ppu(mem, palette),
-      cpu(mem, stop) {
-  Interrupts::intEnable = mem.getBytePtr(IE);
-  Interrupts::intFlags = mem.getBytePtr(IF);
-  *Interrupts::intFlags |= 0xE0;
-  Controls::p1 = mem.getBytePtr(P1);
-  Timers::div = mem.getBytePtr(DIV);
-  Timers::tima = mem.getBytePtr(TIMA);
-  Timers::tma = mem.getBytePtr(TMA);
-  Timers::tac = mem.getBytePtr(TAC);
+bool CGB::stop = false;
+float CGB::speedMult = 1.0;
+
+CGB::CGB() : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32) {
+  PPU::screen = &screen;
 }
 
 CGB::~CGB() {
-  running = false;
+  terminate();
   wait();
 
   free(Memory::mem);
@@ -42,25 +32,18 @@ CGB::~CGB() {
 }
 
 void CGB::run() {
-  running = true;
   auto clock = system_clock::now();
-  while (running) {
-    Log::logStr((char *)string("CPU\n").c_str());
-    uint8 cycles = cpu.step();
-    Log::logStr((char *)string("PPU\n").c_str());
-    ppu.step(cycles);
-    Log::logStr((char *)string("TIMERS\n").c_str());
-    Timers::step(cycles);
+  while (isRunning()) {
+    CPU::step();
+    Timers::step();
+    PPU::step();
 
     if (!Bootstrap::skipWait()) {
-      if (ppu.frameRendered) {
-        Log::logStr((char *)string("SENDING SCREEN\n").c_str());
-        emit sendScreen(ppu.screen);
-        Log::logStr((char *)string("SENT SCREEN\n").c_str());
-        int frameDuration = FRAME_DURATION / speedMult;
-        clock += microseconds(frameDuration);
+      if (PPU::frameRendered) {
+        emit sendScreen(screen);
+        clock += microseconds((int)(FRAME_DURATION / CGB::speedMult));
         this_thread::sleep_until(clock);
-        ppu.frameRendered = false;
+        PPU::frameRendered = false;
       }
     } else {
       clock = system_clock::now();
@@ -83,10 +66,12 @@ bool CGB::loadROM(const QString dir) {
 }
 
 void CGB::reset() {
-  running = false;
+  terminate();
   wait();
-  cpu.reset();
+  stop = false;
+  CPU::reset();
+  Timers::reset();
   Memory::reset();
-  Timers::internalCounter = 0;
-  Memory::getByte(DIV) = 0;
+  MBC::reset();
+  Bootstrap::reset();
 }

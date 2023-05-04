@@ -27,6 +27,8 @@ uint8 Bootstrap::bootstrap[BOOTSTRAP_BYTES] = {
     0xf5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xfb, 0x86, 0x20, 0xfe,
     0x3e, 0x01, 0xe0, 0x50};
 
-uint8 *Bootstrap::at(uint16 addr) { return &Bootstrap::bootstrap[addr]; }
+uint8 &Bootstrap::at(uint16 addr) { return Bootstrap::bootstrap[addr]; }
 
 bool Bootstrap::skipWait() { return Bootstrap::enabled && Bootstrap::skip; }
+
+void Bootstrap::reset() { Bootstrap::enabled = true; }
