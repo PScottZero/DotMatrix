@@ -90,5 +90,6 @@ class MBC {
   static bool bankTypeImplemented();
   static string bankTypeStr();
   static bool hasRAM();
+  static int ramBytes();
   static void reset();
 };

@@ -1,6 +1,7 @@
 #include "memory.h"
 
 #include "bootstrap.h"
+#include "cgb.h"
 #include "controls.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
@@ -9,11 +10,10 @@
 
 uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
 uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
-uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * NUM_RAM_BANKS);
+uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
 uint8 *Memory::romBank0 = (uint8 *)malloc(ROM_BANK_BYTES);
 uint8 *Memory::romBank1 = (uint8 *)malloc(ROM_BANK_BYTES);
 uint8 **Memory::exramBank = (uint8 **)malloc(sizeof(uint8 *) * RAM_BANK_BYTES);
-bool Memory::dmaTransferMode = false;
 
 // **************************************************
 // **************************************************
@@ -25,9 +25,9 @@ bool Memory::dmaTransferMode = false;
 uint8 Memory::read(uint16 addr) {
   CycleCounter::addCycles(1);
 
-  // return zero if reading from a
-  // restricted memory location
-  if (memoryRestricted(addr)) {
+  // cannot access external ram if it
+  // is not enabled by MBC
+  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
     return 0xFF;
   }
 
@@ -54,9 +54,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // check for MBC writes
   MBC::write(addr, val);
 
-  // return if writing to a
-  // restricted memory location
-  if (memoryRestricted(addr) || addr < VRAM_ADDR) {
+  if (addr < VRAM_ADDR) {
     return;
   }
 
@@ -85,16 +83,17 @@ void Memory::write(uint16 addr, uint8 val) {
     getByte(STAT) = (getByte(STAT) & 0x87) | (val & 0x78);
   }
 
+  // echo ram
+  else if (addr >= WORK_RAM_ADDR && addr < OAM_ADDR) {
+    echoRam(addr, val);
+  }
+
   // if using MBC2, ram only uses lower nibble
   // of each ram byte, and ram only consists of
   // 512 half bytes with rest of ram area
   // echoing A000-A1FF
   else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && MBC::halfRAMMode) {
-    uint16 offset = addr % HALF_RAM_BYTES;
-    for (int echoAddr = EXT_RAM_ADDR; echoAddr < WORK_RAM_ADDR;
-         echoAddr += HALF_RAM_BYTES) {
-      getByte(echoAddr + offset) = val | 0xF0;
-    }
+    echoHalfRam(addr, val);
   }
 
   // write to memory
@@ -110,8 +109,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // start dma transfer if dma
   // address was written to
   else if (addr == DMA) {
-    thread dmaTransferThread(&Memory::dmaTransfer);
-    dmaTransferThread.detach();
+    dmaTransfer();
   }
 
   // update state of controls if
@@ -119,36 +117,6 @@ void Memory::write(uint16 addr, uint8 val) {
   else if (addr == P1) {
     Controls::update();
   }
-}
-
-// check if specified addr is a restricted
-// memory location
-bool Memory::memoryRestricted(uint16 addr) {
-  // can only access HRAM during
-  // DMA transfers
-  if (dmaTransferMode && addr < HRAM_ADDR) {
-    return true;
-  }
-
-  // cannot access OAM if lcd is in
-  // pixel transfer or oam search mode
-  if (addr >= OAM_ADDR && addr <= OAM_END_ADDR && !canAccessOAM()) {
-    return true;
-  }
-
-  // cannot access VRAM if lcd is in
-  // pixel transfer mode
-  if (addr >= VRAM_ADDR && addr < EXT_RAM_ADDR && !canAccessVRAM()) {
-    return true;
-  }
-
-  // cannot access external ram if it
-  // is not enabled by MBC
-  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
-    return true;
-  }
-
-  return false;
 }
 
 // write 16-bit value to given memory address
@@ -180,21 +148,6 @@ uint8 &Memory::getByte(uint16 addr) {
     return *exramBank[addr - EXT_RAM_ADDR];
   }
   return mem[addr - VRAM_ADDR];
-}
-
-// check if VRAM can be accessed,
-// can only be access outside of
-// pixel transfer mode
-bool Memory::canAccessVRAM() {
-  return (getByte(STAT) & 0b11) != _PIXEL_TRANSFER_MODE;
-}
-
-// check if OAM memory can be accessed,
-// can only be accesses outside of
-// pixel transfer and oam search mode
-bool Memory::canAccessOAM() {
-  return (getByte(STAT) & 0b11) != _PIXEL_TRANSFER_MODE &&
-         (getByte(STAT) & 0b11) != _OAM_SEARCH_MODE;
 }
 
 // **************************************************
@@ -232,12 +185,40 @@ void Memory::mapEXRAM(uint8 bankNum) {
 
 // perform dma transfer
 void Memory::dmaTransfer() {
-  dmaTransferMode = true;
   uint16 dmaAddr = getByte(DMA) << 8;
   for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
     getByte(OAM_ADDR + i) = getByte(dmaAddr + i);
   }
-  dmaTransferMode = false;
+}
+
+void Memory::echoRam(uint16 addr, uint8 val) {
+  uint16 offset = addr % RAM_BANK_BYTES;
+  getByte(WORK_RAM_ADDR + offset) = val;
+  if (ECHO_RAM_ADDR + offset < OAM_ADDR) {
+    getByte(ECHO_RAM_ADDR + offset) = val;
+  }
+}
+
+void Memory::echoHalfRam(uint16 addr, uint8 val) {
+  uint16 offset = addr % HALF_RAM_BYTES;
+  for (int echoAddr = EXT_RAM_ADDR; echoAddr < WORK_RAM_ADDR;
+       echoAddr += HALF_RAM_BYTES) {
+    getByte(echoAddr + offset) = val | 0xF0;
+  }
+}
+
+void Memory::loadExram() {
+  string exramPath = CGB::romPath.toStdString();
+  exramPath.replace(exramPath.find(".gb"), 4, ".sav");
+  fstream fs(exramPath, ios::in);
+  if (!fs.fail()) fs.read((char *)exram, MBC::ramBytes());
+}
+
+void Memory::saveExram() {
+  string exramPath = CGB::romPath.toStdString();
+  exramPath.replace(exramPath.find(".gb"), 4, ".sav");
+  fstream fs(exramPath, ios::out);
+  fs.write((char *)exram, MBC::ramBytes());
 }
 
 void Memory::loadState() {
@@ -262,14 +243,13 @@ void Memory::reset() {
   }
 
   // clear external ram
-  for (int i = 0; i < RAM_BANK_BYTES * NUM_RAM_BANKS; ++i) {
+  for (int i = 0; i < RAM_BANK_BYTES * MAX_RAM_BANKS; ++i) {
     exram[i] = 0;
   }
 
   // TODO load external ram after clearing
 
   Interrupts::intFlags |= 0xE0;
-  dmaTransferMode = false;
   mapCartMem(romBank0, 0);
   mapCartMem(romBank1, 1);
   mapEXRAM(0);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QString>
-#include <QThread>
 #include <fstream>
 
 #include "types.h"
@@ -12,7 +11,7 @@
 #define ROM_BANK_BYTES 0x4000
 #define RAM_BANK_BYTES 0x2000
 #define HALF_RAM_BYTES 0x200
-#define NUM_RAM_BANKS 4
+#define MAX_RAM_BANKS 16
 
 // dmg in-memory flag addresses
 #define SGB_MODE 0x0146
@@ -104,15 +103,9 @@
 
 class Memory {
  private:
-  static bool dmaTransferMode;
-
-  static bool memoryRestricted(uint16 addr);
-
   static void dmaTransfer();
-
-  // access functions
-  static bool canAccessVRAM();
-  static bool canAccessOAM();
+  static void echoRam(uint16 addr, uint8 val);
+  static void echoHalfRam(uint16 addr, uint8 val);
 
  public:
   static uint8 *mem;
@@ -135,6 +128,10 @@ class Memory {
   static void loadROM(QString dir);
   static void mapCartMem(uint8 *romBank, uint8 bankNum);
   static void mapEXRAM(uint8 bankNum);
+
+  // save and load external ram
+  static void loadExram();
+  static void saveExram();
 
   static void loadState();
   static void saveState();

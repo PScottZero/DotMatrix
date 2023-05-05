@@ -202,6 +202,20 @@ bool MBC::hasRAM() {
   }
 }
 
+int MBC::ramBytes() {
+  switch (ramSize) {
+    case RAM_SIZE_8KB:
+      return RAM_BANK_BYTES;
+    case RAM_SIZE_32KB:
+      return RAM_BANK_BYTES * 4;
+    case RAM_SIZE_64KB:
+      return RAM_BANK_BYTES * 8;
+    case RAM_SIZE_128KB:
+      return RAM_BANK_BYTES * 16;
+  }
+  return 0;
+}
+
 void MBC::reset() {
   ramEnabled = false;
   romBankNum = 1;

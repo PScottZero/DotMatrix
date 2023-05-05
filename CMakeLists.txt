@@ -43,9 +43,6 @@ set(PROJECT_SOURCES
         src/ui/keybindingswindow.cpp
         src/ui/keybindingswindow.h
         src/ui/keybindingswindow.ui
-        src/ui/memoryview.cpp
-        src/ui/memoryview.h
-        src/ui/memoryview.ui
         src/ui/palettes.cpp
         src/ui/palettes.h
 )

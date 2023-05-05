@@ -1,5 +1,6 @@
 #include "cgb.h"
 
+#include <QDir>
 #include <QMessageBox>
 
 #include "bootstrap.h"
@@ -12,6 +13,7 @@
 using namespace std;
 using namespace chrono;
 
+QString CGB::romPath = QDir::currentPath();
 bool CGB::stop = false;
 
 CGB::CGB()
@@ -25,6 +27,8 @@ CGB::CGB()
 CGB::~CGB() {
   terminate();
   wait();
+
+  if (MBC::hasRAM()) Memory::saveExram();
 
   free(Memory::mem);
   free(Memory::cart);
@@ -56,12 +60,14 @@ void CGB::run() {
   }
 }
 
-bool CGB::loadROM(const QString dir) {
-  Memory::loadROM(dir);
+bool CGB::loadROM(const QString romPath) {
+  Memory::loadROM(romPath);
+
   MBC::bankType = Memory::getByte(BANK_TYPE);
   MBC::romSize = Memory::getByte(ROM_SIZE);
   MBC::ramSize = Memory::getByte(RAM_SIZE);
   MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
+
   if (!MBC::bankTypeImplemented()) {
     QMessageBox mbox{};
     auto message = "Bank type " + MBC::bankTypeStr() + " is not supported";
@@ -69,6 +75,10 @@ bool CGB::loadROM(const QString dir) {
     mbox.exec();
     return false;
   }
+
+  CGB::romPath = romPath;
+  if (MBC::hasRAM()) Memory::loadExram();
+
   return true;
 }
 
@@ -78,6 +88,9 @@ void CGB::reset() {
   stop = false;
   pause = false;
   actionPause->setChecked(false);
+
+  if (MBC::hasRAM()) Memory::saveExram();
+
   CPU::reset();
   Timers::reset();
   Memory::reset();

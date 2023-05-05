@@ -1,17 +1,12 @@
 #include "mainwindow.h"
 
-#include <QDir>
-
 #include "../emulator/bootstrap.h"
+#include "../emulator/log.h"
 #include "../emulator/ppu.h"
 #include "keybindingswindow.h"
-#include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),
-      ui(new Ui::MainWindow),
-      cgb(),
-      currPath(QDir::currentPath()) {
+    : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
   ui->setupUi(this);
 
   cgb.actionPause = ui->actionPause;
@@ -101,10 +96,14 @@ MainWindow::MainWindow(QWidget *parent)
   // Debug Menu
   // **************************************************
   // **************************************************
-  connect(ui->actionLoadSaveState, &QAction::triggered, this,
-          &MainWindow::loadSaveState);
-  connect(ui->actionMemoryView, &QAction::triggered, this,
-          &MainWindow::openMemoryView);
+  connect(ui->actionShowBackground, &QAction::toggled, this,
+          &MainWindow::toggleBackground);
+  connect(ui->actionShowWindow, &QAction::toggled, this,
+          &MainWindow::toggleWindow);
+  connect(ui->actionShowSprites, &QAction::toggled, this,
+          &MainWindow::toggleSprites);
+  connect(ui->actionEnableLogging, &QAction::toggled, this,
+          &MainWindow::toggleLogging);
 
   connect(&cgb, &CGB::sendScreen, this, &MainWindow::setScreen);
 
@@ -117,9 +116,9 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::loadROM() {
   // select rom to run
   QString romName = QFileDialog::getOpenFileName(
-      this, tr("Open File"), currPath, tr("Game Boy ROMs (*.gb *.gbc)"));
+      this, tr("Open File"), CGB::romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
   if (romName != "") {
-    currPath = romName;
+    CGB::romPath = romName;
     cgb.reset();
     bool romSupported = cgb.loadROM(romName);
     if (romSupported) cgb.start();
@@ -178,16 +177,21 @@ void MainWindow::openKeyBindingsWindow() {
   kbWin.exec();
 }
 
-void MainWindow::loadSaveState() {}
-
-void MainWindow::openMemoryView() {
-  MemoryView memView{};
-  memView.exec();
-}
-
 void MainWindow::toggleBootScreen(bool showBootScreen) {
   Bootstrap::skip = !showBootScreen;
 }
+
+void MainWindow::toggleBackground(bool showBackground) {
+  PPU::showBackground = showBackground;
+}
+
+void MainWindow::toggleWindow(bool showWindow) { PPU::showWindow = showWindow; }
+
+void MainWindow::toggleSprites(bool showSprites) {
+  PPU::showSprites = showSprites;
+}
+
+void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
   Controls::press(event->key());

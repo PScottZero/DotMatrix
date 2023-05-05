@@ -37,9 +37,11 @@ class MainWindow : public QMainWindow {
   void setScale(int scale);
   void setSpeed(int speed);
   void openKeyBindingsWindow();
-  void loadSaveState();
-  void openMemoryView();
   void toggleBootScreen(bool showBootScreen);
+  void toggleBackground(bool showBackground);
+  void toggleWindow(bool showWindow);
+  void toggleSprites(bool showSprites);
+  void toggleLogging(bool enableLog);
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
@@ -48,7 +50,6 @@ class MainWindow : public QMainWindow {
  private:
   Ui::MainWindow *ui;
   CGB cgb;
-  QString currPath;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);

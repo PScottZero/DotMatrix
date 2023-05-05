@@ -42,6 +42,10 @@ Palette *PPU::palette = &Palettes::palGBP;
 // initialize frame rendered flag
 bool PPU::frameRendered = false;
 
+bool PPU::showBackground = true;
+bool PPU::showWindow = true;
+bool PPU::showSprites = true;
+
 void PPU::step() {
   if (lcdEnable()) {
     if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
@@ -183,7 +187,8 @@ void PPU::renderBg(scanline_t &scanline) {
 
     // transfer pixel row to scanline
     int start = pxCount == 0 ? innerBgTileX : 0;
-    int end = pxCount + 8 > 160 ? innerBgTileX + 1 : TILE_PX_DIM;
+    int end =
+        pxCount + 8 > SCREEN_PX_WIDTH ? SCREEN_PX_WIDTH - pxCount : TILE_PX_DIM;
 
     for (int i = start; i < end; ++i) {
       scanline.pixels[pxCount] = row[i];
@@ -356,11 +361,11 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
 
 bool PPU::lcdEnable() { return lcdc & 0x80; }
 
-bool PPU::bgEnable() { return lcdc & 0x01; }
+bool PPU::bgEnable() { return (lcdc & 0x01) && showBackground; }
 
-bool PPU::windowEnable() { return lcdc & 0x20; }
+bool PPU::windowEnable() { return (lcdc & 0x20) && showWindow; }
 
-bool PPU::spriteEnable() { return lcdc & 0x02; }
+bool PPU::spriteEnable() { return (lcdc & 0x02) && showSprites; }
 
 uint8 PPU::spriteHeight() {
   return lcdc & 0x04 ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;

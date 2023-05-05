@@ -124,6 +124,7 @@ class PPU {
   static QImage *screen;
   static bool frameRendered;
   static Palette *palette;
+  static bool showBackground, showWindow, showSprites;
 
   static void step();
 };

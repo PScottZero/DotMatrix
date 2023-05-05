@@ -15,6 +15,7 @@ class CGB : public QThread {
   QImage screen;
 
  public:
+  static QString romPath;
   QAction *actionPause;
   static bool stop;
   float speedMult;
@@ -25,7 +26,7 @@ class CGB : public QThread {
 
   void run() override;
   void reset();
-  bool loadROM(const QString dir);
+  bool loadROM(const QString romPath);
 
  signals:
   void sendScreen(QImage);
