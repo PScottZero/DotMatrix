@@ -1,18 +1,23 @@
 #pragma once
 
 #include <QString>
-#include <QThread>
 #include <fstream>
 
-#include "controls.h"
 #include "types.h"
 
-// memory size constants
+// memory sizes
 #define MEM_BYTES 0x8000
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
+#define RAM_BANK_BYTES 0x2000
+#define HALF_RAM_BYTES 0x200
+#define MAX_RAM_BANKS 16
 
-// dmg in-memory flag address constants
+// dmg in-memory flag addresses
+#define SGB_MODE 0x0146
+#define BANK_TYPE 0x0147
+#define ROM_SIZE 0x0148
+#define RAM_SIZE 0x149
 #define P1 0xFF00
 #define SB 0xFF01
 #define SC 0xFF02
@@ -32,6 +37,7 @@
 #define BGP 0xFF47
 #define OBP0 0xFF48
 #define OBP1 0xFF49
+#define BOOTSTRAP 0xFF50
 #define WY 0xFF4A
 #define WX 0xFF4B
 #define OAM_START 0xFE00
@@ -61,6 +67,7 @@
 #define WAVEFORM_END 0xFF3F
 
 // cgb in-memory flag address constants
+#define CGB_MODE 0x0143
 #define KEY1 0xFF4D
 #define RP 0xFF56
 #define VBK 0xFF4F
@@ -80,7 +87,7 @@
 #define ROM_BANK_1_ADDR 0x4000
 #define VRAM_ADDR 0x8000
 #define EXT_RAM_ADDR 0xA000
-#define RAM_ADDR 0xC000
+#define WORK_RAM_ADDR 0xC000
 #define RAM_ECHO_END_ADDR 0xDE00
 #define ECHO_RAM_ADDR 0xE000
 #define OAM_ADDR 0xFE00
@@ -94,50 +101,40 @@
 #define _OAM_SEARCH_MODE 0b10
 #define _PIXEL_TRANSFER_MODE 0b11
 
-class Controls;
-
 class Memory {
  private:
-  uint8 *mem;
-  uint8 *cart;
-  uint8 *romBank0;
-  uint8 *romBank1;
-
-  bool dmaTransferMode;
-
-  // access functions
-  bool canAccessVRAM();
-  bool canAccessOAM();
+  static void dmaTransfer();
+  static void echoRam(uint16 addr, uint8 val);
+  static void echoHalfRam(uint16 addr, uint8 val);
 
  public:
-  Memory();
-  ~Memory();
-
-  Controls *controls;
-
-  void init();
+  static uint8 *mem;
+  static uint8 *cart;
+  static uint8 *exram;
+  static uint8 *romBank0;
+  static uint8 *romBank1;
+  static uint8 **exramBank;
 
   // memory read + write functions
-  uint8 read(uint16 addr, uint8 &cycles);
-  uint16 read16(uint16 addr, uint8 &cycles);
-  void write(uint16 addr, uint8 val, uint8 &cycles);
-  void write(uint16 addr, uint16 val, uint8 &cycles);
-  uint8 imm8(uint16 &PC, uint8 &cycles);
-  uint16 imm16(uint16 &PC, uint8 &cycles);
-  bool memoryRestricted(uint16 addr);
-
-  // direct memory access functions
-  uint8 &getByte(uint16 addr);
-  uint8 *getBytePtr(uint16 addr);
-  void setByte(uint16 addr, uint8 val);
-  uint16 getTwoBytes(uint16 addr);
+  static uint8 read(uint16 addr);
+  static uint16 read16(uint16 addr);
+  static void write(uint16 addr, uint8 val);
+  static void write(uint16 addr, uint16 val);
+  static uint8 imm8(uint16 &PC);
+  static uint16 imm16(uint16 &PC);
+  static uint8 &getByte(uint16 addr);
 
   // miscellaneous functions
-  void loadROM(QString dir);
-  void loadNintendoLogo();
-  void mapCartMem(uint8 *romBank, uint16 startAddr);
-  void dmaTransfer();
+  static void loadRom(QString dir);
+  static void setRomBank(uint8 *romBank, uint8 bankNum);
+  static void setExramBank(uint8 bankNum);
 
-  void loadState();
-  void saveState();
+  // save and load external ram
+  static void loadExram();
+  static void saveExram();
+
+  static void loadState();
+  static void saveState();
+
+  static void reset();
 };

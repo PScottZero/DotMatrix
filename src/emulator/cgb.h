@@ -1,27 +1,33 @@
 #pragma once
 
-#include "controls.h"
-#include "cpu.h"
-#include "memory.h"
-#include "ppu.h"
-#include "timers.h"
+#include <QAction>
+#include <QImage>
+#include <QThread>
 
-class CGB {
+#define FRAME_RATE 59.7275
+#define US_PER_SEC 1000000.0
+#define FRAME_DURATION US_PER_SEC / 59.7275
+
+class CGB : public QThread {
+  Q_OBJECT
+
+ private:
+  QImage screen;
+
  public:
+  static QString romPath;
+  QAction *actionPause;
+  static bool stop;
   float speedMult;
-  bool stop;
-  bool threadsRunning;
-  Palette *palette;
-  Memory mem;
-  Timers timers;
-  PPU ppu;
-  CPU cpu;
-  Controls controls;
+  bool pause;
 
-  CGB(Palette *palette);
+  CGB();
   ~CGB();
 
-  void run(QString dir);
-  void runBootstrap();
-  void runFromSaveState();
+  void run() override;
+  void reset();
+  bool loadRom(const QString romPath);
+
+ signals:
+  void sendScreen(QImage);
 };

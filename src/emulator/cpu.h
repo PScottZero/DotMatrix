@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// Sharp LR35902 Central Processing Unit (CPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <stdio.h>
@@ -7,14 +15,7 @@
 #include <fstream>
 #include <thread>
 
-#include "memory.h"
-
-// clock speed constants
-#define DMG_CLOCK_SPEED 0x100000  // 1MHz
-#define CGB_CLOCK_SPEED 0x200000  // 2MHz
-#ifndef NS_PER_SEC
-#define NS_PER_SEC 1000000000
-#endif
+#include "types.h"
 
 // register constants
 #define NUM_REG_16 4
@@ -27,90 +28,63 @@
 #define JUMP_NC 0b10
 #define JUMP_C 0b11
 
-// interrupt constants
-#define JOYPAD_INT 0x10
-#define SERIAL_INT 0x08
-#define TIMER_INT 0x04
-#define LCDC_INT 0x02
-#define V_BLANK_INT 0x01
-
-class CPU : public QThread {
-  Q_OBJECT
-
+class CPU {
  private:
-  uint16 PC, SP, BC, DE, HL;        // 16-bit registers
-  uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
+  static uint16 PC, SP, BC, DE, HL;        // 16-bit registers
+  static uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
 
-  bool zero, subtract, halfCarry, carry, IME, halt, &stop;  // flags
+  static bool zero, subtract, halfCarry, carry, IME, halt;  // flags
 
-  uint8 *regmap8[NUM_REG_8];
-  uint16 *regmap16[NUM_REG_16];
+  static uint8 *regmap8[NUM_REG_8];
+  static uint16 *regmap16[NUM_REG_16];
 
-  Memory &mem;
-
-  uint8 &intEnable, &intFlags;
-
-  float &speedMult;
-  bool &threadRunning;
-  bool shouldSetIME;
+  static bool shouldSetIME, delaySetIME, triggerHaltBug;
 
   // instruction decoding functions
-  void runInstr(uint8 instr, uint8 &cycles);
-  void runInstrCB(uint8 instr, uint8 &cycles);
+  static void runInstr(uint8 opcode);
+  static void runInstrCB(uint8 opcode);
 
   // transfer functions
-  void push(uint16 val, uint8 &cycles);
-  uint16 pop(uint8 &cycles);
+  static void push(uint16 val);
+  static uint16 pop();
 
   // arithmetic and logical functions
-  uint8 add(uint8 a, uint8 b, bool c = false);
-  uint16 add(uint16 a, uint16 b);
-  uint8 sub(uint8 a, uint8 b, bool c = false);
-  void _and(uint8 val);
-  void _or(uint8 val);
-  void _xor(uint8 val);
+  static uint8 add(uint8 a, uint8 b, bool c = false);
+  static uint16 add(uint16 a, uint16 b);
+  static uint16 addSP(int8 val);
+  static uint8 sub(uint8 a, uint8 b, bool c = false);
+  static void _and(uint8 val);
+  static void _or(uint8 val);
+  static void _xor(uint8 val);
 
   // rotate shift functions
-  uint8 rotateLeft(uint8 val, bool thruCarry = false);
-  uint8 rotateRight(uint8 val, bool thruCarry = false);
-  uint8 shiftLeft(uint8 val);
-  uint8 shiftRight(uint8 val, bool arithmetic = false);
-  uint8 swap(uint8 val);
+  static uint8 rotateLeft(uint8 val, bool thruCarry = false);
+  static uint8 rotateRight(uint8 val, bool thruCarry = false);
+  static uint8 shiftLeft(uint8 val);
+  static uint8 shiftRight(uint8 val, bool arithmetic = false);
+  static uint8 swap(uint8 val);
 
   // bit functions
-  void bit(uint8 val, uint8 bitPos);
-  uint8 set(uint8 val, uint8 bitPos, bool bitVal);
+  static void bit(uint8 val, uint8 bitPos);
+  static uint8 set(uint8 val, uint8 bitPos, bool bitVal);
 
   // jump functions
-  bool jumpCondMet(uint8 jumpCond);
+  static bool jumpCondMet(uint8 jumpCond);
 
   // general-purpose arithmetic functions
-  void decimalAdjAcc();
+  static void decimalAdjAcc();
 
   // register AF setter + getter
-  uint16 getAF();
-  void setAF(uint16 val);
+  static uint16 getAF();
+  static void setAF(uint16 val);
 
   // interrupt functions
-  void handleInterrupts(uint8 &cycles);
-  void enableInterrupt(uint8 interrupt);
-  void disableInterrupt(uint8 interrupt);
-  void resetInterrupt(uint8 interrupt);
-  bool interruptEnabled(uint8 interrupt);
-  bool interruptRequested(uint8 interrupt);
-
-  void log(std::fstream &fs);
+  static void handleInterrupts();
 
  public:
-  CPU(Memory &mem, float &speedMult, bool &stop, bool &threadRunning);
-  ~CPU();
+  static void step();
+  static void reset();
 
-  void run() override;
-  void setPC(uint16 addr);
-
-  // request interrupt function
-  void requestInterrupt(uint8 interrupt);
-
-  void loadState();
-  void saveState();
+  static void loadState();
+  static void saveState();
 };

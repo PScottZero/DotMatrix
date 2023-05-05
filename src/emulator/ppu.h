@@ -1,20 +1,27 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// PIXEL PROCESSING UNIT (PPU)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <QImage>
-#include <QThread>
 #include <array>
 #include <thread>
 
-#include "memory.h"
-#include "palette.h"
+#include "../ui/palettes.h"
 #include "types.h"
 
 // clock speed constants
 #define PPU_CLOCK_SPEED 0x100000
 #define OAM_SEARCH_CYCLES 20
-#define PIXEL_TRANSFER_CYCLES 43
-#define H_BLANK_CYCLES 51
+#define PIXEL_TRANSFER_CYCLES OAM_SEARCH_CYCLES + 43
+#define H_BLANK_CYCLES PIXEL_TRANSFER_CYCLES + 51
 #define V_BLANK_CYCLES 114
+#define SCANLINE_CYCLES 114
 #define _NS_PER_SEC 1000000000
 
 // px constants
@@ -44,12 +51,14 @@
 #define PIXEL_TRANSFER_MODE 0b11
 
 // screen memory address constants
-#define WINDOW_CODE_ADDR_0 0x9800
-#define WINDOW_CODE_ADDR_1 0x9C00
+#define WINDOW_MAP_ADDR_0 0x9800
+#define WINDOW_MAP_ADDR_1 0x9C00
 #define BG_DATA_ADDR_0 0x9000
 #define BG_DATA_ADDR_1 0x8000
-#define BG_CODE_ADDR_0 0x9800
-#define BG_CODE_ADDR_1 0x9C00
+#define BG_MAP_ADDR_0 0x9800
+#define BG_MAP_ADDR_1 0x9C00
+
+using namespace std;
 
 // sprite oam entry
 typedef struct {
@@ -62,11 +71,7 @@ typedef struct {
   bool palette;
 } sprite_t;
 
-enum PaletteType {
-  BG,
-  SPRITE0,
-  SPRITE1
-};
+enum PaletteType { BG, SPRITE0, SPRITE1 };
 
 typedef struct {
   uint8 pixels[SCREEN_PX_WIDTH];
@@ -75,56 +80,51 @@ typedef struct {
 } scanline_t;
 
 // tile row of eight pixels
-using TileRow = std::array<uint8, TILE_PX_DIM>;
+using TileRow = array<uint8, TILE_PX_DIM>;
 
-class PPU : public QThread {
-  Q_OBJECT
-
+class PPU {
  private:
-  uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1, &wy, &wx,
-      &intFlag;
-  sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
-  uint8 visibleSpriteCount;
-  float &speedMult;
-  Memory &mem;
-  Palette *palette;
-  bool &stop, &threadRunning;
+  static uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1,
+      &wy, &wx, windowLineNum;
+  static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
+  static uint8 visibleSpriteCount;
+
+  // OAM search functions
+  static void findVisibleSprites();
 
   // rendering functions
-  void renderBg(scanline_t &scanline);
-  void renderSprites(scanline_t &scanline);
-  void renderWindow(scanline_t &scanline);
-  void findVisibleSprites();
-  void transferScanlineToScreen(scanline_t &scanline);
+  static void renderBg(scanline_t &scanline);
+  static void renderSprites(scanline_t &scanline);
+  static void renderWindow(scanline_t &scanline);
+  static bool shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
+                                    uint8 scanlineIdx, uint8 px);
+  static void transferScanlineToScreen(scanline_t &scanline);
 
   // read display memory functions
-  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
-  TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
-  sprite_t getSpriteOAM(uint8 spriteIdx);
+  static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
+  static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
+  static sprite_t getSpriteOAM(uint8 spriteIdx);
 
   // lcdc register functions
-  bool lcdEnable();
-  bool bgEnable();
-  bool windowEnable();
-  bool spriteEnable();
-  uint8 spriteHeight();
-  uint16 windowMapAddr();
-  uint16 bgWindowDataAddr();
-  uint16 bgMapAddr();
+  static bool lcdEnable();
+  static bool bgEnable();
+  static bool windowEnable();
+  static bool spriteEnable();
+  static uint8 spriteHeight();
+  static uint16 windowMapAddr();
+  static uint16 bgWindowDataAddr();
+  static uint16 bgMapAddr();
 
   // stat register functions
-  void setMode(uint8 mode);
-  void setLCDInterrupt();
+  static void setMode(uint8 mode);
+  static uint8 getMode();
+  static void setLCDInterrupt();
 
  public:
-  QImage screen;
+  static QImage *screen;
+  static bool frameRendered;
+  static Palette *palette;
+  static bool showBackground, showWindow, showSprites;
 
-  PPU(Memory &mem, Palette *palette, float &speedMult, bool &stop,
-      bool &threadRunning);
-  ~PPU();
-
-  void run() override;
-
- signals:
-  void sendScreen(QImage *);
+  static void step();
 };

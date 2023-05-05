@@ -16,11 +16,16 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="font">
+   <font>
+    <stylestrategy>NoAntialias</stylestrategy>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Dot Matrix: Game Boy Emulator</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resource.qrc">
+   <iconset>
     <normaloff>:/img/dm_icon.ico</normaloff>:/img/dm_icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -55,7 +60,7 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="../../resource.qrc">:/img/background.png</pixmap>
+     <pixmap resource="../../resource.qrc">:/assets/imgs/background.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -93,6 +98,7 @@
     <font>
      <family>DejaVu Sans Mono</family>
      <pointsize>10</pointsize>
+     <stylestrategy>NoAntialias</stylestrategy>
     </font>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -100,12 +106,15 @@
      <font>
       <family>DejaVu Sans Mono</family>
       <pointsize>10</pointsize>
+      <stylestrategy>NoAntialias</stylestrategy>
      </font>
     </property>
     <property name="title">
      <string>File</string>
     </property>
     <addaction name="actionOpenROM"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionReset"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -114,6 +123,7 @@
      <font>
       <family>DejaVu Sans Mono</family>
       <pointsize>10</pointsize>
+      <stylestrategy>NoAntialias</stylestrategy>
      </font>
     </property>
     <property name="title">
@@ -124,6 +134,7 @@
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -134,13 +145,13 @@
      <addaction name="actionSpeed1x"/>
      <addaction name="actionSpeed2x"/>
      <addaction name="actionSpeed4x"/>
-     <addaction name="actionSpeed8x"/>
     </widget>
     <widget class="QMenu" name="menuPalette">
      <property name="font">
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -164,6 +175,7 @@
       <font>
        <family>DejaVu Sans Mono</family>
        <pointsize>10</pointsize>
+       <stylestrategy>NoAntialias</stylestrategy>
       </font>
      </property>
      <property name="title">
@@ -178,6 +190,17 @@
     <addaction name="menuSpeed"/>
     <addaction name="menuPalette"/>
     <addaction name="actionKeyBindings"/>
+    <addaction name="actionShowBootScreen"/>
+   </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionShowBackground"/>
+    <addaction name="actionShowWindow"/>
+    <addaction name="actionShowSprites"/>
+    <addaction name="separator"/>
+    <addaction name="actionEnableLogging"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
     <property name="title">
@@ -194,6 +217,12 @@
   <action name="actionOpenROM">
    <property name="text">
     <string>Open ROM</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>12</pointsize>
+    </font>
    </property>
   </action>
   <action name="actionQuit">
@@ -242,14 +271,6 @@
    </property>
    <property name="text">
     <string>4x</string>
-   </property>
-  </action>
-  <action name="actionSpeed8x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>8x</string>
    </property>
   </action>
   <action name="actionBGB">
@@ -351,14 +372,6 @@
     <string>Wish GB (By Kerrie Lake)</string>
    </property>
   </action>
-  <action name="actionScale025x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>0.25x</string>
-   </property>
-  </action>
   <action name="actionScale0_5x">
    <property name="checkable">
     <bool>true</bool>
@@ -409,9 +422,66 @@
     <string>Memory View</string>
    </property>
   </action>
-  <action name="actionRunBootstrap">
+  <action name="actionShowBootScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Run Bootstrap</string>
+    <string>Show Boot Screen</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+  </action>
+  <action name="actionShowBackground">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Background</string>
+   </property>
+  </action>
+  <action name="actionShowWindow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Window</string>
+   </property>
+  </action>
+  <action name="actionShowSprites">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Sprites</string>
+   </property>
+  </action>
+  <action name="actionEnableLogging">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable Logging</string>
    </property>
   </action>
  </widget>

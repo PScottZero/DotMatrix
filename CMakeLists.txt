@@ -14,7 +14,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         src/main.cpp
-        
         src/emulator/cgb.cpp
         src/emulator/cgb.h
         src/emulator/cpu.cpp
@@ -25,20 +24,27 @@ set(PROJECT_SOURCES
         src/emulator/ppu.h
         src/emulator/timers.cpp
         src/emulator/timers.h
-        src/emulator/palette.cpp
-        src/emulator/palette.h
         src/emulator/controls.cpp
         src/emulator/controls.h
+        src/emulator/interrupts.cpp
+        src/emulator/interrupts.h
+        src/emulator/bootstrap.cpp
+        src/emulator/bootstrap.h
+        src/emulator/log.cpp
+        src/emulator/log.h
+        src/emulator/cyclecounter.cpp
+        src/emulator/cyclecounter.h
         src/emulator/types.h
+        src/emulator/mbc.cpp
+        src/emulator/mbc.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui
         src/ui/keybindingswindow.cpp
         src/ui/keybindingswindow.h
         src/ui/keybindingswindow.ui
-        src/ui/memoryview.cpp
-        src/ui/memoryview.h
-        src/ui/memoryview.ui
+        src/ui/palettes.cpp
+        src/ui/palettes.h
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)

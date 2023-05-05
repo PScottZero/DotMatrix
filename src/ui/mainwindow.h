@@ -10,6 +10,7 @@
 
 #include "../emulator/cgb.h"
 #include "./ui_mainwindow.h"
+#include "palettes.h"
 
 #define WINDOW_BASE_WIDTH 640
 #define WINDOW_BASE_HEIGHT 576
@@ -29,23 +30,24 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void loadROM();
-  void setScreen(QImage *image);
+  void pause(bool shouldPause);
+  void reset();
+  void setScreen(QImage image);
   void setPalette(QObject *palette);
   void setScale(int scale);
   void setSpeed(int speed);
   void openKeyBindingsWindow();
-  void loadSaveState();
-  void runBootstrap();
-  void openMemoryView();
+  void toggleBootScreen(bool showBootScreen);
+  void toggleBackground(bool showBackground);
+  void toggleWindow(bool showWindow);
+  void toggleSprites(bool showSprites);
+  void toggleLogging(bool enableLog);
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
   void keyReleaseEvent(QKeyEvent *event) override;
 
  private:
-  Palette palBGB, palBicycle, palChocolate, palCobalt, palGB, palGBP,
-      palInverted, palKirby, palPlatinum, palPokemon, palVB, palWishGB;
-
   Ui::MainWindow *ui;
   CGB cgb;
 

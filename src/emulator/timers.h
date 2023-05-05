@@ -3,41 +3,27 @@
 #include <QThread>
 #include <chrono>
 
-#include "cpu.h"
-#include "memory.h"
 #include "types.h"
 
 #define TIMER_BASE_FREQ 0x100000  // 1MHz
-#define TIMA_CYCLES_00 256
-#define TIMA_CYCLES_01 4
-#define TIMA_CYCLES_10 16
-#define TIMA_CYCLES_11 64
-#define DIV_CYCLES 64
+#define TAC_00 0x03FF
+#define TAC_01 0x000F
+#define TAC_10 0x003F
+#define TAC_11 0x00FF
 
-class Timers : public QThread {
-  Q_OBJECT
+#define DIV_MASK 0xFF00
 
+class Timers {
  private:
-  CPU &cpu;
+  static const uint16 internalCounterMasks[4];
 
-  uint8 &div, &tima, &tma, &tac;
-
-  int timaFreqs[4];
-  int timaCycles;
-  int divCycles;
-
-  float &speedMult;
-
-  bool &stop, &threadRunning;
-
-  void updateTimers();
-  bool timerEnabled();
-  uint8 timerFreq();
+  static bool timerEnabled();
+  static uint8 timerFreq();
 
  public:
-  Timers(CPU &cpu, Memory &mem, float &speedMult, bool &stop,
-         bool &threadRunning);
-  ~Timers();
+  static uint8 &div, &tima, &tma, &tac;
+  static uint16 internalCounter;
 
-  void run() override;
+  static void step();
+  static void reset();
 };

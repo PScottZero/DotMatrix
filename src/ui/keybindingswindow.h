@@ -16,7 +16,7 @@ class KeyBindingsWindow : public QDialog {
   Q_OBJECT
 
  public:
-  explicit KeyBindingsWindow(Controls &controls, QWidget *parent = nullptr);
+  explicit KeyBindingsWindow(QWidget *parent = nullptr);
   ~KeyBindingsWindow();
 
  protected:
@@ -24,11 +24,10 @@ class KeyBindingsWindow : public QDialog {
 
  private:
   Ui::KeyBindingsWindow *ui;
-  Controls &controls;
   Button selectedButton;
   bool acceptKeyPress;
-  std::map<Button, QLabel *> buttonKeyLabels;
-  std::map<Button, QPushButton *> setKeyButtons;
+  map<Button, QLabel *> buttonKeyLabels;
+  map<Button, QPushButton *> setKeyButtons;
 
   void startBind(Button button);
 };

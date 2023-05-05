@@ -1,63 +1,43 @@
 #include "timers.h"
 
-Timers::Timers(CPU &cpu, Memory &mem, float &speedMult, bool &stop,
-               bool &threadRunning)
-    : QThread(),
-      cpu(cpu),
-      div(mem.getByte(DIV)),
-      tima(mem.getByte(TIMA)),
-      tma(mem.getByte(TMA)),
-      tac(mem.getByte(TAC)),
-      timaFreqs{},
-      timaCycles(),
-      divCycles(),
-      speedMult(speedMult),
-      stop(stop),
-      threadRunning(threadRunning) {}
+#include "cyclecounter.h"
+#include "interrupts.h"
+#include "memory.h"
 
-Timers::~Timers() {
-  threadRunning = false;
-  wait();
-}
+uint16 Timers::internalCounter = 0;
 
-void Timers::run() {
-  while (threadRunning) {
-    if (!stop) {
-      auto start = std::chrono::system_clock::now();
-      int cycleTimeNs = NS_PER_SEC / (TIMER_BASE_FREQ * speedMult);
-      auto end = start + std::chrono::nanoseconds(cycleTimeNs);
+uint8 &Timers::div = Memory::getByte(DIV);
+uint8 &Timers::tima = Memory::getByte(TIMA);
+uint8 &Timers::tma = Memory::getByte(TMA);
+uint8 &Timers::tac = Memory::getByte(TAC);
 
-      ++timaCycles;
-      ++divCycles;
-      updateTimers();
+const uint16 Timers::internalCounterMasks[4]{TAC_00, TAC_01, TAC_10, TAC_11};
 
-      std::this_thread::sleep_until(end);
-    }
-  }
-}
+void Timers::step() {
+  // increment internal counter and
+  // update DIV register
+  uint16 oldInternalCounter = internalCounter;
+  internalCounter += 4 * CycleCounter::cpuCycles;
+  div = (internalCounter & DIV_MASK) >> 8;
 
-void Timers::updateTimers() {
   // update TIMA timer
   if (timerEnabled()) {
-    if (timaCycles >= timerFreq()) {
-      // on TIMA overflow, set TIMA
-      // to TMA and request a timer
-      // interrupt
+    uint16 oldCounter = oldInternalCounter & internalCounterMasks[timerFreq()];
+    uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
+    if (counter < oldCounter) {
       if (++tima == 0) {
         tima = tma;
-        cpu.requestInterrupt(TIMER_INT);
+        Interrupts::request(TIMER_INT);
       }
-      timaCycles -= timerFreq();
     }
-  }
-
-  // update DIV timer
-  if (divCycles >= DIV_CYCLES) {
-    ++div;
-    divCycles -= DIV_CYCLES;
   }
 }
 
 bool Timers::timerEnabled() { return tac & 0x04; }
 
-uint8 Timers::timerFreq() { return timaFreqs[tac & 0b11]; }
+uint8 Timers::timerFreq() { return tac & 0b11; }
+
+void Timers::reset() {
+  Timers::internalCounter = 0;
+  div = 0;
+}
