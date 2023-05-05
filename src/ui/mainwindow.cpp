@@ -120,7 +120,7 @@ void MainWindow::loadROM() {
   if (romName != "") {
     CGB::romPath = romName;
     cgb.reset();
-    bool romSupported = cgb.loadROM(romName);
+    bool romSupported = cgb.loadRom(romName);
     if (romSupported) cgb.start();
   }
 }

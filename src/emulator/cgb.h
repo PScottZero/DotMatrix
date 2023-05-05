@@ -26,7 +26,7 @@ class CGB : public QThread {
 
   void run() override;
   void reset();
-  bool loadROM(const QString romPath);
+  bool loadRom(const QString romPath);
 
  signals:
   void sendScreen(QImage);

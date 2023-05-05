@@ -28,7 +28,7 @@ CGB::~CGB() {
   terminate();
   wait();
 
-  if (MBC::hasRAM()) Memory::saveExram();
+  if (MBC::hasRam()) Memory::saveExram();
 
   free(Memory::mem);
   free(Memory::cart);
@@ -60,8 +60,8 @@ void CGB::run() {
   }
 }
 
-bool CGB::loadROM(const QString romPath) {
-  Memory::loadROM(romPath);
+bool CGB::loadRom(const QString romPath) {
+  Memory::loadRom(romPath);
 
   MBC::bankType = Memory::getByte(BANK_TYPE);
   MBC::romSize = Memory::getByte(ROM_SIZE);
@@ -77,7 +77,7 @@ bool CGB::loadROM(const QString romPath) {
   }
 
   CGB::romPath = romPath;
-  if (MBC::hasRAM()) Memory::loadExram();
+  if (MBC::hasRam()) Memory::loadExram();
 
   return true;
 }
@@ -89,7 +89,7 @@ void CGB::reset() {
   pause = false;
   actionPause->setChecked(false);
 
-  if (MBC::hasRAM()) Memory::saveExram();
+  if (MBC::hasRam()) Memory::saveExram();
 
   CPU::reset();
   Timers::reset();

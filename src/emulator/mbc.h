@@ -51,14 +51,16 @@
 #define RAM_SIZE_128KB 0x04
 #define RAM_SIZE_64KB 0x05
 
-// mbc1 register constants
+// mbc registers
 #define MBC1_RAM_ENABLE 0x1FFF
 #define MBC1_ROM_BANK_NUM 0x3FFF
 #define MBC1_RAM_BANK_NUM 0x5FFF
 #define MBC1_BANK_MODE 0x7FFF
-
-// mbc2 register constants
 #define MBC2_RAM_ROM 0x3FFF
+#define MBC5_RAM_ENABLE 0x1FFF
+#define MBC5_ROM_BANK_BYTE_LO 0x2FFF
+#define MBC5_ROM_BANK_BIT_9 0x3FFF
+#define MBC5_RAM_BANK_NUM 0x5FFF
 
 using namespace std;
 
@@ -69,27 +71,28 @@ class MBC {
   static uint8 romSize;
   static uint8 ramSize;
 
-  static bool ramEnabled, bankMode;
+  static bool ramEnabled, bankMode, halfRAMMode, romBankBit9;
   static uint8 romBankNum, ramBankNum;
 
-  static bool halfRAMMode;
-
+  // mbc functions
   static void write(uint16 addr, uint8 val);
-
-  // mbc1 functions
   static void mbc1(uint16 addr, uint8 val);
-  static uint8 mbc1ROMBank0BankNum();
-  static uint8 mbc1ROMBank1BankNum();
-  static uint8 mbc1EXRAMBankNum();
-
-  // mbc2 functions
   static void mbc2(uint16 addr, uint8 val);
+  static void mbc5(uint16 addr, uint8 val);
 
+  // mbc helper functions
+  static uint8 mbc1RomBank0BankNum();
+  static uint8 mbc1RomBank1BankNum();
+  static uint8 mbc1ExramBankNum();
+  static uint16 mbc5RomBankNum();
+  static uint8 mbc5RamBankNum();
+
+  // mbc config functions
   static uint8 romSizeMask();
   static uint8 ramSizeMask();
   static bool bankTypeImplemented();
   static string bankTypeStr();
-  static bool hasRAM();
+  static bool hasRam();
   static int ramBytes();
   static void reset();
 };

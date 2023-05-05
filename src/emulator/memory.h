@@ -125,9 +125,9 @@ class Memory {
   static uint8 &getByte(uint16 addr);
 
   // miscellaneous functions
-  static void loadROM(QString dir);
-  static void mapCartMem(uint8 *romBank, uint8 bankNum);
-  static void mapEXRAM(uint8 bankNum);
+  static void loadRom(QString dir);
+  static void setRomBank(uint8 *romBank, uint8 bankNum);
+  static void setExramBank(uint8 bankNum);
 
   // save and load external ram
   static void loadExram();

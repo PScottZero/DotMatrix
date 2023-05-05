@@ -58,6 +58,12 @@ void Memory::write(uint16 addr, uint8 val) {
     return;
   }
 
+  // cannot access external ram if it
+  // is not enabled by MBC
+  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
+    return;
+  }
+
   // LY register is read-only
   if (addr == LY) {
     return;
@@ -157,18 +163,18 @@ uint8 &Memory::getByte(uint16 addr) {
 // **************************************************
 
 // load rom at the given directory into memory
-void Memory::loadROM(QString dir) {
+void Memory::loadRom(QString dir) {
   fstream fs(dir.toStdString());
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
-  mapCartMem(romBank0, 0);
-  mapCartMem(romBank1, 1);
-  mapEXRAM(0);
+  setRomBank(romBank0, 0);
+  setRomBank(romBank1, 1);
+  setExramBank(0);
 }
 
 // map memory rom bank to cartridge rom bank
-void Memory::mapCartMem(uint8 *romBank, uint8 bankNum) {
+void Memory::setRomBank(uint8 *romBank, uint8 bankNum) {
   uint32 startAddr = ROM_BANK_BYTES * bankNum;
   for (int i = 0; i < ROM_BANK_BYTES; ++i) {
     romBank[i] = cart[startAddr + i];
@@ -176,12 +182,22 @@ void Memory::mapCartMem(uint8 *romBank, uint8 bankNum) {
 }
 
 // map memory external ram bank to external ram bank
-void Memory::mapEXRAM(uint8 bankNum) {
+void Memory::setExramBank(uint8 bankNum) {
   uint16 startAddr = RAM_BANK_BYTES * bankNum;
   for (int i = 0; i < RAM_BANK_BYTES; ++i) {
     exramBank[i] = &exram[startAddr + i];
   }
 }
+
+// // map memory rom bank to cartridge rom bank
+// void Memory::setRomBank(uint8 *romBank, uint8 bankNum) {
+//   romBank = &cart[ROM_BANK_BYTES * bankNum];
+// }
+
+// // map memory external ram bank to external ram bank
+// void Memory::setExramBank(uint8 bankNum) {
+//   exramBank = &exram[RAM_BANK_BYTES * bankNum];
+// }
 
 // perform dma transfer
 void Memory::dmaTransfer() {
@@ -250,7 +266,7 @@ void Memory::reset() {
   // TODO load external ram after clearing
 
   Interrupts::intFlags |= 0xE0;
-  mapCartMem(romBank0, 0);
-  mapCartMem(romBank1, 1);
-  mapEXRAM(0);
+  setRomBank(romBank0, 0);
+  setRomBank(romBank1, 1);
+  setExramBank(0);
 }
