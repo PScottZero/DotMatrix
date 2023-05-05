@@ -1,9 +1,12 @@
 #include "cgb.h"
 
+#include <math.h>
+
 #include <QDir>
 #include <QMessageBox>
 
 #include "bootstrap.h"
+#include "controls.h"
 #include "cpu.h"
 #include "mbc.h"
 #include "memory.h"
@@ -22,6 +25,7 @@ CGB::CGB()
       pause(false),
       speedMult(1.0) {
   PPU::screen = &screen;
+  PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
 }
 
 CGB::~CGB() {
@@ -42,6 +46,7 @@ void CGB::run() {
   auto clock = system_clock::now();
   while (isRunning()) {
     if (!pause) {
+      Controls::update();
       CPU::step();
       Timers::step();
       PPU::step();
@@ -67,6 +72,11 @@ bool CGB::loadRom(const QString romPath) {
   MBC::romSize = Memory::getByte(ROM_SIZE);
   MBC::ramSize = Memory::getByte(RAM_SIZE);
   MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
+
+  printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
+  printf("Bank Type: %s\n", MBC::bankTypeStr().c_str());
+  printf("ROM Size: %06X\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
+  printf("RAM Size: %05X\n\n", MBC::ramBytes());
 
   if (!MBC::bankTypeImplemented()) {
     QMessageBox mbox{};

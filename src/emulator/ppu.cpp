@@ -9,6 +9,7 @@
 #include "ppu.h"
 
 #include "bootstrap.h"
+#include "cgb.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -37,7 +38,7 @@ sprite_t PPU::visibleSprites[MAX_SPRITES_PER_LINE]{};
 uint8 PPU::visibleSpriteCount = 0;
 
 // initialize palette
-Palette *PPU::palette = &Palettes::palGBP;
+Palette *PPU::palette = nullptr;
 
 // initialize frame rendered flag
 bool PPU::frameRendered = false;
@@ -47,7 +48,7 @@ bool PPU::showWindow = true;
 bool PPU::showSprites = true;
 
 void PPU::step() {
-  if (lcdEnable()) {
+  if (lcdEnable() && !CGB::stop) {
     if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
       if (++ly >= SCREEN_LINES) ly = 0;
 

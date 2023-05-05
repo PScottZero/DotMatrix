@@ -4,7 +4,6 @@
 #include "../emulator/log.h"
 #include "../emulator/ppu.h"
 #include "keybindingswindow.h"
-#include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
@@ -59,36 +58,30 @@ MainWindow::MainWindow(QWidget *parent)
   auto paletteActionGroup = new QActionGroup(this);
   auto paletteSigMap = new QSignalMapper(this);
   paletteActionGroup->setExclusive(true);
-  addToActionGroup(paletteActionGroup, ui->actionBGB, paletteSigMap,
-                   &Palettes::palBGB);
-  addToActionGroup(paletteActionGroup, ui->actionBicycle, paletteSigMap,
-                   &Palettes::palBicycle);
-  addToActionGroup(paletteActionGroup, ui->actionChocolate, paletteSigMap,
-                   &Palettes::palChocolate);
-  addToActionGroup(paletteActionGroup, ui->actionCobalt, paletteSigMap,
-                   &Palettes::palCobalt);
-  addToActionGroup(paletteActionGroup, ui->actionGameBoy, paletteSigMap,
-                   &Palettes::palGB);
-  addToActionGroup(paletteActionGroup, ui->actionGameBoyPocket, paletteSigMap,
-                   &Palettes::palGBP);
-  addToActionGroup(paletteActionGroup, ui->actionInverted, paletteSigMap,
-                   &Palettes::palInverted);
-  addToActionGroup(paletteActionGroup, ui->actionKirby, paletteSigMap,
-                   &Palettes::palKirby);
-  addToActionGroup(paletteActionGroup, ui->actionPlatinum, paletteSigMap,
-                   &Palettes::palPlatinum);
-  addToActionGroup(paletteActionGroup, ui->actionPokemon, paletteSigMap,
-                   &Palettes::palPokemon);
-  addToActionGroup(paletteActionGroup, ui->actionVirtualBoy, paletteSigMap,
-                   &Palettes::palVB);
-  addToActionGroup(paletteActionGroup, ui->actionWishGB, paletteSigMap,
-                   &Palettes::palWishGB);
+  for (auto pal : Palettes::allPalettes) {
+    QAction *action = new QAction();
+    action->setCheckable(true);
+    if (pal->name == "Game Boy Pocket") action->setChecked(true);
+    QString label = pal->name;
+    if (pal->creator != "Me") {
+      if (pal->creator == "SGB") {
+        label += " (Super Game Boy)";
+      } else {
+        label += " (By " + pal->creator + ")";
+      }
+    }
+    action->setText(label);
+    ui->menuPalette->addAction(action);
+    addToActionGroup(paletteActionGroup, action, paletteSigMap, pal);
+  }
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
 
+  // **************************************************
+  // Other Options
+  // **************************************************
   connect(ui->actionKeyBindings, &QAction::triggered, this,
           &MainWindow::openKeyBindingsWindow);
-
   connect(ui->actionShowBootScreen, &QAction::toggled, this,
           &MainWindow::toggleBootScreen);
 
@@ -114,10 +107,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() { delete ui; }
 
+// select rom to run
 void MainWindow::loadROM() {
-  // select rom to run
+  cgb.pause = true;
   QString romName = QFileDialog::getOpenFileName(
       this, tr("Open File"), CGB::romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
+  cgb.pause = false;
   if (romName != "") {
     CGB::romPath = romName;
     cgb.reset();

@@ -2,8 +2,9 @@
 
 #include "bootstrap.h"
 #include "interrupts.h"
+#include <string.h>
 
-fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
+fstream Log::log("/home/paul/git/DotMatrix/debug/log.txt", ios::out);
 
 bool Log::enable = false;
 

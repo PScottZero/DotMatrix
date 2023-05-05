@@ -1,5 +1,6 @@
 #include "timers.h"
 
+#include "cgb.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -14,20 +15,23 @@ uint8 &Timers::tac = Memory::getByte(TAC);
 const uint16 Timers::internalCounterMasks[4]{TAC_00, TAC_01, TAC_10, TAC_11};
 
 void Timers::step() {
-  // increment internal counter and
-  // update DIV register
-  uint16 oldInternalCounter = internalCounter;
-  internalCounter += 4 * CycleCounter::cpuCycles;
-  div = (internalCounter & DIV_MASK) >> 8;
+  if (!CGB::stop) {
+    // increment internal counter and
+    // update DIV register
+    uint16 oldInternalCounter = internalCounter;
+    internalCounter += 4 * CycleCounter::cpuCycles;
+    div = (internalCounter & DIV_MASK) >> 8;
 
-  // update TIMA timer
-  if (timerEnabled()) {
-    uint16 oldCounter = oldInternalCounter & internalCounterMasks[timerFreq()];
-    uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
-    if (counter < oldCounter) {
-      if (++tima == 0) {
-        tima = tma;
-        Interrupts::request(TIMER_INT);
+    // update TIMA timer
+    if (timerEnabled()) {
+      uint16 oldCounter =
+          oldInternalCounter & internalCounterMasks[timerFreq()];
+      uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
+      if (counter < oldCounter) {
+        if (++tima == 0) {
+          tima = tma;
+          Interrupts::request(TIMER_INT);
+        }
       }
     }
   }

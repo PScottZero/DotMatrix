@@ -2,7 +2,6 @@
 
 #include "bootstrap.h"
 #include "cgb.h"
-#include "controls.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "mbc.h"
@@ -79,8 +78,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // will reset the internal counter
   // and the DIV register
   if (addr == DIV) {
-    Timers::internalCounter = 0;
-    getByte(DIV) = 0;
+    Timers::reset();
   }
 
   // only bits 6-3 of the STAT register
@@ -116,12 +114,6 @@ void Memory::write(uint16 addr, uint8 val) {
   // address was written to
   else if (addr == DMA) {
     dmaTransfer();
-  }
-
-  // update state of controls if
-  // writing to joypad register
-  else if (addr == P1) {
-    Controls::update();
   }
 }
 
@@ -269,19 +261,4 @@ void Memory::reset() {
   setRomBank(romBank0, 0);
   setRomBank(romBank1, 1);
   setExramBank(0);
-}
-
-void Memory::loadState() {
-  std::fstream fs("../debug/memory_state.bin", std::ios::in);
-  fs.read((char *)romBank0, ROM_BANK_BYTES);
-  fs.read((char *)romBank1, ROM_BANK_BYTES);
-  fs.read((char *)mem, MEM_BYTES);
-}
-
-void Memory::saveState() {
-  std::fstream fs("../debug/memory_state.bin", std::ios::out);
-  fs.write((char *)romBank0, ROM_BANK_BYTES);
-  fs.write((char *)romBank1, ROM_BANK_BYTES);
-  fs.write((char *)mem, MEM_BYTES);
-  fs.close();
 }

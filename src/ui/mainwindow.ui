@@ -157,18 +157,6 @@
      <property name="title">
       <string>Palette</string>
      </property>
-     <addaction name="actionBGB"/>
-     <addaction name="actionBicycle"/>
-     <addaction name="actionChocolate"/>
-     <addaction name="actionCobalt"/>
-     <addaction name="actionGameBoy"/>
-     <addaction name="actionGameBoyPocket"/>
-     <addaction name="actionInverted"/>
-     <addaction name="actionKirby"/>
-     <addaction name="actionPlatinum"/>
-     <addaction name="actionPokemon"/>
-     <addaction name="actionVirtualBoy"/>
-     <addaction name="actionWishGB"/>
     </widget>
     <widget class="QMenu" name="menuScale">
      <property name="font">
@@ -201,14 +189,6 @@
     <addaction name="actionShowSprites"/>
     <addaction name="separator"/>
     <addaction name="actionEnableLogging"/>
-   </widget>
-   <widget class="QMenu" name="menuDebug">
-    <property name="title">
-     <string>Debug</string>
-    </property>
-    <addaction name="actionLoadSaveState"/>
-    <addaction name="actionMemoryView"/>
-    <addaction name="actionRunBootstrap"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuSettings"/>

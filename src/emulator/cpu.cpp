@@ -7,14 +7,15 @@
 // **************************************************
 
 #include "cpu.h"
-#include "json.hpp"
 
 #include "cgb.h"
+#include "controls.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "json.hpp"
 #include "log.h"
 #include "memory.h"
+#include "timers.h"
 
 // initialize program counter
 // and stack pointer
@@ -547,8 +548,70 @@ void CPU::runInstr(uint8 opcode) {
     // 1 ----
     // halts the cpu, system clock, oscillator,
     // and lcd controller
+    //
+    // see: https://gbdev.io/pandocs/imgs/gb_stop.png
     case 0x10:
-      CGB::stop = true;
+      // if any buttons are pressed, do
+      // not enter stop mode
+      if ((Controls::p1 & 0x0F) != 0x0F) {
+        // if interrupts are pending,
+        // stop is a 1-byte opcode, and
+        // div does not reset
+        //
+        // if no interrupts are pending,
+        // stop is a 2-byte opcode, and
+        // halt mode is entered
+        if (!Interrupts::pending()) {
+          ++PC;
+          halt = true;
+        }
+      }
+
+      // if a speed switch was not requested,
+      // enter stop mode and reset div
+      else if (Memory::getByte(KEY1) != 0x01) {
+        CGB::stop = true;
+        Timers::reset();
+
+        // if interrupts are pending,
+        // stop is a 1-byte opcode
+        //
+        // if no interrupts are pending,
+        // stop is a 2-byte opcode
+        if (!Interrupts::pending()) ++PC;
+      }
+
+      // if a speed switch was requested,
+      // do not enter stop mode and reset div
+      else if (Memory::getByte(KEY1) == 0x01) {
+        Timers::reset();
+
+        // if interrupts are pending,
+        // check value of IME
+        //
+        // if interrupts are not pending,
+        // stop is a 2-byte opcode and
+        // halt mode is entered (and cpu
+        // changes speed on cgb)
+        if (!Interrupts::pending()) {
+          ++PC;
+          // ignore setting halt for dmg
+          // TODO implement automatic halt
+          // exit after 0x20000 t-cycles
+          // halt = true;
+        } else {
+          // if IME is disabled, stop is a
+          // 1-byte opcode and mode does
+          // not change
+          //
+          // if IME is enabled, the CPU will
+          // glitch (on real hardware)
+          if (IME) {
+            printf("STOP instruction glitch triggered\n");
+          }
+        }
+      }
+
       break;
 
     // illegal opcodes
@@ -1327,6 +1390,12 @@ void CPU::handleInterrupts() {
     CycleCounter::addCycles(1);
   }
 
+  // if a button is pressed while in stop mode, exit
+  // stop mode
+  if (CGB::stop && ((Controls::p1 & 0x0F) != 0x0F)) {
+    CGB::stop = false;
+  }
+
   if (IME) {
     uint16 intAddr = 0;
     if (Interrupts::requestedAndEnabled(V_BLANK_INT)) {
@@ -1390,54 +1459,6 @@ void CPU::saveState() {
       {"stop", CGB::stop}};
   string stateStr = state.dump(4);
   fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::out);
-  fs.write(stateStr.c_str(), stateStr.size());
-  fs.close();
-}
-
-void CPU::loadState() {
-  std::fstream fs("../debug/cpu_state.json", std::ios::in);
-  fs.seekg(0, std::ios::end);
-  int size = fs.tellg();
-  fs.seekg(0, std::ios::beg);
-
-  char readBuf[size + 1];
-  fs.read(readBuf, size);
-  readBuf[size] = 0;
-  
-  auto state = nlohmann::json::parse(std::string(readBuf));
-  PC = state["PC"];
-  SP = state["SP"];
-  A = state["A"];
-  BC = state["BC"];
-  DE = state["DE"];
-  HL = state["HL"];
-  carry = state["carry"];
-  halfCarry = state["halfCarry"];
-  subtract = state["subtract"];
-  zero = state["zero"];
-  IME = state["IME"];
-  halt = state["halt"];
-  stop = state["stop"];
-}
-
-void CPU::saveState() {
-  nlohmann::json state = {
-    {"PC", PC},
-    {"SP", SP},
-    {"A", A},
-    {"BC", BC},
-    {"DE", DE},
-    {"HL", HL},
-    {"carry", carry},
-    {"halfCarry", carry},
-    {"subtract", subtract},
-    {"zero", zero},
-    {"IME", IME},
-    {"halt", halt},
-    {"stop", stop}
-  };
-  std::string stateStr = state.dump(4);
-  std::fstream fs("../debug/cpu_state.json", std::ios::out);
   fs.write(stateStr.c_str(), stateStr.size());
   fs.close();
 }
