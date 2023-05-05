@@ -11,12 +11,14 @@
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
 #define RAM_BANK_BYTES 0x2000
+#define HALF_RAM_BYTES 0x200
 #define NUM_RAM_BANKS 4
 
 // dmg in-memory flag addresses
 #define SGB_MODE 0x0146
 #define BANK_TYPE 0x0147
-#define CART_SIZE 0x0148
+#define ROM_SIZE 0x0148
+#define RAM_SIZE 0x149
 #define P1 0xFF00
 #define SB 0xFF01
 #define SC 0xFF02

@@ -85,15 +85,19 @@ using TileRow = array<uint8, TILE_PX_DIM>;
 class PPU {
  private:
   static uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1,
-      &wy, &wx;
+      &wy, &wx, windowLineNum;
   static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   static uint8 visibleSpriteCount;
+
+  // OAM search functions
+  static void findVisibleSprites();
 
   // rendering functions
   static void renderBg(scanline_t &scanline);
   static void renderSprites(scanline_t &scanline);
   static void renderWindow(scanline_t &scanline);
-  static void findVisibleSprites();
+  static bool shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
+                                    uint8 scanlineIdx, uint8 px);
   static void transferScanlineToScreen(scanline_t &scanline);
 
   // read display memory functions

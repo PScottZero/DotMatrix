@@ -8,8 +8,13 @@
 #include "memoryview.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      cgb(),
+      currPath(QDir::currentPath()) {
   ui->setupUi(this);
+
+  cgb.actionPause = ui->actionPause;
 
   // **************************************************
   // **************************************************
@@ -17,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent)
   // **************************************************
   // **************************************************
   connect(ui->actionOpenROM, &QAction::triggered, this, &MainWindow::loadROM);
+  connect(ui->actionPause, &QAction::toggled, this, &MainWindow::pause);
+  connect(ui->actionReset, &QAction::triggered, this, &MainWindow::reset);
   connect(ui->actionQuit, &QAction::triggered, this, &QApplication::quit);
 
   // **************************************************
@@ -48,7 +55,6 @@ MainWindow::MainWindow(QWidget *parent)
   addToActionGroup(speedActionGroup, ui->actionSpeed1x, speedSigMap, 2);
   addToActionGroup(speedActionGroup, ui->actionSpeed2x, speedSigMap, 3);
   addToActionGroup(speedActionGroup, ui->actionSpeed4x, speedSigMap, 4);
-  addToActionGroup(speedActionGroup, ui->actionSpeed8x, speedSigMap, 5);
   connect(speedSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setSpeed);
 
   // **************************************************
@@ -110,14 +116,21 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::loadROM() {
   // select rom to run
-  QString romName =
-      QFileDialog::getOpenFileName(this, tr("Open File"), QDir::currentPath(),
-                                   tr("Game Boy ROMs (*.gb *.gbc)"));
+  QString romName = QFileDialog::getOpenFileName(
+      this, tr("Open File"), currPath, tr("Game Boy ROMs (*.gb *.gbc)"));
   if (romName != "") {
+    currPath = romName;
     cgb.reset();
     bool romSupported = cgb.loadROM(romName);
     if (romSupported) cgb.start();
   }
+}
+
+void MainWindow::pause(bool shouldPause) { cgb.pause = shouldPause; }
+
+void MainWindow::reset() {
+  cgb.reset();
+  cgb.start();
 }
 
 void MainWindow::setScreen(QImage image) {
@@ -140,7 +153,7 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setSpeed(int speed) { CGB::speedMult = pow(2, speed - 2); }
+void MainWindow::setSpeed(int speed) { cgb.speedMult = pow(2, speed - 2); }
 
 void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
                                   QSignalMapper *sigMap, int mapVal) {

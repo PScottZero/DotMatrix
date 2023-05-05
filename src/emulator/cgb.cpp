@@ -4,7 +4,7 @@
 
 #include "bootstrap.h"
 #include "cpu.h"
-#include "mbc/mbc.h"
+#include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
 #include "timers.h"
@@ -13,9 +13,12 @@ using namespace std;
 using namespace chrono;
 
 bool CGB::stop = false;
-float CGB::speedMult = 1.0;
 
-CGB::CGB() : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32) {
+CGB::CGB()
+    : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
+      actionPause(nullptr),
+      pause(false),
+      speedMult(1.0) {
   PPU::screen = &screen;
 }
 
@@ -34,19 +37,21 @@ CGB::~CGB() {
 void CGB::run() {
   auto clock = system_clock::now();
   while (isRunning()) {
-    CPU::step();
-    Timers::step();
-    PPU::step();
+    if (!pause) {
+      CPU::step();
+      Timers::step();
+      PPU::step();
 
-    if (!Bootstrap::skipWait()) {
-      if (PPU::frameRendered) {
-        emit sendScreen(screen);
-        clock += microseconds((int)(FRAME_DURATION / CGB::speedMult));
-        this_thread::sleep_until(clock);
-        PPU::frameRendered = false;
+      if (!Bootstrap::skipWait()) {
+        if (PPU::frameRendered) {
+          emit sendScreen(screen);
+          clock += microseconds((int)(FRAME_DURATION / CGB::speedMult));
+          this_thread::sleep_until(clock);
+          PPU::frameRendered = false;
+        }
+      } else {
+        clock = system_clock::now();
       }
-    } else {
-      clock = system_clock::now();
     }
   }
 }
@@ -54,7 +59,9 @@ void CGB::run() {
 bool CGB::loadROM(const QString dir) {
   Memory::loadROM(dir);
   MBC::bankType = Memory::getByte(BANK_TYPE);
-  MBC::cartSize = Memory::getByte(CART_SIZE);
+  MBC::romSize = Memory::getByte(ROM_SIZE);
+  MBC::ramSize = Memory::getByte(RAM_SIZE);
+  MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
   if (!MBC::bankTypeImplemented()) {
     QMessageBox mbox{};
     auto message = "Bank type " + MBC::bankTypeStr() + " is not supported";
@@ -69,6 +76,8 @@ void CGB::reset() {
   terminate();
   wait();
   stop = false;
+  pause = false;
+  actionPause->setChecked(false);
   CPU::reset();
   Timers::reset();
   Memory::reset();

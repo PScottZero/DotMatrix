@@ -30,6 +30,8 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void loadROM();
+  void pause(bool shouldPause);
+  void reset();
   void setScreen(QImage image);
   void setPalette(QObject *palette);
   void setScale(int scale);
@@ -46,6 +48,7 @@ class MainWindow : public QMainWindow {
  private:
   Ui::MainWindow *ui;
   CGB cgb;
+  QString currPath;
 
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, int mapValue);

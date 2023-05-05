@@ -4,7 +4,7 @@
 #include "controls.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
-#include "mbc/mbc.h"
+#include "mbc.h"
 #include "timers.h"
 
 uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
@@ -28,7 +28,7 @@ uint8 Memory::read(uint16 addr) {
   // return zero if reading from a
   // restricted memory location
   if (memoryRestricted(addr)) {
-    return 0x00;
+    return 0xFF;
   }
 
   // skip waiting for screen frame in
@@ -60,6 +60,17 @@ void Memory::write(uint16 addr, uint8 val) {
     return;
   }
 
+  // LY register is read-only
+  if (addr == LY) {
+    return;
+  }
+
+  // turn off boostrap if writing
+  // nonzero value to address ff50
+  if (addr == BOOTSTRAP && val != 0) {
+    Bootstrap::enabled = false;
+  }
+
   // writing anything to DIV register
   // will reset the internal counter
   // and the DIV register
@@ -74,20 +85,24 @@ void Memory::write(uint16 addr, uint8 val) {
     getByte(STAT) = (getByte(STAT) & 0x87) | (val & 0x78);
   }
 
-  // LY register is read-only
-  else if (addr == LY) {
-    return;
-  }
-
-  // turn off boostrap if writing
-  // nonzero value to address ff50
-  else if (addr == BOOTSTRAP && val != 0) {
-    Bootstrap::enabled = false;
+  // if using MBC2, ram only uses lower nibble
+  // of each ram byte, and ram only consists of
+  // 512 half bytes with rest of ram area
+  // echoing A000-A1FF
+  else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && MBC::halfRAMMode) {
+    uint16 offset = addr % HALF_RAM_BYTES;
+    for (int echoAddr = EXT_RAM_ADDR; echoAddr < WORK_RAM_ADDR;
+         echoAddr += HALF_RAM_BYTES) {
+      getByte(echoAddr + offset) = val | 0xF0;
+    }
   }
 
   // write to memory
-  getByte(addr) = val;
+  else {
+    getByte(addr) = val;
+  }
 
+  // upper 3 bits of IF are always 1
   if (addr == IF) {
     getByte(addr) |= 0xE0;
   }

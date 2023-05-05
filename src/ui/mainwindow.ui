@@ -113,6 +113,8 @@
      <string>File</string>
     </property>
     <addaction name="actionOpenROM"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionReset"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -143,7 +145,6 @@
      <addaction name="actionSpeed1x"/>
      <addaction name="actionSpeed2x"/>
      <addaction name="actionSpeed4x"/>
-     <addaction name="actionSpeed8x"/>
     </widget>
     <widget class="QMenu" name="menuPalette">
      <property name="font">
@@ -259,14 +260,6 @@
    </property>
    <property name="text">
     <string>4x</string>
-   </property>
-  </action>
-  <action name="actionSpeed8x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>8x</string>
    </property>
   </action>
   <action name="actionBGB">
@@ -424,6 +417,19 @@
    </property>
    <property name="text">
     <string>Show Boot Screen</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pause</string>
    </property>
   </action>
  </widget>

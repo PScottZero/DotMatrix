@@ -35,12 +35,8 @@ set(PROJECT_SOURCES
         src/emulator/cyclecounter.cpp
         src/emulator/cyclecounter.h
         src/emulator/types.h
-        src/emulator/mbc/mbc.cpp
-        src/emulator/mbc/mbc.h
-        src/emulator/mbc/mbc1.cpp
-        src/emulator/mbc/mbc1.h
-        src/emulator/mbc/mbc2.cpp
-        src/emulator/mbc/mbc2.h
+        src/emulator/mbc.cpp
+        src/emulator/mbc.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui

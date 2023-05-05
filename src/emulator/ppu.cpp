@@ -29,6 +29,7 @@ uint8 &PPU::obp0 = Memory::getByte(OBP0);
 uint8 &PPU::obp1 = Memory::getByte(OBP1);
 uint8 &PPU::wx = Memory::getByte(WX);
 uint8 &PPU::wy = Memory::getByte(WY);
+uint8 PPU::windowLineNum = 0;
 
 // initialize visible sprite
 // array and count
@@ -81,9 +82,14 @@ void PPU::step() {
           setLCDInterrupt();
           if (!Bootstrap::skipWait()) {
             scanline_t scanline;
+            for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
+              scanline.pixels[i] = 0;
+              scanline.palettes[i] = PaletteType::BG;
+              scanline.spriteIndices[i] = 0;
+            }
             if (bgEnable()) renderBg(scanline);
-            if (spriteEnable()) renderSprites(scanline);
             if (windowEnable()) renderWindow(scanline);
+            if (spriteEnable()) renderSprites(scanline);
             transferScanlineToScreen(scanline);
           }
         }
@@ -107,10 +113,12 @@ void PPU::step() {
         setLCDInterrupt();
         Interrupts::request(V_BLANK_INT);
         frameRendered = true;
+        windowLineNum = 0;
       }
     }
   } else {
     ly = 0;
+    windowLineNum = 0;
     setMode(H_BLANK_MODE);
     screen->fill(palette->data[0]);
     CycleCounter::ppuCycles = 0;
@@ -119,85 +127,9 @@ void PPU::step() {
 
 // **************************************************
 // **************************************************
-// Rendering Functions
+// OAM Search Functions
 // **************************************************
 // **************************************************
-
-// render background tiles that intersect
-// the current scanline
-void PPU::renderBg(scanline_t &scanline) {
-  uint16 tileMapAddr = bgMapAddr();
-  uint16 tileDataAddr = bgWindowDataAddr();
-
-  // render background row
-  int pxY = (scy + ly) % BG_PX_DIM;
-  int pxCount = 0;
-  while (pxCount < SCREEN_PX_WIDTH) {
-    // get background tile number (0 to 1023)
-    int pxX = (scx + pxCount) % BG_PX_DIM;
-    int bgTileX = pxX / TILE_PX_DIM;
-    int bgTileY = pxY / TILE_PX_DIM;
-    int innerBgTileX = pxX % TILE_PX_DIM;
-    int innerBgTileY = pxY % TILE_PX_DIM;
-    int bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
-
-    // get data tile number (0 to 256 or -128 to 127)
-    int tileNo = Memory::getByte(tileMapAddr + bgTileNo);
-
-    // get row of pixels from tile
-    TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
-
-    // transfer pixel row to scanline
-    int oldPxCount = pxCount;
-    int start = pxCount == 0 ? innerBgTileX : 0;
-    int end = pxCount + 8 > 160 ? innerBgTileX + 1 : TILE_PX_DIM;
-    for (int i = start; i < end; ++i) {
-      scanline.pixels[pxCount] = row[i];
-      scanline.palettes[pxCount] = PaletteType::BG;
-      ++pxCount;
-    }
-
-    if (pxCount == oldPxCount) {
-      break;
-    }
-  }
-}
-
-// render sprites that intersect the
-// current scanline
-void PPU::renderSprites(scanline_t &scanline) {
-  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
-    sprite_t sprite = visibleSprites[spriteIdx];
-    uint8 spriteRow = (ly + 16) - sprite.y;
-    TileRow row = getSpriteRow(sprite, spriteRow);
-
-    // draw sprite row onto screen
-    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
-      int pxX = sprite.x + rowIdx - 8;
-      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
-        // if sprite priority is true, then only draw sprite
-        // if current scaline color is zero
-        if ((!sprite.priority || scanline.pixels[pxX] == 0) &&
-            row[rowIdx] != 0) {
-          scanline.pixels[pxX] = row[rowIdx];
-          scanline.palettes[pxX] =
-              sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
-          scanline.spriteIndices[pxX] = spriteIdx;
-        }
-      }
-    }
-  }
-}
-
-// render window
-void PPU::renderWindow(scanline_t &scanline) {
-  // uint16 tileMapAddr = windowMapAddr();
-  // uint16 tileDataAddr = bgWindowDataAddr();
-
-  // for (int i = 0; i < BG_TILE_DIM; i++) {
-
-  // }
-}
 
 // find which sprites intersect the
 // current scanline
@@ -217,6 +149,116 @@ void PPU::findVisibleSprites() {
       }
     }
   }
+}
+
+// **************************************************
+// **************************************************
+// Rendering Functions
+// **************************************************
+// **************************************************
+
+// render background tile rows that
+// intersect current scanline
+void PPU::renderBg(scanline_t &scanline) {
+  uint16 tileMapAddr = bgMapAddr();
+  uint16 tileDataAddr = bgWindowDataAddr();
+
+  // render background row
+  uint8 pxCount = 0;
+  uint8 pxY = scy + ly;
+  while (pxCount < SCREEN_PX_WIDTH) {
+    // get background tile number (0 to 1023)
+    uint8 pxX = scx + pxCount;
+    uint8 bgTileX = pxX / TILE_PX_DIM;
+    uint8 bgTileY = pxY / TILE_PX_DIM;
+    uint8 innerBgTileX = pxX % TILE_PX_DIM;
+    uint8 innerBgTileY = pxY % TILE_PX_DIM;
+    uint16 bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
+
+    // get data tile number (0 to 256 or -128 to 127)
+    uint8 tileNo = Memory::getByte(tileMapAddr + bgTileNo);
+
+    // get row of pixels from tile
+    TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
+
+    // transfer pixel row to scanline
+    int start = pxCount == 0 ? innerBgTileX : 0;
+    int end = pxCount + 8 > 160 ? innerBgTileX + 1 : TILE_PX_DIM;
+
+    for (int i = start; i < end; ++i) {
+      scanline.pixels[pxCount] = row[i];
+      scanline.palettes[pxCount] = PaletteType::BG;
+      ++pxCount;
+    }
+  }
+}
+
+// render sprite tile rows that
+// intersect the current scanline
+void PPU::renderSprites(scanline_t &scanline) {
+  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
+    sprite_t sprite = visibleSprites[spriteIdx];
+    uint8 spriteRow = (ly + 16) - sprite.y;
+    TileRow row = getSpriteRow(sprite, spriteRow);
+
+    // draw sprite row onto screen
+    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
+      int pxX = sprite.x + rowIdx - 8;
+      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
+        if (shouldDrawSpritePixel(sprite, scanline, pxX, row[rowIdx])) {
+          scanline.pixels[pxX] = row[rowIdx];
+          scanline.palettes[pxX] =
+              sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
+          scanline.spriteIndices[pxX] = spriteIdx;
+        }
+      }
+    }
+  }
+}
+
+// render window tile rows that
+// intersect the current scanline
+void PPU::renderWindow(scanline_t &scanline) {
+  if (ly >= wy) {
+    uint16 tileMapAddr = windowMapAddr();
+    uint16 tileDataAddr = bgWindowDataAddr();
+
+    uint8 pxCount = 0;
+    uint8 winX = wx - 7;
+    while (pxCount + winX < SCREEN_PX_WIDTH) {
+      uint8 winTileX = pxCount / TILE_PX_DIM;
+      uint8 winTileY = windowLineNum / TILE_PX_DIM;
+      uint16 winTileNo = winTileY * BG_TILE_DIM + winTileX;
+      uint8 tileNo = Memory::getByte(tileMapAddr + winTileNo);
+
+      TileRow row = getTileRow(tileDataAddr, tileNo, windowLineNum % 8);
+      for (int i = 0; i < TILE_PX_DIM; ++i) {
+        if (winX + pxCount >= 0 && winX + pxCount < SCREEN_PX_WIDTH) {
+          scanline.pixels[winX + pxCount] = row[i];
+          scanline.palettes[winX + pxCount] = PaletteType::BG;
+        }
+        if (++pxCount + winX >= SCREEN_PX_WIDTH) break;
+      }
+    }
+
+    ++windowLineNum;
+  }
+}
+
+bool PPU::shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
+                                uint8 scanlineIdx, uint8 px) {
+  // if another sprite is located at the current pixel,
+  // draw current sprite if it has a lower x value
+  if (scanline.palettes[scanlineIdx] == PaletteType::SPRITE0 ||
+      scanline.palettes[scanlineIdx] == PaletteType::SPRITE1) {
+    auto otherSprite = visibleSprites[scanline.spriteIndices[scanlineIdx]];
+    return sprite.x < otherSprite.x;
+  }
+
+  // if sprite priority is true, then only draw sprite
+  // if current scaline color is zero, otherwise draw
+  // sprite (in both bases ignoring px values of 0)
+  return (!sprite.priority || scanline.pixels[scanlineIdx] == 0) && px != 0;
 }
 
 // apply palette colors to current pixel

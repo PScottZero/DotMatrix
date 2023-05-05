@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QAction>
 #include <QImage>
 #include <QThread>
 
@@ -14,8 +15,10 @@ class CGB : public QThread {
   QImage screen;
 
  public:
+  QAction *actionPause;
   static bool stop;
-  static float speedMult;
+  float speedMult;
+  bool pause;
 
   CGB();
   ~CGB();
