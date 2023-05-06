@@ -22,6 +22,7 @@ bool CGB::stop = false;
 CGB::CGB()
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       actionPause(nullptr),
+      running(false),
       pause(false),
       speedMult(1.0) {
   PPU::screen = &screen;
@@ -29,7 +30,7 @@ CGB::CGB()
 }
 
 CGB::~CGB() {
-  terminate();
+  running = false;
   wait();
 
   if (MBC::hasRam()) Memory::saveExram();
@@ -43,8 +44,9 @@ CGB::~CGB() {
 }
 
 void CGB::run() {
+  running = true;
   auto clock = system_clock::now();
-  while (isRunning()) {
+  while (running) {
     if (!pause) {
       Controls::update();
       CPU::step();
@@ -75,8 +77,8 @@ bool CGB::loadRom(const QString romPath) {
 
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
   printf("Bank Type: %s\n", MBC::bankTypeStr().c_str());
-  printf("ROM Size: %06X\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
-  printf("RAM Size: %05X\n\n", MBC::ramBytes());
+  printf("ROM Size: %d KiB\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
+  printf("RAM Size: %d KiB\n", MBC::ramBytes());
 
   if (!MBC::bankTypeImplemented()) {
     QMessageBox mbox{};
@@ -93,7 +95,7 @@ bool CGB::loadRom(const QString romPath) {
 }
 
 void CGB::reset() {
-  terminate();
+  running = false;
   wait();
   stop = false;
   pause = false;

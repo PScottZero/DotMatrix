@@ -19,7 +19,7 @@ class CGB : public QThread {
   QAction *actionPause;
   static bool stop;
   float speedMult;
-  bool pause;
+  bool running, pause;
 
   CGB();
   ~CGB();
