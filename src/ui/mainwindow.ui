@@ -18,7 +18,8 @@
   </property>
   <property name="font">
    <font>
-    <stylestrategy>NoAntialias</stylestrategy>
+    <family>Silkscreen</family>
+    <pointsize>11</pointsize>
    </font>
   </property>
   <property name="windowTitle">
@@ -60,7 +61,7 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap resource="../../resource.qrc">:/assets/imgs/background.png</pixmap>
+     <pixmap resource="../../resource.qrc">:/assets/imgs/bg_new.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -94,19 +95,11 @@
      <height>26</height>
     </size>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>10</pointsize>
-     <stylestrategy>NoAntialias</stylestrategy>
-    </font>
-   </property>
    <widget class="QMenu" name="menuFile">
     <property name="font">
      <font>
-      <family>DejaVu Sans Mono</family>
-      <pointsize>10</pointsize>
-      <stylestrategy>NoAntialias</stylestrategy>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
      </font>
     </property>
     <property name="title">
@@ -121,22 +114,14 @@
    <widget class="QMenu" name="menuSettings">
     <property name="font">
      <font>
-      <family>DejaVu Sans Mono</family>
-      <pointsize>10</pointsize>
-      <stylestrategy>NoAntialias</stylestrategy>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
      </font>
     </property>
     <property name="title">
      <string>Settings</string>
     </property>
     <widget class="QMenu" name="menuSpeed">
-     <property name="font">
-      <font>
-       <family>DejaVu Sans Mono</family>
-       <pointsize>10</pointsize>
-       <stylestrategy>NoAntialias</stylestrategy>
-      </font>
-     </property>
      <property name="title">
       <string>Speed</string>
      </property>
@@ -147,25 +132,11 @@
      <addaction name="actionSpeed4x"/>
     </widget>
     <widget class="QMenu" name="menuPalette">
-     <property name="font">
-      <font>
-       <family>DejaVu Sans Mono</family>
-       <pointsize>10</pointsize>
-       <stylestrategy>NoAntialias</stylestrategy>
-      </font>
-     </property>
      <property name="title">
       <string>Palette</string>
      </property>
     </widget>
     <widget class="QMenu" name="menuScale">
-     <property name="font">
-      <font>
-       <family>DejaVu Sans Mono</family>
-       <pointsize>10</pointsize>
-       <stylestrategy>NoAntialias</stylestrategy>
-      </font>
-     </property>
      <property name="title">
       <string>Scale</string>
      </property>
@@ -181,6 +152,12 @@
     <addaction name="actionShowBootScreen"/>
    </widget>
    <widget class="QMenu" name="menuDebug">
+    <property name="font">
+     <font>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
     <property name="title">
      <string>Debug</string>
     </property>
@@ -201,13 +178,17 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
-     <pointsize>12</pointsize>
     </font>
    </property>
   </action>
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionSpeed0_25x">
@@ -217,6 +198,11 @@
    <property name="text">
     <string>0.25x</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionSpeed0_5x">
    <property name="checkable">
@@ -224,6 +210,11 @@
    </property>
    <property name="text">
     <string>0.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionSpeed1x">
@@ -236,6 +227,11 @@
    <property name="text">
     <string>1x</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionSpeed2x">
    <property name="checkable">
@@ -243,6 +239,11 @@
    </property>
    <property name="text">
     <string>2x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionSpeed4x">
@@ -252,104 +253,10 @@
    <property name="text">
     <string>4x</string>
    </property>
-  </action>
-  <action name="actionBGB">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>BGB</string>
-   </property>
-  </action>
-  <action name="actionBicycle">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Bicycle (By Braquen)</string>
-   </property>
-  </action>
-  <action name="actionChocolate">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Chocolate (By GrafxKid)</string>
-   </property>
-  </action>
-  <action name="actionCobalt">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Cobalt</string>
-   </property>
-  </action>
-  <action name="actionGameBoy">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Game Boy</string>
-   </property>
-  </action>
-  <action name="actionGameBoyPocket">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Game Boy Pocket</string>
-   </property>
-  </action>
-  <action name="actionInverted">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Inverted</string>
-   </property>
-  </action>
-  <action name="actionKirby">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Kirby (Super Game Boy)</string>
-   </property>
-  </action>
-  <action name="actionPlatinum">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Platinum (By WildLeoKnight)</string>
-   </property>
-  </action>
-  <action name="actionPokemon">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Pokémon (Super Game Boy)</string>
-   </property>
-  </action>
-  <action name="actionVirtualBoy">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Virtual Boy</string>
-   </property>
-  </action>
-  <action name="actionWishGB">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Wish GB (By Kerrie Lake)</string>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionScale0_5x">
@@ -358,6 +265,11 @@
    </property>
    <property name="text">
     <string>0.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionScale1x">
@@ -370,6 +282,11 @@
    <property name="text">
     <string>1x</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionScale1_5x">
    <property name="checkable">
@@ -377,6 +294,11 @@
    </property>
    <property name="text">
     <string>1.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionScale2x">
@@ -386,20 +308,20 @@
    <property name="text">
     <string>2x</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionKeyBindings">
    <property name="text">
     <string>Key Bindings</string>
    </property>
-  </action>
-  <action name="actionLoadSaveState">
-   <property name="text">
-    <string>Load Save State</string>
-   </property>
-  </action>
-  <action name="actionMemoryView">
-   <property name="text">
-    <string>Memory View</string>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionShowBootScreen">
@@ -409,10 +331,20 @@
    <property name="text">
     <string>Show Boot Screen</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionReset">
    <property name="text">
     <string>Reset</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionPause">
@@ -421,6 +353,11 @@
    </property>
    <property name="text">
     <string>Pause</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionShowBackground">
@@ -433,6 +370,11 @@
    <property name="text">
     <string>Show Background</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionShowWindow">
    <property name="checkable">
@@ -443,6 +385,11 @@
    </property>
    <property name="text">
     <string>Show Window</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
   <action name="actionShowSprites">
@@ -455,6 +402,11 @@
    <property name="text">
     <string>Show Sprites</string>
    </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
   </action>
   <action name="actionEnableLogging">
    <property name="checkable">
@@ -462,6 +414,11 @@
    </property>
    <property name="text">
     <string>Enable Logging</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
    </property>
   </action>
  </widget>

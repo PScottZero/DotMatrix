@@ -44,4 +44,5 @@ uint8 Timers::timerFreq() { return tac & 0b11; }
 void Timers::reset() {
   Timers::internalCounter = 0;
   div = 0;
+  tima = 0;
 }

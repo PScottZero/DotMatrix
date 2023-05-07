@@ -77,7 +77,6 @@ void CPU::step() {
                      IME, Interrupts::intEnable, Interrupts::intFlags,
                      Memory::getByte(LCDC), Memory::getByte(STAT),
                      Memory::getByte(LY));
-
     uint8 opcode = Memory::imm8(PC);
     uint8 imm8 = Memory::getByte(PC);
     if (triggerHaltBug) {
@@ -666,6 +665,7 @@ void CPU::runInstr(uint8 opcode) {
             // decrement register pair ss
             case 0xB:
               --*regmap16[regPair];
+              CycleCounter::addCycles(1);
               break;
 
             default:

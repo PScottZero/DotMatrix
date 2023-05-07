@@ -57,6 +57,10 @@ void Memory::write(uint16 addr, uint8 val) {
     return;
   }
 
+  // if (addr == SCX) {
+  //   printf("SCX: %02X\n", val);
+  // }
+
   // cannot access external ram if it
   // is not enabled by MBC
   if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
@@ -114,6 +118,10 @@ void Memory::write(uint16 addr, uint8 val) {
   // address was written to
   else if (addr == DMA) {
     dmaTransfer();
+  }
+
+  else if (addr == SC && (val & 0x81) == 0x81) {
+    CycleCounter::serialTransferMode = true;
   }
 }
 

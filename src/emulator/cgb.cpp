@@ -12,6 +12,8 @@
 #include "memory.h"
 #include "ppu.h"
 #include "timers.h"
+#include "cyclecounter.h"
+#include "interrupts.h"
 
 using namespace std;
 using namespace chrono;
@@ -53,6 +55,13 @@ void CGB::run() {
       Timers::step();
       PPU::step();
 
+      // check if serial transfer has completed
+      if (CycleCounter::serialTransferComplete()) {
+        Memory::getByte(SC) &= 0x7F;
+        Interrupts::request(SERIAL_INT);
+      }
+
+      // send rendered screen frame to ui
       if (!Bootstrap::skipWait()) {
         if (PPU::frameRendered) {
           emit sendScreen(screen);

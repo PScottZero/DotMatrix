@@ -71,10 +71,8 @@ void PPU::step() {
       if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
         if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
-          setLCDInterrupt();
-          if (!Bootstrap::skipWait()) {
-            findVisibleSprites();
-          }
+          // setLCDInterrupt();
+          findVisibleSprites();
         }
       }
 
@@ -84,19 +82,18 @@ void PPU::step() {
       else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
-          setLCDInterrupt();
-          if (!Bootstrap::skipWait()) {
-            scanline_t scanline;
-            for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
-              scanline.pixels[i] = 0;
-              scanline.palettes[i] = PaletteType::BG;
-              scanline.spriteIndices[i] = 0;
-            }
-            if (bgEnable()) renderBg(scanline);
-            if (windowEnable()) renderWindow(scanline);
-            if (spriteEnable()) renderSprites(scanline);
-            transferScanlineToScreen(scanline);
+          // setLCDInterrupt();
+          
+          scanline_t scanline;
+          for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
+            scanline.pixels[i] = 0;
+            scanline.palettes[i] = PaletteType::BG;
+            scanline.spriteIndices[i] = 0;
           }
+          if (bgEnable()) renderBg(scanline);
+          if (windowEnable()) renderWindow(scanline);
+          if (spriteEnable()) renderSprites(scanline);
+          transferScanlineToScreen(scanline);
         }
       }
 

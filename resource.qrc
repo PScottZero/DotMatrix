@@ -1,7 +1,8 @@
 <RCC>
-<qresource>
-    <file>assets/imgs/background.png</file>
-    <file>assets/icons/dm_icon.ico</file>
-    <file>assets/icons/dm_icon.icns</file>
-</qresource>
+    <qresource prefix="/">
+        <file>assets/icons/dm_icon.ico</file>
+        <file>assets/icons/dm_icon.icns</file>
+        <file>assets/imgs/bg_new.png</file>
+        <file>assets/imgs/bg_old.png</file>
+    </qresource>
 </RCC>
