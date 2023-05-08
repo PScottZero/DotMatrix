@@ -18,55 +18,55 @@ I've also added several new palettes, as well as a new splash screen.
 ## May 25th 2020
 Added support for MBC5. Emulator now supports No-Bank, MBC1, MBC2, MBC3, and MBC5. Emulator now saves games properly as well. I have released an executable for this version (0.5 Beta) and plan to take a break from this project in order to work on other projects.
 <div>
-  <img src="screenshots/gw_gallery.jpeg" width="300" height="300">
-  <img src="screenshots/pokemon1.jpeg" width="300" height="300">
+  <img src="screenshots/gw_gallery.jpeg" width="350" height="350">
+  <img src="screenshots/pokemon1.jpeg" width="350" height="350">
 </div>
 
 ## May 4th 2020
 Changed UI background and icon. Small revisions have also been made under the hood. Plan to finish implementing several banking methods next. Also, Pokemon is working (without save feature).
 <div>
-  <img src="screenshots/pokemon2.jpeg" width="300" height="300">
-  <img src="screenshots/pokemon3.jpeg" width="300" height="300">
-  <img src="screenshots/pokemon4.jpeg" width="300" height="300">
-  <img src="screenshots/pokemon5.jpeg" width="300" height="300">
-  <img src="screenshots/old_splash_screen.jpeg" width="300" height="300">
+  <img src="screenshots/pokemon2.jpeg" width="350" height="350">
+  <img src="screenshots/pokemon3.jpeg" width="350" height="350">
+  <img src="screenshots/pokemon4.jpeg" width="350" height="350">
+  <img src="screenshots/pokemon5.jpeg" width="350" height="350">
+  <img src="screenshots/old_splash_screen.jpeg" width="350" height="350">
   <img src="assets/icons/dm_icon.ico" width="150" height="150">
 </div>
 
 ## April 20th 2020
 Revised UI and added palettes. Video is now completely implemented. However, some games still have bugs that I am trying to work out.
 <div>
-  <img src="screenshots/really_old_splash_screen.jpeg" width="300" height="300">
-  <img src="screenshots/kirby_cobalt.jpeg" width="300" height="300">
-  <img src="screenshots/kirby_kirby.jpeg" width="300" height="300">
-  <img src="screenshots/kirby_gbp.jpeg" width="300" height="300">
-  <img src="screenshots/kirby_wishgb.jpeg" width="300" height="300">
-  <img src="screenshots/kirby_gb.jpeg" width="300" height="300">
+  <img src="screenshots/really_old_splash_screen.jpeg" width="350" height="350">
+  <img src="screenshots/kirby_cobalt.jpeg" width="350" height="350">
+  <img src="screenshots/kirby_kirby.jpeg" width="350" height="350">
+  <img src="screenshots/kirby_gbp.jpeg" width="350" height="350">
+  <img src="screenshots/kirby_wishgb.jpeg" width="350" height="350">
+  <img src="screenshots/kirby_gb.jpeg" width="350" height="350">
 </div>
 
 ## April 17th 2020
 Both Tetris and Dr. Mario are now working correctly. Will next work on finishing video implementation
 <div>
-  <img src="screenshots/tetris1.jpeg" width="300" height="300">
-  <img src="screenshots/tetris2.jpeg" width="300" height="300">
-  <img src="screenshots/tetris3.jpeg" width="300" height="300">
+  <img src="screenshots/tetris1.jpeg" width="350" height="350">
+  <img src="screenshots/tetris2.jpeg" width="350" height="350">
+  <img src="screenshots/tetris3.jpeg" width="350" height="350">
 </div>
 
 ## April 16th 2020
 Dr. Mario appears to be working. There is a small bug that I need to fix in the game though. Joypad is also now properly implemented.
 <div>
-  <img src="screenshots/dr_mario1.jpeg" width="300" height="300">
-  <img src="screenshots/dr_mario2.jpeg" width="300" height="300">
+  <img src="screenshots/dr_mario1.jpeg" width="350" height="350">
+  <img src="screenshots/dr_mario2.jpeg" width="350" height="350">
 </div>
 
 ## April 11th 2020
 Tetris finally boots. Took me a bit to find the bug that prevented it from booting!
 <div>
-  <img src="screenshots/tetris_early.jpeg" width="300" height="300">
+  <img src="screenshots/tetris_early.jpeg" width="350" height="350">
 </div>
 
 ## Feb 14th 2020
 The Nintendo logo is scrolling!!!
 <div>
-  <img src="screenshots/bootstrap.jpeg" width="300" height="300">
+  <img src="screenshots/bootstrap.jpeg" width="350" height="350">
 </div>
