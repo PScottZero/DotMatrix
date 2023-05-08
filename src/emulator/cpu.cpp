@@ -1409,6 +1409,7 @@ void CPU::handleInterrupts() {
       Interrupts::reset(PC, TIMER_INT);
     } else if (Interrupts::requestedAndEnabled(SERIAL_INT)) {
       intAddr = 0x58;
+      Memory::getByte(SB) = 0xFF;
       Interrupts::reset(PC, SERIAL_INT);
     } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
       intAddr = 0x60;

@@ -88,6 +88,7 @@ class PPU {
       &wy, &wx, windowLineNum;
   static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   static uint8 visibleSpriteCount;
+  static bool statInt;
 
   // OAM search functions
   static void findVisibleSprites();

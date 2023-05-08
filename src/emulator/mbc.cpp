@@ -286,6 +286,22 @@ bool MBC::hasRam() {
   }
 }
 
+bool MBC::hasRamAndBattery() {
+  switch (bankType) {
+    case MBC1_RAM_BATTERY:
+    case MMM01_RAM_BATTERY:
+    case MBC3_TIMER_RAM_BATTERY:
+    case MBC3_RAM_BATTERY:
+    case MBC5_RAM_BATTERY:
+    case MBC5_RUMBLE_RAM_BATTERY:
+    case MBC7_SENSOR_RUMBLE_RAM_BATTERY:
+    case HuC1_RAM_BATTERY:
+      return true;
+    default:
+      return false;
+  }
+}
+
 int MBC::ramBytes() {
   switch (ramSize) {
     case RAM_SIZE_8KB:

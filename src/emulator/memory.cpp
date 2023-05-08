@@ -7,12 +7,13 @@
 #include "mbc.h"
 #include "timers.h"
 
-uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
-uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
-uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
-uint8 *Memory::romBank0 = (uint8 *)malloc(ROM_BANK_BYTES);
-uint8 *Memory::romBank1 = (uint8 *)malloc(ROM_BANK_BYTES);
-uint8 **Memory::exramBank = (uint8 **)malloc(sizeof(uint8 *) * RAM_BANK_BYTES);
+uint8 *Memory::mem = (uint8 *)std::malloc(MEM_BYTES);
+uint8 *Memory::cart = (uint8 *)std::malloc(CART_BYTES);
+uint8 *Memory::exram = (uint8 *)std::malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
+uint8 *Memory::romBank0 = (uint8 *)std::malloc(ROM_BANK_BYTES);
+uint8 *Memory::romBank1 = (uint8 *)std::malloc(ROM_BANK_BYTES);
+uint8 **Memory::exramBank =
+    (uint8 **)std::malloc(sizeof(uint8 *) * RAM_BANK_BYTES);
 
 // **************************************************
 // **************************************************
@@ -30,12 +31,28 @@ uint8 Memory::read(uint16 addr) {
     return 0xFF;
   }
 
+  // do not read value if reading from
+  // write-only memory register
+  if (addr == NR13 || addr == NR23 || addr == NR31 || addr == NR33 ||
+      addr == NR41 || addr == HDMA1 || addr == HDMA2 || addr == HDMA3 ||
+      addr == HDMA4) {
+    return 0xFF;
+  }
+
+  // only the upper 2-bits of register
+  // NR11 and NR21 can be read
+  if (addr == NR11 || addr == NR21) return getByte(addr) | 0x3F;
+
+  // only bit 6 of register NR14,
+  // NR24, NR34 and NR44 can be read
+  if (addr == NR14 || addr == NR24 || addr == NR34 || addr == NR44) {
+    return getByte(addr) | 0xBF;
+  }
+
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && Bootstrap::skipWait()) {
-    return 0x90;
-  }
+  if (addr == LY && Bootstrap::skipWait()) return 0x90;
 
   // read from memory
   return getByte(addr);
@@ -53,74 +70,94 @@ void Memory::write(uint16 addr, uint8 val) {
   // check for MBC writes
   MBC::write(addr, val);
 
-  if (addr < VRAM_ADDR) {
-    return;
+  // rom bank area is read-only
+  if (addr < VRAM_ADDR) return;
+
+  // external memory write
+  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR) {
+    // cannot access external ram if it
+    // is not enabled by MBC
+    if (!MBC::ramEnabled) return;
+
+    // if using MBC2, ram only uses lower nibble
+    // of each ram byte, and ram only consists of
+    // 512 half bytes with rest of ram area
+    // echoing A000-A1FF
+    if (MBC::halfRAMMode) {
+      echoHalfRam(addr, val);
+      return;
+    }
   }
 
-  // if (addr == SCX) {
-  //   printf("SCX: %02X\n", val);
-  // }
-
-  // cannot access external ram if it
-  // is not enabled by MBC
-  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
-    return;
-  }
-
-  // LY register is read-only
-  if (addr == LY) {
-    return;
-  }
-
-  // turn off boostrap if writing
-  // nonzero value to address ff50
-  if (addr == BOOTSTRAP && val != 0) {
-    Bootstrap::enabled = false;
-  }
+  // do not write value if writing to
+  // read-only memory register
+  if (addr == LY || addr == PCM12 || addr == PCM34) return;
 
   // writing anything to DIV register
   // will reset the internal counter
   // and the DIV register
   if (addr == DIV) {
     Timers::reset();
+    return;
+  }
+
+  // only bit 7 of register NR52 can
+  // be written to
+  if (addr == NR52) {
+    getByte(addr) = (getByte(addr) & 0x7F) | (val & 0x80);
+    return;
   }
 
   // only bits 6-3 of the STAT register
   // can be written to
-  else if (addr == STAT) {
+  if (addr == STAT) {
     getByte(STAT) = (getByte(STAT) & 0x87) | (val & 0x78);
+    return;
+  }
+
+  // only bit 0 of register KEY1 can
+  // be written to
+  if (addr == KEY1) {
+    getByte(addr) = (getByte(addr) & 0xFE) | val & 0x01;
+    return;
+  }
+
+  // can write to all bits of register RP
+  // except for bit 1
+  if (addr == RP) {
+    getByte(addr) = (getByte(addr) & 0xFD) | val & 0x02;
+    return;
+  }
+
+  // only lower 5 bits of interrupt flag
+  // register can be written to (top 3
+  // bits are always 1)
+  if (addr == IF) {
+    getByte(addr) = val | 0xE0;
+    return;
   }
 
   // echo ram
-  else if (addr >= WORK_RAM_ADDR && addr < OAM_ADDR) {
+  if (addr >= WORK_RAM_ADDR && addr < OAM_ADDR) {
     echoRam(addr, val);
-  }
-
-  // if using MBC2, ram only uses lower nibble
-  // of each ram byte, and ram only consists of
-  // 512 half bytes with rest of ram area
-  // echoing A000-A1FF
-  else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && MBC::halfRAMMode) {
-    echoHalfRam(addr, val);
+    return;
   }
 
   // write to memory
-  else {
-    getByte(addr) = val;
-  }
-
-  // upper 3 bits of IF are always 1
-  if (addr == IF) {
-    getByte(addr) |= 0xE0;
-  }
+  getByte(addr) = val;
 
   // start dma transfer if dma
   // address was written to
-  else if (addr == DMA) {
-    dmaTransfer();
-  }
+  if (addr == DMA) dmaTransfer();
 
-  else if (addr == SC && (val & 0x81) == 0x81) {
+  // turn off boostrap if writing
+  // nonzero value to address ff50
+  if (addr == BOOTSTRAP && val != 0) Bootstrap::enabled = false;
+
+  // start serial transfer if writing
+  // to register SC with bit 7 and bit
+  // 0 being set to 1
+  if (addr == SC && (val & 0x81) == 0x81) {
     CycleCounter::serialTransferMode = true;
   }
 }
@@ -189,16 +226,6 @@ void Memory::setExramBank(uint8 bankNum) {
   }
 }
 
-// // map memory rom bank to cartridge rom bank
-// void Memory::setRomBank(uint8 *romBank, uint8 bankNum) {
-//   romBank = &cart[ROM_BANK_BYTES * bankNum];
-// }
-
-// // map memory external ram bank to external ram bank
-// void Memory::setExramBank(uint8 bankNum) {
-//   exramBank = &exram[RAM_BANK_BYTES * bankNum];
-// }
-
 // perform dma transfer
 void Memory::dmaTransfer() {
   uint16 dmaAddr = getByte(DMA) << 8;
@@ -258,12 +285,14 @@ void Memory::reset() {
     mem[i] = 0;
   }
 
+  // save external ram if current game
+  // has ram and battery
+  if (MBC::hasRamAndBattery()) saveExram();
+
   // clear external ram
   for (int i = 0; i < RAM_BANK_BYTES * MAX_RAM_BANKS; ++i) {
     exram[i] = 0;
   }
-
-  // TODO load external ram after clearing
 
   Interrupts::intFlags |= 0xE0;
   setRomBank(romBank0, 0);

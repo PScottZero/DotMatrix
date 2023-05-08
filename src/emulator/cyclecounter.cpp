@@ -7,7 +7,6 @@ bool CycleCounter::serialTransferMode = false;
 
 void CycleCounter::addCycles(uint8 count) {
   cpuCycles += count;
-  ppuCycles += count;
   if (serialTransferMode) serialTransferCycles += count;
 }
 

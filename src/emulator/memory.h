@@ -13,74 +13,74 @@
 #define HALF_RAM_BYTES 0x200
 #define MAX_RAM_BANKS 16
 
-// dmg in-memory flag addresses
+// cartridge header addresses
+#define CGB_MODE 0x0143
 #define SGB_MODE 0x0146
 #define BANK_TYPE 0x0147
 #define ROM_SIZE 0x0148
-#define RAM_SIZE 0x149
-#define P1 0xFF00
-#define SB 0xFF01
-#define SC 0xFF02
-#define DIV 0xFF04
-#define TIMA 0xFF05
-#define TMA 0xFF06
-#define TAC 0xFF07
-#define IF 0xFF0F
-#define IE 0xFFFF
-#define LCDC 0xFF40
-#define STAT 0xFF41
-#define SCY 0xFF42
-#define SCX 0xFF43
-#define LY 0xFF44
-#define LYC 0xFF45
-#define DMA 0xFF46
-#define BGP 0xFF47
-#define OBP0 0xFF48
-#define OBP1 0xFF49
-#define BOOTSTRAP 0xFF50
-#define WY 0xFF4A
-#define WX 0xFF4B
-#define OAM_START 0xFE00
-#define OAM_END 0xFE9F
-#define NR10 0xFF10
-#define NR11 0xFF11
-#define NR12 0xFF12
-#define NR13 0xFF13
-#define NR14 0xFF14
-#define NR21 0xFF16
-#define NR22 0xFF17
-#define NR23 0xFF18
-#define NR24 0xFF19
-#define NR30 0xFF1A
-#define NR31 0xFF1B
-#define NR32 0xFF1C
-#define NR33 0xFF1D
-#define NR34 0xFF1E
-#define NR41 0xFF20
-#define NR42 0xFF21
-#define NR43 0xFF22
-#define NR44 0xFF23
-#define NR50 0xFF24
-#define NR51 0xFF25
-#define NR52 0xFF26
-#define WAVEFORM_START 0xFF30
-#define WAVEFORM_END 0xFF3F
+#define RAM_SIZE 0x0149
 
-// cgb in-memory flag address constants
-#define CGB_MODE 0x0143
-#define KEY1 0xFF4D
-#define RP 0xFF56
-#define VBK 0xFF4F
-#define SVBK 0xFF70
-#define HDMA1 0xFF51
-#define HDMA2 0xFF52
-#define HDMA3 0xFF53
-#define HDMA4 0xFF54
-#define HDMA5 0xFF55
-#define BCPS 0xFF68
-#define BCPD 0xFF69
-#define OCPS 0xFF6A
-#define OCPD 0xFF6B
+// hardware registers
+#define P1 0xFF00         // joypad register
+#define SB 0xFF01         // serial transfer data
+#define SC 0xFF02         // serial transfer control
+#define DIV 0xFF04        // divider register
+#define TIMA 0xFF05       // timer counter
+#define TMA 0xFF06        // timer modulo
+#define TAC 0xFF07        // timer control
+#define IF 0xFF0F         // interrupt flag
+#define NR10 0xFF10       // sound channel 1 sweep
+#define NR11 0xFF11       // sound channel 1 length timer & duty cycle
+#define NR12 0xFF12       // sound channel 1 volume & envelope
+#define NR13 0xFF13       // sound channel 1 wavelength low
+#define NR14 0xFF14       // sound channel 1 wavelength high & control
+#define NR21 0xFF16       // sound channel 2 length timer & duty cycle
+#define NR22 0xFF17       // sound channel 2 volume & envelope
+#define NR23 0xFF18       // sound channel 2 wavelength low
+#define NR24 0xFF19       // sound channel 2 wavelength high & control
+#define NR30 0xFF1A       // sound channel 3 dac enable
+#define NR31 0xFF1B       // sound channel 3 length timer
+#define NR32 0xFF1C       // sound channel 3 output level
+#define NR33 0xFF1D       // sound channel 3 wavelength low
+#define NR34 0xFF1E       // sound channel 3 wavelength high & control
+#define NR41 0xFF20       // sound channel 4 length timer
+#define NR42 0xFF21       // sound channel 4 volume & envelope
+#define NR43 0xFF22       // sound channel 4 frequency & randomness
+#define NR44 0xFF23       // sound channel 4 control
+#define NR50 0xFF24       // master volume & vin panning
+#define NR51 0xFF25       // sound panning
+#define NR52 0xFF26       // sound on/off
+#define WAVE_RAM 0xFF30   // waveform data (up to 0xFF3F)
+#define LCDC 0xFF40       // lcd control
+#define STAT 0xFF41       // lcd status
+#define SCY 0xFF42        // scroll y
+#define SCX 0xFF43        // scroll x
+#define LY 0xFF44         // lcd y coordinate
+#define LYC 0xFF45        // lcd y compare
+#define DMA 0xFF46        // oam dma source address & start
+#define BGP 0xFF47        // background palette data (dmg only)
+#define OBP0 0xFF48       // object palette 0 data (dmg only)
+#define OBP1 0xFF49       // object palette 1 data (dmg only)
+#define BOOTSTRAP 0xFF50  // enable/disable bootstrap
+#define WY 0xFF4A         // window y position
+#define WX 0xFF4B         // window x position
+#define KEY1 0xFF4D       // prepare speed switch (cgb only)
+#define VBK 0xFF4F        // vram bank (cgb only)
+#define HDMA1 0xFF51      // vram dma source high (cgb only)
+#define HDMA2 0xFF52      // vram dma source low (cgb only)
+#define HDMA3 0xFF53      // vram dma destination high (cgb only)
+#define HDMA4 0xFF54      // vram dma destination low (cgb only)
+#define HDMA5 0xFF55      // vram dma length/mode/start (cgb only)
+#define RP 0xFF56         // infrared communications port
+#define BCPS 0xFF68       // background color palette specification
+#define BCPD 0xFF69       // background color palette data
+#define OCPS 0xFF6A       // object color palette specification
+#define OCPD 0xFF6B       // object color palette data
+#define OPRI 0xFF6C       // object priority mode
+#define SVBK 0xFF70       // wram bank
+#define PCM12 0xFF76      // audio digital outputs 1 & 2
+#define PCM34 0xFF77      // audio digital outputs 3 & 4
+#define IE 0xFFFF         // interrupt enable
 
 // memory map constants
 #define ROM_BANK_0_ADDR 0x0000

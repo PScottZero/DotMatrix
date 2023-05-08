@@ -8,12 +8,12 @@
 #include "bootstrap.h"
 #include "controls.h"
 #include "cpu.h"
+#include "cyclecounter.h"
+#include "interrupts.h"
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
 #include "timers.h"
-#include "cyclecounter.h"
-#include "interrupts.h"
 
 using namespace std;
 using namespace chrono;
@@ -35,14 +35,14 @@ CGB::~CGB() {
   running = false;
   wait();
 
-  if (MBC::hasRam()) Memory::saveExram();
+  if (MBC::hasRamAndBattery()) Memory::saveExram();
 
-  free(Memory::mem);
-  free(Memory::cart);
-  free(Memory::exram);
-  free(Memory::romBank0);
-  free(Memory::romBank1);
-  free(Memory::exramBank);
+  std::free(Memory::mem);
+  std::free(Memory::cart);
+  std::free(Memory::exram);
+  std::free(Memory::romBank0);
+  std::free(Memory::romBank1);
+  std::free(Memory::exramBank);
 }
 
 void CGB::run() {
@@ -98,23 +98,25 @@ bool CGB::loadRom(const QString romPath) {
   }
 
   CGB::romPath = romPath;
-  if (MBC::hasRam()) Memory::loadExram();
+  if (MBC::hasRamAndBattery()) Memory::loadExram();
 
   return true;
 }
 
-void CGB::reset() {
+void CGB::reset(bool newGame) {
   running = false;
   wait();
   stop = false;
   pause = false;
   actionPause->setChecked(false);
 
-  if (MBC::hasRam()) Memory::saveExram();
-
   CPU::reset();
   Timers::reset();
   Memory::reset();
   MBC::reset();
   Bootstrap::reset();
+
+  if (!newGame && MBC::hasRamAndBattery()) {
+    Memory::loadExram();
+  }
 }

@@ -124,7 +124,7 @@ void MainWindow::loadROM() {
 void MainWindow::pause(bool shouldPause) { cgb.pause = shouldPause; }
 
 void MainWindow::reset() {
-  cgb.reset();
+  cgb.reset(false);
   cgb.start();
 }
 

@@ -25,7 +25,7 @@ class CGB : public QThread {
   ~CGB();
 
   void run() override;
-  void reset();
+  void reset(bool newGame = true);
   bool loadRom(const QString romPath);
 
  signals:
