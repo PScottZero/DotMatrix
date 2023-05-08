@@ -55,8 +55,12 @@ Dr. Mario appears to be working. There is a small bug that I need to fix in the 
 
 ## April 11th 2020
 Tetris finally boots. Took me a bit to find the bug that prevented it from booting!
-<img src="https://i.imgur.com/EFEmEq0.jpg" width="300" height="300">
+<div>
+  <img src="https://i.imgur.com/EFEmEq0.jpg" width="300" height="300">
+</div>
 
 ## Feb 14th 2020
 The Nintendo logo is scrolling!!!
-<img src="https://i.imgur.com/GmHoigL.jpg" width="300" height="300">
+<div>
+  <img src="https://i.imgur.com/GmHoigL.jpg" width="300" height="300">
+</div>
