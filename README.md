@@ -9,10 +9,10 @@ Certain games that never worked in the old emulation code now work! Some of thes
 
 I've also added several new palettes, as well as a new splash screen.
 <div>
-  <img src="screenshots/new_splash_screen.png" width="400" height="400">
-  <img src="screenshots/tetris_ayy4.png" width="400" height="400">
-  <img src="screenshots/alleyway.png" width="400" height="400">
-  <img src="screenshots/rcpro.png" width="400" height="400">
+  <img src="screenshots/new_splash_screen.png" width="350" height="350">
+  <img src="screenshots/tetris_ayy4.png" width="350" height="350">
+  <img src="screenshots/alleyway.png" width="350" height="350">
+  <img src="screenshots/rcpro.png" width="350" height="350">
 </div>
 
 ## May 25th 2020
