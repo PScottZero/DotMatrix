@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>640</width>
+    <height>602</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="font">
+   <font>
+    <family>Silkscreen</family>
+    <pointsize>11</pointsize>
+   </font>
+  </property>
+  <property name="windowTitle">
+   <string>Dot Matrix: Game Boy Emulator</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/img/dm_icon.ico</normaloff>:/img/dm_icon.ico</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="screen">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>640</width>
+      <height>576</height>
+     </rect>
+    </property>
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+    <property name="minimumSize">
+     <size>
+      <width>640</width>
+      <height>576</height>
+     </size>
+    </property>
+    <property name="maximumSize">
+     <size>
+      <width>640</width>
+      <height>576</height>
+     </size>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="pixmap">
+     <pixmap resource="../../resource.qrc">:/assets/imgs/bg_new.png</pixmap>
+    </property>
+    <property name="scaledContents">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>640</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>640</width>
+     <height>26</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>640</width>
+     <height>26</height>
+    </size>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="font">
+     <font>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpenROM"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionReset"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="font">
+     <font>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <widget class="QMenu" name="menuSpeed">
+     <property name="title">
+      <string>Speed</string>
+     </property>
+     <addaction name="actionSpeed0_25x"/>
+     <addaction name="actionSpeed0_5x"/>
+     <addaction name="actionSpeed1x"/>
+     <addaction name="actionSpeed2x"/>
+     <addaction name="actionSpeed4x"/>
+    </widget>
+    <widget class="QMenu" name="menuPalette">
+     <property name="title">
+      <string>Palette</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="menuScale">
+     <property name="title">
+      <string>Scale</string>
+     </property>
+     <addaction name="actionScale0_5x"/>
+     <addaction name="actionScale1x"/>
+     <addaction name="actionScale1_5x"/>
+     <addaction name="actionScale2x"/>
+    </widget>
+    <addaction name="menuScale"/>
+    <addaction name="menuSpeed"/>
+    <addaction name="menuPalette"/>
+    <addaction name="actionKeyBindings"/>
+    <addaction name="actionShowBootScreen"/>
+   </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="font">
+     <font>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionShowBackground"/>
+    <addaction name="actionShowWindow"/>
+    <addaction name="actionShowSprites"/>
+    <addaction name="separator"/>
+    <addaction name="actionEnableLogging"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuDebug"/>
+  </widget>
+  <action name="actionOpenROM">
+   <property name="text">
+    <string>Open ROM</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionSpeed0_25x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.25x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionSpeed0_5x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionSpeed1x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionSpeed2x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionSpeed4x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionScale0_5x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>0.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionScale1x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionScale1_5x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionScale2x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionKeyBindings">
+   <property name="text">
+    <string>Key Bindings</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionShowBootScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Boot Screen</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="text">
+    <string>Reset</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionShowBackground">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Background</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionShowWindow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Window</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionShowSprites">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Sprites</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+  <action name="actionEnableLogging">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable Logging</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+    </font>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="../../resource.qrc"/>
+ </resources>
+ <connections/>
+</ui>
