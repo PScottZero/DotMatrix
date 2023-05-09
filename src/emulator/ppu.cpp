@@ -8,7 +8,6 @@
 
 #include "ppu.h"
 
-#include "bootstrap.h"
 #include "cgb.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
@@ -43,92 +42,99 @@ Palette *PPU::palette = nullptr;
 // initialize frame rendered flag
 bool PPU::frameRendered = false;
 
+// initialize show/hide flags
 bool PPU::showBackground = true;
 bool PPU::showWindow = true;
 bool PPU::showSprites = true;
 
+// initialize stat register interrupt
 bool PPU::statInt = false;
 
 void PPU::step() {
-  for (int i = 0; i < CycleCounter::cpuCycles; ++i) {
-    CycleCounter::ppuCycles += 1;
+  if (lcdEnable() && !CGB::stop) {
+    // if scanline completed, increment ly
+    if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
+      if (++ly >= SCREEN_LINES) ly = 0;
 
-    if (lcdEnable() && !CGB::stop) {
-      if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
-        if (++ly >= SCREEN_LINES) ly = 0;
+      // check if current line number
+      // is equal to the value in lyc
+      if (ly == lyc) {
+        stat |= 0x04;
+      } else {
+        stat &= 0xFB;
+      }
+      setLcdInterrupt();
 
-        // check if current line number
-        // is equal to the value in LYC
-        if (ly == lyc) {
-          stat |= 0x04;
-        } else {
-          stat &= 0xFB;
+      CycleCounter::ppuCycles %= SCANLINE_CYCLES;
+    }
+
+    if (ly < SCREEN_PX_HEIGHT) {
+      // **************************************************
+      // OAM Search
+      // **************************************************
+      if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
+        if (getMode() != OAM_SEARCH_MODE) {
+          setMode(OAM_SEARCH_MODE);
+          setLcdInterrupt();
+          findVisibleSprites();
         }
-        setLCDInterrupt();
-
-        CycleCounter::ppuCycles %= SCANLINE_CYCLES;
       }
 
-      if (ly < SCREEN_PX_HEIGHT) {
-        // **************************************************
-        // OAM Search
-        // **************************************************
-        if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
+      // **************************************************
+      // Pixel Transfer
+      // **************************************************
+      else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
+        if (getMode() != PIXEL_TRANSFER_MODE) {
+          // check if oam search mode was skipped,
+          // a single cpu step could potentially have
+          // 20 or more cycles
           if (getMode() != OAM_SEARCH_MODE) {
             setMode(OAM_SEARCH_MODE);
-            setLCDInterrupt();
+            setLcdInterrupt();
             findVisibleSprites();
           }
-        }
 
-        // **************************************************
-        // Pixel Transfer
-        // **************************************************
-        else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
-          if (getMode() != PIXEL_TRANSFER_MODE) {
-            setMode(PIXEL_TRANSFER_MODE);
-            setLCDInterrupt();
+          setMode(PIXEL_TRANSFER_MODE);
+          setLcdInterrupt();
 
-            scanline_t scanline;
-            for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
-              scanline.pixels[i] = 0;
-              scanline.palettes[i] = PaletteType::BG;
-              scanline.spriteIndices[i] = 0;
-            }
-            if (bgEnable()) renderBg(scanline);
-            if (windowEnable()) renderWindow(scanline);
-            if (spriteEnable()) renderSprites(scanline);
-            transferScanlineToScreen(scanline);
-          }
+          scanline_t scanline;
+          resetScanline(scanline);
+          if (bgEnable()) renderBg(scanline);
+          if (windowEnable()) renderWindow(scanline);
+          if (spriteEnable()) renderSprites(scanline);
+          transferScanlineToScreen(scanline);
         }
+      }
 
-        // **************************************************
-        // H-Blank
-        // **************************************************
-        else if (CycleCounter::ppuCycles < H_BLANK_CYCLES) {
-          if (getMode() != H_BLANK_MODE) {
-            setMode(H_BLANK_MODE);
-            setLCDInterrupt();
-          }
-        }
-      } else {
-        // **************************************************
-        // V-Blank
-        // **************************************************
-        if (getMode() != V_BLANK_MODE) {
-          setMode(V_BLANK_MODE);
-          setLCDInterrupt();
-          Interrupts::request(V_BLANK_INT);
-          frameRendered = true;
-          windowLineNum = 0;
+      // **************************************************
+      // H-Blank
+      // **************************************************
+      else if (CycleCounter::ppuCycles < H_BLANK_CYCLES) {
+        if (getMode() != H_BLANK_MODE) {
+          setMode(H_BLANK_MODE);
+          setLcdInterrupt();
         }
       }
     } else {
-      ly = 0;
-      windowLineNum = 0;
-      setMode(H_BLANK_MODE);
-      screen->fill(palette->data[0]);
-      CycleCounter::ppuCycles = 0;
+      // **************************************************
+      // V-Blank
+      // **************************************************
+      if (getMode() != V_BLANK_MODE) {
+        setMode(V_BLANK_MODE);
+        setLcdInterrupt();
+        Interrupts::request(V_BLANK_INT);
+        frameRendered = true;
+        windowLineNum = 0;
+      }
+    }
+  } else {
+    ly = 0;
+    windowLineNum = 0;
+    setMode(H_BLANK_MODE);
+    screen->fill(palette->data[0]);
+    if (CycleCounter::ppuCycles > SCANLINE_CYCLES * SCREEN_LINES) {
+      CycleCounter::ppuCycles %= SCANLINE_CYCLES * SCREEN_LINES;
+      frameRendered = true;
     }
   }
 }
@@ -193,7 +199,6 @@ void PPU::renderBg(scanline_t &scanline) {
     int start = pxCount == 0 ? innerBgTileX : 0;
     int end =
         pxCount + 8 > SCREEN_PX_WIDTH ? SCREEN_PX_WIDTH - pxCount : TILE_PX_DIM;
-
     for (int i = start; i < end; ++i) {
       scanline.pixels[pxCount] = row[i];
       scanline.palettes[pxCount] = PaletteType::BG;
@@ -288,6 +293,15 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
     }
     uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & 0b11;
     screen->setPixel(px, ly, palette->data[pxPalVal]);
+  }
+}
+
+// reset scanline by zeroing it out
+void PPU::resetScanline(scanline_t &scanline) {
+  for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
+    scanline.pixels[i] = 0;
+    scanline.palettes[i] = PaletteType::BG;
+    scanline.spriteIndices[i] = 0;
   }
 }
 
@@ -401,15 +415,22 @@ void PPU::setMode(uint8 mode) {
   stat |= mode;
 }
 
+// return the current lcd mode
+// 00 - hblank mode
+// 01 - vblank mode
+// 10 - oam search mode
+// 11 - pixel transfer mode
 uint8 PPU::getMode() { return stat & 0b11; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register
-void PPU::setLCDInterrupt() {
+void PPU::setLcdInterrupt() {
   if (((stat & 0x40) && (stat & 0b100)) ||
       ((stat & 0x20) && (stat & 0b011) == OAM_SEARCH_MODE) ||
       ((stat & 0x10) && (stat & 0b011) == V_BLANK_MODE) ||
       ((stat & 0x08) && (stat & 0b011) == H_BLANK_MODE)) {
+    // only request an interrupt if stat
+    // interrupt goes from low to high
     if (!statInt) {
       statInt = true;
       Interrupts::request(LCDC_INT);

@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// TIMERS CONTROLLER (DIV, TIMA)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "timers.h"
 
 #include "cgb.h"
@@ -7,6 +15,7 @@
 
 uint16 Timers::internalCounter = 0;
 
+// initialize hardware register references
 uint8 &Timers::div = Memory::getByte(DIV);
 uint8 &Timers::tima = Memory::getByte(TIMA);
 uint8 &Timers::tma = Memory::getByte(TMA);
@@ -22,7 +31,7 @@ void Timers::step() {
     internalCounter += 4 * CycleCounter::cpuCycles;
     div = (internalCounter & DIV_MASK) >> 8;
 
-    // update TIMA timer
+    // update TIMA timer if enabled
     if (timerEnabled()) {
       uint16 oldCounter =
           oldInternalCounter & internalCounterMasks[timerFreq()];
@@ -37,10 +46,14 @@ void Timers::step() {
   }
 }
 
+// check if tima is enabled
 bool Timers::timerEnabled() { return tac & 0x04; }
 
+// return frequency for incrementing tima
 uint8 Timers::timerFreq() { return tac & 0b11; }
 
+// reset timers by setting internal counter,
+// div, and tima to 0
 void Timers::reset() {
   Timers::internalCounter = 0;
   div = 0;

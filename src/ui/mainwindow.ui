@@ -121,16 +121,6 @@
     <property name="title">
      <string>Settings</string>
     </property>
-    <widget class="QMenu" name="menuSpeed">
-     <property name="title">
-      <string>Speed</string>
-     </property>
-     <addaction name="actionSpeed0_25x"/>
-     <addaction name="actionSpeed0_5x"/>
-     <addaction name="actionSpeed1x"/>
-     <addaction name="actionSpeed2x"/>
-     <addaction name="actionSpeed4x"/>
-    </widget>
     <widget class="QMenu" name="menuPalette">
      <property name="title">
       <string>Palette</string>
@@ -146,7 +136,6 @@
      <addaction name="actionScale2x"/>
     </widget>
     <addaction name="menuScale"/>
-    <addaction name="menuSpeed"/>
     <addaction name="menuPalette"/>
     <addaction name="actionKeyBindings"/>
     <addaction name="actionShowBootScreen"/>
@@ -184,74 +173,6 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-    </font>
-   </property>
-  </action>
-  <action name="actionSpeed0_25x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>0.25x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-    </font>
-   </property>
-  </action>
-  <action name="actionSpeed0_5x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>0.5x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-    </font>
-   </property>
-  </action>
-  <action name="actionSpeed1x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>1x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-    </font>
-   </property>
-  </action>
-  <action name="actionSpeed2x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>2x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-    </font>
-   </property>
-  </action>
-  <action name="actionSpeed4x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>4x</string>
    </property>
    <property name="font">
     <font>

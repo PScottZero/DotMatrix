@@ -28,6 +28,12 @@
     <height>370</height>
    </size>
   </property>
+  <property name="font">
+   <font>
+    <family>Silkscreen</family>
+    <pointsize>12</pointsize>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Key Bindings</string>
   </property>
@@ -35,493 +41,246 @@
    <iconset>
     <normaloff>../img/dm_icon.ico</normaloff>../img/dm_icon.ico</iconset>
   </property>
-  <widget class="QLabel" name="upLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>91</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>UP</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="downLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>50</y>
-     <width>71</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>DOWN</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="leftLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>90</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>LEFT</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="rightLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>130</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>RIGHT</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="aLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>170</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>A</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="bLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>210</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>B</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="startLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>250</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>START</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="selectLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>290</y>
-     <width>81</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
-   <property name="text">
-    <string>SELECT</string>
-   </property>
-  </widget>
   <widget class="QPushButton" name="setUpButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>10</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Up</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setLeftButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>90</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Left</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setRightButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>130</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Right</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setDownButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>50</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Down</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setSelectButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>290</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Select</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setStartButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>250</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set Start</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setBButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>210</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set B</string>
    </property>
   </widget>
   <widget class="QPushButton" name="setAButton">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>10</x>
      <y>170</y>
-     <width>106</width>
+     <width>121</width>
      <height>30</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-    </font>
-   </property>
    <property name="text">
-    <string>Set</string>
+    <string>Set A</string>
    </property>
   </widget>
   <widget class="QLabel" name="startKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>250</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>M</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="aKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>170</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>P</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="selectKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>290</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>N</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="bKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>210</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>O</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="leftKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>90</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>A</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="upKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>10</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>W</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="downKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>50</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>S</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="rightKeyLabel">
    <property name="geometry">
     <rect>
-     <x>250</x>
+     <x>140</x>
      <y>130</y>
-     <width>81</width>
+     <width>121</width>
      <height>31</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
-   </property>
    <property name="text">
     <string>D</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="bindStatusLabel">
    <property name="geometry">
     <rect>
-     <x>0</x>
+     <x>10</x>
      <y>330</y>
-     <width>271</width>
+     <width>251</width>
      <height>31</height>
     </rect>
-   </property>
-   <property name="font">
-    <font>
-     <family>DejaVu Sans Mono</family>
-     <pointsize>12</pointsize>
-     <italic>false</italic>
-    </font>
    </property>
    <property name="text">
     <string>[select a button to bind]</string>

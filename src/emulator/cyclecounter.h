@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// CYCLE COUNTER (KEEPS TRACK OF CPU + PPU CYCLES)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include "types.h"
@@ -8,8 +16,8 @@
 
 class CycleCounter {
  public:
-  static uint8 cpuCycles, ppuCycles;
-  static uint16 serialTransferCycles;
+  static uint8 cpuCycles;
+  static uint16 ppuCycles, serialTransferCycles;
   static bool serialTransferMode;
 
   static void addCycles(uint8 count);

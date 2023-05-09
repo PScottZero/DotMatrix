@@ -68,6 +68,12 @@ uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
 void CPU::step() {
   CycleCounter::cpuCycles = 0;
 
+  // check if serial transfer has completed
+  if (CycleCounter::serialTransferComplete()) {
+    Memory::getByte(SC) &= 0x7F;
+    Interrupts::request(SERIAL_INT);
+  }
+
   // check for interrupts
   handleInterrupts();
 

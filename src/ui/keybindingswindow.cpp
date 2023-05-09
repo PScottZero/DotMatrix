@@ -24,6 +24,9 @@ KeyBindingsWindow::KeyBindingsWindow(QWidget *parent)
                    {START, ui->setStartButton}, {SELECT, ui->setSelectButton}};
 
   for (const auto &pair : setKeyButtons) {
+    auto label = buttonKeyLabels[pair.first];
+    QKeySequence seq(Controls::joypadBindings[pair.first]);
+    label->setText(seq.toString());
     connect(pair.second, &QPushButton::clicked, this,
             [this, pair] { startBind(pair.first); });
   }

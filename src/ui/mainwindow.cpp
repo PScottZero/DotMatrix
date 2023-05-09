@@ -40,39 +40,19 @@ MainWindow::MainWindow(QWidget *parent)
   connect(scaleSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setScale);
 
   // **************************************************
-  // Speed Options
-  // **************************************************
-  auto speedActionGroup = new QActionGroup(this);
-  auto speedSigMap = new QSignalMapper(this);
-  speedActionGroup->setExclusive(true);
-  addToActionGroup(speedActionGroup, ui->actionSpeed0_25x, speedSigMap, 0);
-  addToActionGroup(speedActionGroup, ui->actionSpeed0_5x, speedSigMap, 1);
-  addToActionGroup(speedActionGroup, ui->actionSpeed1x, speedSigMap, 2);
-  addToActionGroup(speedActionGroup, ui->actionSpeed2x, speedSigMap, 3);
-  addToActionGroup(speedActionGroup, ui->actionSpeed4x, speedSigMap, 4);
-  connect(speedSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setSpeed);
-
-  // **************************************************
   // Palette Options
   // **************************************************
   auto paletteActionGroup = new QActionGroup(this);
   auto paletteSigMap = new QSignalMapper(this);
   paletteActionGroup->setExclusive(true);
-  for (auto pal : Palettes::allPalettes) {
+  for (auto palette : Palettes::allPalettes) {
     QAction *action = new QAction();
     action->setCheckable(true);
-    if (pal->name == "Game Boy Pocket") action->setChecked(true);
-    QString label = pal->name;
-    if (pal->creator != "Me") {
-      if (pal->creator == "SGB") {
-        label += " (Super Game Boy)";
-      } else {
-        label += " (By " + pal->creator + ")";
-      }
-    }
-    action->setText(label);
+    if (palette->name == "Game Boy Pocket") action->setChecked(true);
+    action->setText(getPaletteLabel(palette));
+    action->setFont(ui->menuPalette->font());
     ui->menuPalette->addAction(action);
-    addToActionGroup(paletteActionGroup, action, paletteSigMap, pal);
+    addToActionGroup(paletteActionGroup, action, paletteSigMap, palette);
   }
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
@@ -106,6 +86,32 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
+void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
+                                  QSignalMapper *sigMap, int mapVal) {
+  action->setActionGroup(actionGroup);
+  sigMap->setMapping(action, mapVal);
+  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
+}
+
+void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
+                                  QSignalMapper *sigMap, Palette *mapVal) {
+  action->setActionGroup(actionGroup);
+  sigMap->setMapping(action, mapVal);
+  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
+}
+
+QString MainWindow::getPaletteLabel(Palette *palette) {
+  QString label = palette->name;
+  if (palette->creator != "Me") {
+    if (palette->creator == "SGB") {
+      label += " (Super Game Boy)";
+    } else {
+      label += " (By " + palette->creator + ")";
+    }
+  }
+  return label;
+}
 
 // select rom to run
 void MainWindow::loadROM() {
@@ -146,22 +152,6 @@ void MainWindow::setScale(int scale) {
   this->setFixedSize(width, height + ui->menubar->height());
 #endif
   ui->screen->setFixedSize(width, height);
-}
-
-void MainWindow::setSpeed(int speed) { cgb.speedMult = pow(2, speed - 2); }
-
-void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                                  QSignalMapper *sigMap, int mapVal) {
-  action->setActionGroup(actionGroup);
-  sigMap->setMapping(action, mapVal);
-  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
-}
-
-void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                                  QSignalMapper *sigMap, Palette *mapVal) {
-  action->setActionGroup(actionGroup);
-  sigMap->setMapping(action, mapVal);
-  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
 }
 
 void MainWindow::setPalette(QObject *palette) {

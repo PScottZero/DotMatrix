@@ -1,8 +1,17 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// LOGGER
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "log.h"
+
+#include <string.h>
 
 #include "bootstrap.h"
 #include "interrupts.h"
-#include <string.h>
 
 fstream Log::log("/home/paul/git/DotMatrix/debug/log.txt", ios::out);
 
@@ -24,7 +33,8 @@ void Log::logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,
            "| STAT: %02X | LY: %02X\n",
            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero, IME,
            intEnable, intFlags, lcdc, stat, ly);
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logCPUCycles(uint8 opcode, uint8 cbOpcode, uint8 cycles) {
@@ -36,37 +46,43 @@ void Log::logCPUCycles(uint8 opcode, uint8 cbOpcode, uint8 cycles) {
     snprintf(logLine, LINE_BYTES, "CPU >>> OPCODE %02X TOOK %d CYCLES\n",
              opcode, cycles);
   }
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptEnable(uint16 PC) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES, "INT >>> ENABLED INTERRUPTS AT PC %04X\n", PC);
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptDisable(uint16 PC) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES, "INT >>> DISABLED INTERRUPTS AT PC %04X\n", PC);
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptRequest(uint8 interrupt) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES, "INT >>> REQUESTED %s\n",
            intName.at(interrupt).c_str());
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptService(uint16 PC, uint8 interrupt) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES, "INT >>> SERVICED %s AT PC %04X\n",
            intName.at(interrupt).c_str(), PC);
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }
 
 void Log::logInterruptReturn(uint16 PC) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES, "INT >>> RETURNED TO PC %04X\n", PC);
-  if (!Bootstrap::skipWait() && enable) log.write(logLine, strlen(logLine));
+  if (!Bootstrap::enabledAndShouldSkip() && enable)
+    log.write(logLine, strlen(logLine));
 }

@@ -100,6 +100,7 @@ class PPU {
   static bool shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
                                     uint8 scanlineIdx, uint8 px);
   static void transferScanlineToScreen(scanline_t &scanline);
+  static void resetScanline(scanline_t &scanline);
 
   // read display memory functions
   static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
@@ -119,7 +120,7 @@ class PPU {
   // stat register functions
   static void setMode(uint8 mode);
   static uint8 getMode();
-  static void setLCDInterrupt();
+  static void setLcdInterrupt();
 
  public:
   static QImage *screen;

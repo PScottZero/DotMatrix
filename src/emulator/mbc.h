@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// MEMORY BANK CONTROLLER (MBC)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <map>
@@ -67,12 +75,8 @@ using namespace std;
 class MBC {
  private:
  public:
-  static uint8 bankType;
-  static uint8 romSize;
-  static uint8 ramSize;
-
+  static uint8 bankType, romSize, ramSize, romBankNum, ramBankNum;
   static bool ramEnabled, bankMode, halfRAMMode, romBankBit9;
-  static uint8 romBankNum, ramBankNum;
 
   // mbc functions
   static void write(uint16 addr, uint8 val);

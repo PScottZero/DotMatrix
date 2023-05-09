@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// GAME BOY COLOR (CURRENTLY ONLY SUPPORTS DMG)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <QAction>
@@ -18,7 +26,6 @@ class CGB : public QThread {
   static QString romPath;
   QAction *actionPause;
   static bool stop;
-  float speedMult;
   bool running, pause;
 
   CGB();

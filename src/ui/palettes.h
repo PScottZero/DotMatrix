@@ -4,7 +4,7 @@
 #include <vector>
 
 #define PALETTE_COLOR_COUNT 4
-#define DEFAULT_PALETTE_IDX 10
+#define DEFAULT_PALETTE_IDX 12
 
 using namespace std;
 

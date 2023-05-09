@@ -1,8 +1,18 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// BOOTSTRAP (RUNS WHEN GAME BOY BOOTS)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "bootstrap.h"
 
+// bootstrap status flags
 bool Bootstrap::enabled = true;
 bool Bootstrap::skip = true;
 
+// bootstrap bytes (256 bytes)
 uint8 Bootstrap::bootstrap[BOOTSTRAP_BYTES] = {
     0x31, 0xfe, 0xff, 0xaf, 0x21, 0xff, 0x9f, 0x32, 0xcb, 0x7c, 0x20, 0xfb,
     0x21, 0x26, 0xff, 0x0e, 0x11, 0x3e, 0x80, 0x32, 0xe2, 0x0c, 0x3e, 0xf3,
@@ -27,8 +37,14 @@ uint8 Bootstrap::bootstrap[BOOTSTRAP_BYTES] = {
     0xf5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xfb, 0x86, 0x20, 0xfe,
     0x3e, 0x01, 0xe0, 0x50};
 
+// get byte of boostrap at given address
 uint8 &Bootstrap::at(uint16 addr) { return Bootstrap::bootstrap[addr]; }
 
-bool Bootstrap::skipWait() { return Bootstrap::enabled && Bootstrap::skip; }
+// check if bootstrap is enabled and should be
+// fast-forwarded through
+bool Bootstrap::enabledAndShouldSkip() {
+  return Bootstrap::enabled && Bootstrap::skip;
+}
 
+// reset bootstrap
 void Bootstrap::reset() { Bootstrap::enabled = true; }

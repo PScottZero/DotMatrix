@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// GAME BOY COLOR (CURRENTLY ONLY SUPPORTS DMG)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "cgb.h"
 
 #include <math.h>
@@ -9,7 +17,6 @@
 #include "controls.h"
 #include "cpu.h"
 #include "cyclecounter.h"
-#include "interrupts.h"
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
@@ -25,8 +32,7 @@ CGB::CGB()
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       actionPause(nullptr),
       running(false),
-      pause(false),
-      speedMult(1.0) {
+      pause(false) {
   PPU::screen = &screen;
   PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
 }
@@ -40,9 +46,6 @@ CGB::~CGB() {
   std::free(Memory::mem);
   std::free(Memory::cart);
   std::free(Memory::exram);
-  std::free(Memory::romBank0);
-  std::free(Memory::romBank1);
-  std::free(Memory::exramBank);
 }
 
 void CGB::run() {
@@ -53,25 +56,23 @@ void CGB::run() {
       Controls::update();
       CPU::step();
       Timers::step();
+      if (stop) CycleCounter::ppuCycles += 1;
       PPU::step();
 
-      // check if serial transfer has completed
-      if (CycleCounter::serialTransferComplete()) {
-        Memory::getByte(SC) &= 0x7F;
-        Interrupts::request(SERIAL_INT);
-      }
-
       // send rendered screen frame to ui
-      if (!Bootstrap::skipWait()) {
+      if (!Bootstrap::enabledAndShouldSkip()) {
         if (PPU::frameRendered) {
           emit sendScreen(screen);
-          clock += microseconds((int)(FRAME_DURATION / CGB::speedMult));
+          int duration = FRAME_DURATION;
+          clock += microseconds(duration);
           this_thread::sleep_until(clock);
           PPU::frameRendered = false;
         }
       } else {
         clock = system_clock::now();
       }
+    } else {
+      clock = system_clock::now();
     }
   }
 }
@@ -85,7 +86,9 @@ bool CGB::loadRom(const QString romPath) {
   MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
 
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
-  printf("Bank Type: %s\n", MBC::bankTypeStr().c_str());
+  printf("Bank Type: %s (%02X)\n", MBC::bankTypeStr().c_str(), MBC::bankType);
+  printf("Has RAM: %s\n", MBC::hasRam() ? "true" : "false");
+  printf("Has Battery: %s\n", MBC::hasRamAndBattery() ? "true" : "false");
   printf("ROM Size: %d KiB\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
   printf("RAM Size: %d KiB\n", MBC::ramBytes());
 

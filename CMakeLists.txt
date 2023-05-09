@@ -37,6 +37,8 @@ set(PROJECT_SOURCES
         src/emulator/types.h
         src/emulator/mbc.cpp
         src/emulator/mbc.h
+        src/emulator/apu.cpp
+        src/emulator/apu.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui

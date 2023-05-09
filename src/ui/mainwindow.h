@@ -35,7 +35,6 @@ class MainWindow : public QMainWindow {
   void setScreen(QImage image);
   void setPalette(QObject *palette);
   void setScale(int scale);
-  void setSpeed(int speed);
   void openKeyBindingsWindow();
   void toggleBootScreen(bool showBootScreen);
   void toggleBackground(bool showBackground);
@@ -55,4 +54,5 @@ class MainWindow : public QMainWindow {
                         QSignalMapper *sigMap, int mapValue);
   void addToActionGroup(QActionGroup *actionGroup, QAction *action,
                         QSignalMapper *sigMap, Palette *mapValue);
+  QString getPaletteLabel(Palette *palette);
 };

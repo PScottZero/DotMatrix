@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// MEMORY
+// **************************************************
+// **************************************************
+// **************************************************
+
 #include "memory.h"
 
 #include "bootstrap.h"
@@ -7,13 +15,16 @@
 #include "mbc.h"
 #include "timers.h"
 
-uint8 *Memory::mem = (uint8 *)std::malloc(MEM_BYTES);
-uint8 *Memory::cart = (uint8 *)std::malloc(CART_BYTES);
-uint8 *Memory::exram = (uint8 *)std::malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
-uint8 *Memory::romBank0 = (uint8 *)std::malloc(ROM_BANK_BYTES);
-uint8 *Memory::romBank1 = (uint8 *)std::malloc(ROM_BANK_BYTES);
-uint8 **Memory::exramBank =
-    (uint8 **)std::malloc(sizeof(uint8 *) * RAM_BANK_BYTES);
+// allocate space for internal memory, cartridge rom,
+// and external ram
+uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
+uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
+uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
+
+// set initial rom banks and external ram bank
+uint8 *Memory::romBank0 = &mem[0];
+uint8 *Memory::romBank1 = &mem[ROM_BANK_BYTES];
+uint8 *Memory::exramBank = &exram[0];
 
 // **************************************************
 // **************************************************
@@ -41,18 +52,18 @@ uint8 Memory::read(uint16 addr) {
 
   // only the upper 2-bits of register
   // NR11 and NR21 can be read
-  if (addr == NR11 || addr == NR21) return getByte(addr) | 0x3F;
+  if (addr == NR11 || addr == NR21) return readBits(addr, {6, 7});
 
   // only bit 6 of register NR14,
   // NR24, NR34 and NR44 can be read
   if (addr == NR14 || addr == NR24 || addr == NR34 || addr == NR44) {
-    return getByte(addr) | 0xBF;
+    return readBits(addr, {6});
   }
 
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && Bootstrap::skipWait()) return 0x90;
+  if (addr == LY && Bootstrap::enabledAndShouldSkip()) return 0x90;
 
   // read from memory
   return getByte(addr);
@@ -61,6 +72,15 @@ uint8 Memory::read(uint16 addr) {
 // read 16-bit value from given memory address
 uint16 Memory::read16(uint16 addr) {
   return read(addr) | (read(addr + 1) << 8);
+}
+
+// only read the specified bits of the given
+// 8-bit value at the given memory address,
+// all other bits are set to 1
+uint8 Memory::readBits(uint16 addr, vector<uint8> bits) {
+  uint8 mask = 0xFF;
+  for (uint8 bit : bits) mask ^= (uint8)pow(2, bit);
+  return getByte(addr) | mask;
 }
 
 // write 8-bit value to given memory address
@@ -93,6 +113,12 @@ void Memory::write(uint16 addr, uint8 val) {
   // read-only memory register
   if (addr == LY || addr == PCM12 || addr == PCM34) return;
 
+  // only bits 4 and 5 of register P1
+  // can be written to
+  if (addr == P1) {
+    writeBits(addr, val, {4, 5});
+  }
+
   // writing anything to DIV register
   // will reset the internal counter
   // and the DIV register
@@ -104,28 +130,28 @@ void Memory::write(uint16 addr, uint8 val) {
   // only bit 7 of register NR52 can
   // be written to
   if (addr == NR52) {
-    getByte(addr) = (getByte(addr) & 0x7F) | (val & 0x80);
+    writeBits(addr, val, {7});
     return;
   }
 
-  // only bits 6-3 of the STAT register
+  // only bits 3-6 of the STAT register
   // can be written to
   if (addr == STAT) {
-    getByte(STAT) = (getByte(STAT) & 0x87) | (val & 0x78);
+    writeBits(addr, val, {3, 4, 5, 6});
     return;
   }
 
   // only bit 0 of register KEY1 can
   // be written to
   if (addr == KEY1) {
-    getByte(addr) = (getByte(addr) & 0xFE) | val & 0x01;
+    writeBits(addr, val, {0});
     return;
   }
 
   // can write to all bits of register RP
   // except for bit 1
   if (addr == RP) {
-    getByte(addr) = (getByte(addr) & 0xFD) | val & 0x02;
+    writeBits(addr, val, {0, 2, 3, 4, 5, 6, 7});
     return;
   }
 
@@ -168,6 +194,14 @@ void Memory::write(uint16 addr, uint16 val) {
   write(addr + 1, (uint8)((val >> 8) & 0xFF));
 }
 
+// only write the specified bits of the given
+// 8-bit value to the given memory address
+void Memory::writeBits(uint16 addr, uint16 val, vector<uint8> bits) {
+  uint8 mask = 0x00;
+  for (uint8 bit : bits) mask |= (uint8)pow(2, bit);
+  getByte(addr) = (getByte(addr) & ~mask) | (val & mask);
+}
+
 // get 8-bit immediate value
 uint8 Memory::imm8(uint16 &PC) { return read(PC++); }
 
@@ -188,7 +222,7 @@ uint8 &Memory::getByte(uint16 addr) {
   } else if (addr < VRAM_ADDR) {
     return romBank1[addr - ROM_BANK_1_ADDR];
   } else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR) {
-    return *exramBank[addr - EXT_RAM_ADDR];
+    return exramBank[addr - EXT_RAM_ADDR];
   }
   return mem[addr - VRAM_ADDR];
 }
@@ -205,25 +239,19 @@ void Memory::loadRom(QString dir) {
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
-  setRomBank(romBank0, 0);
-  setRomBank(romBank1, 1);
+  setRomBank(&romBank0, 0);
+  setRomBank(&romBank1, 1);
   setExramBank(0);
 }
 
 // map memory rom bank to cartridge rom bank
-void Memory::setRomBank(uint8 *romBank, uint8 bankNum) {
-  uint32 startAddr = ROM_BANK_BYTES * bankNum;
-  for (int i = 0; i < ROM_BANK_BYTES; ++i) {
-    romBank[i] = cart[startAddr + i];
-  }
+void Memory::setRomBank(uint8 **romBank, uint8 bankNum) {
+  *romBank = &cart[ROM_BANK_BYTES * bankNum];
 }
 
 // map memory external ram bank to external ram bank
 void Memory::setExramBank(uint8 bankNum) {
-  uint16 startAddr = RAM_BANK_BYTES * bankNum;
-  for (int i = 0; i < RAM_BANK_BYTES; ++i) {
-    exramBank[i] = &exram[startAddr + i];
-  }
+  exramBank = &exram[RAM_BANK_BYTES * bankNum];
 }
 
 // perform dma transfer
@@ -234,6 +262,8 @@ void Memory::dmaTransfer() {
   }
 }
 
+// echo memory range C000-DDFF in memory
+// range E000-FDFF
 void Memory::echoRam(uint16 addr, uint8 val) {
   uint16 offset = addr % RAM_BANK_BYTES;
   getByte(WORK_RAM_ADDR + offset) = val;
@@ -242,6 +272,9 @@ void Memory::echoRam(uint16 addr, uint8 val) {
   }
 }
 
+// echo half-ram memory range A000-A1FF in the
+// 15 equal size memory ranges in the rest of
+// of the external ram bank
 void Memory::echoHalfRam(uint16 addr, uint8 val) {
   uint16 offset = addr % HALF_RAM_BYTES;
   for (int echoAddr = EXT_RAM_ADDR; echoAddr < WORK_RAM_ADDR;
@@ -250,6 +283,9 @@ void Memory::echoHalfRam(uint16 addr, uint8 val) {
   }
 }
 
+// load external ram, should have same name
+// and be in the same directory as the rom,
+// except with a .sav extension
 void Memory::loadExram() {
   string exramPath = CGB::romPath.toStdString();
   exramPath.replace(exramPath.find(".gb"), 4, ".sav");
@@ -257,6 +293,9 @@ void Memory::loadExram() {
   if (!fs.fail()) fs.read((char *)exram, MBC::ramBytes());
 }
 
+// save external ram, will be saved in the same
+// directory as the rom and have the same name
+// except with a .sav extension
 void Memory::saveExram() {
   string exramPath = CGB::romPath.toStdString();
   exramPath.replace(exramPath.find(".gb"), 4, ".sav");
@@ -264,21 +303,7 @@ void Memory::saveExram() {
   fs.write((char *)exram, MBC::ramBytes());
 }
 
-void Memory::loadState() {
-  fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", ios::in);
-  fs.read((char *)romBank0, ROM_BANK_BYTES);
-  fs.read((char *)romBank1, ROM_BANK_BYTES);
-  fs.read((char *)mem, MEM_BYTES);
-}
-
-void Memory::saveState() {
-  fstream fs("/Users/paulscott/git/DotMatrix/debug/memory_state.bin", ios::out);
-  fs.write((char *)romBank0, ROM_BANK_BYTES);
-  fs.write((char *)romBank1, ROM_BANK_BYTES);
-  fs.write((char *)mem, MEM_BYTES);
-  fs.close();
-}
-
+// reset memory
 void Memory::reset() {
   // clear memory
   for (int i = 0; i < MEM_BYTES; ++i) {
@@ -294,8 +319,12 @@ void Memory::reset() {
     exram[i] = 0;
   }
 
-  Interrupts::intFlags |= 0xE0;
-  setRomBank(romBank0, 0);
-  setRomBank(romBank1, 1);
+  // set upper three bits of interrupt
+  // flag register
+  Interrupts::intFlags = 0xE0;
+
+  // reset rom and ram banks
+  setRomBank(&romBank0, 0);
+  setRomBank(&romBank1, 1);
   setExramBank(0);
 }

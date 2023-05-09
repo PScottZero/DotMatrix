@@ -1,3 +1,11 @@
+// **************************************************
+// **************************************************
+// **************************************************
+// GAME BOY CONTROLS (JOYPAD)
+// **************************************************
+// **************************************************
+// **************************************************
+
 #pragma once
 
 #include <Qt>
@@ -8,6 +16,7 @@
 
 using namespace std;
 
+// joypad buttons
 enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 
 // joypad + button constants
@@ -23,17 +32,15 @@ enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 class Controls {
  private:
   static map<Button, bool> state;
-  static map<int, Button> invertKeybindingsMap();
+  static map<int, Button> getKeyBindings();
 
  public:
-  static map<Button, int> keyBindings;
-  static map<int, Button> keyBindingsInv;
+  static map<int, Button> keyBindings;
+  static map<Button, int> joypadBindings;
   const static map<Button, uint8> buttonToMask;
-
   static uint8 &p1;
 
   static void update();
-
   static void press(int key);
   static void release(int key);
   static void bind(int key, Button button);
