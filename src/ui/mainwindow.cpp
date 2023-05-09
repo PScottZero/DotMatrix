@@ -45,17 +45,34 @@ MainWindow::MainWindow(QWidget *parent)
   auto paletteActionGroup = new QActionGroup(this);
   auto paletteSigMap = new QSignalMapper(this);
   paletteActionGroup->setExclusive(true);
+
+  // add non-sgb palettes to palettes menu
   for (auto palette : Palettes::allPalettes) {
     QAction *action = new QAction();
     action->setCheckable(true);
     if (palette->name == "Game Boy Pocket") action->setChecked(true);
     action->setText(getPaletteLabel(palette));
-    action->setFont(ui->menuPalette->font());
     ui->menuPalette->addAction(action);
     addToActionGroup(paletteActionGroup, action, paletteSigMap, palette);
+    connect(action, &QAction::hovered, this,
+            [this, palette] { cgb.previewPalette(palette); });
   }
+
+  // add sgb palettes to sgb palettes submenu
+  for (auto sgbPalette : Palettes::sgbPalettes) {
+    QAction *action = new QAction();
+    action->setCheckable(true);
+    action->setText(sgbPalette->name);
+    ui->menuSGB->addAction(action);
+    addToActionGroup(paletteActionGroup, action, paletteSigMap, sgbPalette);
+    connect(action, &QAction::hovered, this,
+            [this, sgbPalette] { cgb.previewPalette(sgbPalette); });
+  }
+
+  // connect palette signal map
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
+  connect(ui->menuPalette, &QMenu::aboutToHide, &cgb, &CGB::resetPalette);
 
   // **************************************************
   // Other Options
@@ -103,12 +120,8 @@ void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
 
 QString MainWindow::getPaletteLabel(Palette *palette) {
   QString label = palette->name;
-  if (palette->creator != "Me") {
-    if (palette->creator == "SGB") {
-      label += " (Super Game Boy)";
-    } else {
-      label += " (By " + palette->creator + ")";
-    }
+  if (palette->creator != "") {
+    label += " (By " + palette->creator + ")";
   }
   return label;
 }
@@ -134,9 +147,9 @@ void MainWindow::reset() {
   cgb.start();
 }
 
-void MainWindow::setScreen(QImage image) {
+void MainWindow::setScreen(QImage *image) {
   // no anti-aliasing when resizing image
-  auto pixmap = QPixmap::fromImage(image).scaled(
+  auto pixmap = QPixmap::fromImage(*image).scaled(
       ui->screen->width(), ui->screen->height(), Qt::KeepAspectRatio,
       Qt::FastTransformation);
   ui->screen->setPixmap(pixmap);
@@ -156,6 +169,7 @@ void MainWindow::setScale(int scale) {
 
 void MainWindow::setPalette(QObject *palette) {
   PPU::palette = (Palette *)palette;
+  cgb.tempPalette = nullptr;
 }
 
 void MainWindow::openKeyBindingsWindow() {

@@ -122,9 +122,27 @@
      <string>Settings</string>
     </property>
     <widget class="QMenu" name="menuPalette">
+     <property name="font">
+      <font>
+       <family>Silkscreen</family>
+       <pointsize>11</pointsize>
+      </font>
+     </property>
      <property name="title">
       <string>Palette</string>
      </property>
+     <widget class="QMenu" name="menuSGB">
+      <property name="font">
+       <font>
+        <family>Silkscreen</family>
+        <pointsize>11</pointsize>
+       </font>
+      </property>
+      <property name="title">
+       <string>Super Game Boy</string>
+      </property>
+     </widget>
+     <addaction name="menuSGB"/>
     </widget>
     <widget class="QMenu" name="menuScale">
      <property name="title">
@@ -167,6 +185,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -190,6 +209,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -206,6 +226,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -219,6 +240,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -232,6 +254,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -242,6 +265,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -255,6 +279,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -278,6 +303,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -294,6 +320,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -310,6 +337,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -326,6 +354,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>
@@ -339,6 +368,7 @@
    <property name="font">
     <font>
      <family>Silkscreen</family>
+     <pointsize>11</pointsize>
     </font>
    </property>
   </action>

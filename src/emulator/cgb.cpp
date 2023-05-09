@@ -32,7 +32,8 @@ CGB::CGB()
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       actionPause(nullptr),
       running(false),
-      pause(false) {
+      pause(false),
+      tempPalette(nullptr) {
   PPU::screen = &screen;
   PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
 }
@@ -62,7 +63,7 @@ void CGB::run() {
       // send rendered screen frame to ui
       if (!Bootstrap::enabledAndShouldSkip()) {
         if (PPU::frameRendered) {
-          emit sendScreen(screen);
+          emit sendScreen(&screen);
           int duration = FRAME_DURATION;
           clock += microseconds(duration);
           this_thread::sleep_until(clock);
@@ -121,5 +122,29 @@ void CGB::reset(bool newGame) {
 
   if (!newGame && MBC::hasRamAndBattery()) {
     Memory::loadExram();
+  }
+}
+
+void CGB::previewPalette(Palette *palette) {
+  if (pause) {
+    uint16 ppuCycles = CycleCounter::ppuCycles;
+    CycleCounter::ppuCycles = 0;
+    for (int i = 0; i < SCANLINE_CYCLES * SCREEN_LINES; ++i) {
+      CycleCounter::ppuCycles += 1;
+      PPU::step();
+    }
+    PPU::frameRendered = false;
+    emit sendScreen(&screen);
+    CycleCounter::ppuCycles = ppuCycles;
+  } else {
+    if (tempPalette == nullptr) tempPalette = PPU::palette;
+    PPU::palette = palette;
+  }
+}
+
+void CGB::resetPalette() {
+  if (tempPalette != nullptr) {
+    PPU::palette = tempPalette;
+    tempPalette = nullptr;
   }
 }

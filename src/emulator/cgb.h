@@ -12,6 +12,8 @@
 #include <QImage>
 #include <QThread>
 
+#include "../ui/palettes.h"
+
 #define FRAME_RATE 59.7275
 #define US_PER_SEC 1000000.0
 #define FRAME_DURATION US_PER_SEC / 59.7275
@@ -27,6 +29,7 @@ class CGB : public QThread {
   QAction *actionPause;
   static bool stop;
   bool running, pause;
+  Palette *tempPalette;
 
   CGB();
   ~CGB();
@@ -36,5 +39,9 @@ class CGB : public QThread {
   bool loadRom(const QString romPath);
 
  signals:
-  void sendScreen(QImage);
+  void sendScreen(QImage *screen);
+
+ public slots:
+  void previewPalette(Palette *palette);
+  void resetPalette();
 };

@@ -15,11 +15,12 @@ class Palette : public QObject {
   QString name, creator;
   uint data[PALETTE_COLOR_COUNT];
 
-  Palette(QString name, QString creator, uint color00, uint color01,
-          uint color10, uint color11);
+  Palette(uint color00, uint color01, uint color10, uint color11, QString name,
+          QString creator = "");
 };
 
 class Palettes {
  public:
   static vector<Palette *> allPalettes;
+  static vector<Palette *> sgbPalettes;
 };
