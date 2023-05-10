@@ -54,9 +54,7 @@ void CGB::run() {
   auto clock = system_clock::now();
   while (running) {
     if (!pause) {
-      Controls::update();
       CPU::step();
-      Timers::step();
       if (stop) CycleCounter::ppuCycles += 1;
       PPU::step();
 
@@ -126,6 +124,20 @@ void CGB::reset(bool newGame) {
 }
 
 void CGB::previewPalette(Palette *palette) {
+  if (tempPalette == nullptr) tempPalette = PPU::palette;
+  PPU::palette = palette;
+  renderInPauseMode();
+}
+
+void CGB::resetPreviewPalette() {
+  if (tempPalette != nullptr) {
+    PPU::palette = tempPalette;
+    tempPalette = nullptr;
+  }
+  renderInPauseMode();
+}
+
+void CGB::renderInPauseMode() {
   if (pause) {
     uint16 ppuCycles = CycleCounter::ppuCycles;
     CycleCounter::ppuCycles = 0;
@@ -136,15 +148,5 @@ void CGB::previewPalette(Palette *palette) {
     PPU::frameRendered = false;
     emit sendScreen(&screen);
     CycleCounter::ppuCycles = ppuCycles;
-  } else {
-    if (tempPalette == nullptr) tempPalette = PPU::palette;
-    PPU::palette = palette;
-  }
-}
-
-void CGB::resetPalette() {
-  if (tempPalette != nullptr) {
-    PPU::palette = tempPalette;
-    tempPalette = nullptr;
   }
 }

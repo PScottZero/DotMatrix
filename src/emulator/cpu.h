@@ -28,6 +28,13 @@
 #define JUMP_NC 0b10
 #define JUMP_C 0b11
 
+// interrupt handler addresses
+#define VBLANK_INT_ADDR 0x40
+#define LCDC_INT_ADDR 0x48
+#define TIMER_INT_ADDR 0x50
+#define SERIAL_INT_ADDR 0x58
+#define JOYPAD_INT_ADDR 0x60
+
 class CPU {
  private:
   static uint16 PC, SP, BC, DE, HL;        // 16-bit registers
@@ -50,7 +57,7 @@ class CPU {
 
   // arithmetic and logical functions
   static uint8 add(uint8 a, uint8 b, bool c = false);
-  static uint16 add(uint16 a, uint16 b);
+  static void addHL(uint16 val);
   static uint16 addSP(int8 val);
   static uint8 sub(uint8 a, uint8 b, bool c = false);
   static void _and(uint8 val);
@@ -82,9 +89,8 @@ class CPU {
   static void handleInterrupts();
 
  public:
+  static bool shouldSetTimerInt, delaySetTimerInt;
+
   static void step();
   static void reset();
-
-  static void loadState();
-  static void saveState();
 };

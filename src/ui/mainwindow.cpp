@@ -72,7 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
   // connect palette signal map
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
-  connect(ui->menuPalette, &QMenu::aboutToHide, &cgb, &CGB::resetPalette);
+  connect(ui->menuPalette, &QMenu::aboutToHide, &cgb, &CGB::resetPreviewPalette);
 
   // **************************************************
   // Other Options
@@ -170,6 +170,7 @@ void MainWindow::setScale(int scale) {
 void MainWindow::setPalette(QObject *palette) {
   PPU::palette = (Palette *)palette;
   cgb.tempPalette = nullptr;
+  cgb.renderInPauseMode();
 }
 
 void MainWindow::openKeyBindingsWindow() {

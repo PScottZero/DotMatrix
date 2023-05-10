@@ -37,11 +37,12 @@ class CGB : public QThread {
   void run() override;
   void reset(bool newGame = true);
   bool loadRom(const QString romPath);
+  void renderInPauseMode();
 
  signals:
   void sendScreen(QImage *screen);
 
  public slots:
   void previewPalette(Palette *palette);
-  void resetPalette();
+  void resetPreviewPalette();
 };

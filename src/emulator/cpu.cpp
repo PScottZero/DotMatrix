@@ -12,7 +12,6 @@
 #include "controls.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
-#include "json.hpp"
 #include "log.h"
 #include "memory.h"
 #include "timers.h"
@@ -48,6 +47,8 @@ bool CPU::IME = false;
 bool CPU::halt = false;
 bool CPU::shouldSetIME = false;
 bool CPU::delaySetIME = true;
+bool CPU::shouldSetTimerInt = false;
+bool CPU::delaySetTimerInt = true;
 bool CPU::triggerHaltBug = false;
 
 // initialize register maps
@@ -67,10 +68,11 @@ uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
 // a single instruction
 void CPU::step() {
   CycleCounter::cpuCycles = 0;
+  Controls::update();
 
   // check if serial transfer has completed
   if (CycleCounter::serialTransferComplete()) {
-    Memory::getByte(SC) &= 0x7F;
+    Memory::getByte(SC) &= ~BIT7_MASK;
     Interrupts::request(SERIAL_INT);
   }
 
@@ -85,6 +87,11 @@ void CPU::step() {
                      Memory::getByte(LY));
     uint8 opcode = Memory::imm8(PC);
     uint8 imm8 = Memory::getByte(PC);
+
+    // trigger halt bug by failing to
+    // increment PC (since imm8 function
+    // auto increments PC, need to
+    // decrement PC)
     if (triggerHaltBug) {
       --PC;
       triggerHaltBug = false;
@@ -107,6 +114,21 @@ void CPU::step() {
       delaySetIME = false;
     }
   }
+
+  Timers::step();
+
+  // delay requesting timer overflow
+  // interrupt by one machine cycle
+  if (shouldSetTimerInt) {
+    if (!delaySetTimerInt) {
+      Timers::tima = Timers::tma;
+      Interrupts::request(TIMER_INT);
+      shouldSetTimerInt = false;
+      delaySetTimerInt = true;
+    } else {
+      delaySetTimerInt = false;
+    }
+  }
 }
 
 void CPU::reset() {
@@ -126,12 +148,12 @@ void CPU::reset() {
 // 8-bit opcode
 void CPU::runInstr(uint8 opcode) {
   // break 8-bit opcode into parts
-  uint8 upperTwoBits = (opcode >> 6) & 0b11;
-  uint8 regDest = (opcode >> 3) & 0b111;
-  uint8 regSrc = opcode & 0b111;
-  uint8 regPair = (regDest >> 1) & 0b11;
-  uint8 jumpCond = regDest & 0b11;
-  uint8 loNibble = opcode & 0xF;
+  uint8 upperTwoBits = (opcode >> 6) & TWO_BITS_MASK;
+  uint8 regDest = (opcode >> 3) & THREE_BITS_MASK;
+  uint8 regSrc = opcode & THREE_BITS_MASK;
+  uint8 regPair = (regDest >> 1) & TWO_BITS_MASK;
+  uint8 jumpCond = regDest & TWO_BITS_MASK;
+  uint8 loNibble = opcode & NIBBLE_MASK;
 
   bool prevCarry = carry;
   bool prevZero = zero;
@@ -558,7 +580,7 @@ void CPU::runInstr(uint8 opcode) {
     case 0x10:
       // if any buttons are pressed, do
       // not enter stop mode
-      if ((Controls::p1 & 0x0F) != 0x0F) {
+      if ((Controls::p1 & NIBBLE_MASK) != 0x0F) {
         // if interrupts are pending,
         // stop is a 1-byte opcode, and
         // div does not reset
@@ -661,7 +683,7 @@ void CPU::runInstr(uint8 opcode) {
             // add register pair ss to HL and store
             // result in HL
             case 0x9:
-              HL = add(HL, *regmap16[regPair]);
+              addHL(*regmap16[regPair]);
               zero = prevZero;
               CycleCounter::addCycles(1);
               break;
@@ -902,9 +924,9 @@ void CPU::runInstr(uint8 opcode) {
 // run the CB prefixed instruction specified
 // by the given 8-bit opcode
 void CPU::runInstrCB(uint8 opcode) {
-  uint8 upperTwoBits = (opcode >> 6) & 0b11;
-  uint8 regDest = (opcode >> 3) & 0b111;
-  uint8 regSrc = opcode & 0b111;
+  uint8 upperTwoBits = (opcode >> 6) & TWO_BITS_MASK;
+  uint8 regDest = (opcode >> 3) & THREE_BITS_MASK;
+  uint8 regSrc = opcode & THREE_BITS_MASK;
 
   switch (upperTwoBits) {
     case 0b00:
@@ -1080,14 +1102,14 @@ uint16 CPU::pop() {
 // optionally add the carry flag as well
 //
 // flags affected:
-// C - true if carry, false otherwise
+// C - true if carry from bit 7, false otherwise
 // H - true if carry from bit 3, false otherwise
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::add(uint8 a, uint8 b, bool c) {
   uint16 resultOverflow = a + b + c;
-  uint8 result = resultOverflow & 0xFF;
-  uint8 halfResult = (a & 0xF) + (b & 0xF) + c;
+  uint8 result = resultOverflow & BYTE_MASK;
+  uint8 halfResult = (a & NIBBLE_MASK) + (b & NIBBLE_MASK) + c;
   carry = resultOverflow > 0xFF;
   halfCarry = halfResult > 0xF;
   subtract = false;
@@ -1095,30 +1117,37 @@ uint8 CPU::add(uint8 a, uint8 b, bool c) {
   return result;
 }
 
-// add 16-bit numbers a and b together
+// add given 16-bit value to register HL
 //
 // flags affected:
-// C - true if carry, false otherwise
+// C - true if carry from bit 15, false otherwise
 // H - true if carry from bit 11, false otherwise
 // N - set to false
-uint16 CPU::add(uint16 a, uint16 b) {
-  uint16 halfA = a & 0xFFF;
-  uint16 result = a + b;
-  uint16 halfResult = (halfA + (b & 0xFFF)) & 0xFFF;
-  carry = result < a;
-  halfCarry = halfResult < halfA;
+void CPU::addHL(uint16 val) {
+  uint16 halfHL = HL & TWELVE_BITS_MASK;
+  uint16 result = HL + val;
+  uint16 halfResult = (halfHL + (val & TWELVE_BITS_MASK)) & TWELVE_BITS_MASK;
+  carry = result < HL;
+  halfCarry = halfResult < halfHL;
   subtract = false;
-  return result;
+  HL = result;
 }
 
+// add given 8-bit signed value to SP
+//
+// flags affected:
+// C - true if carry/borrow (8-bit), false otherwise
+// H - true if half carry/borrow (8-bit), false otherwise
+// N - set to false
+// Z - set to false
 uint16 CPU::addSP(int8 val) {
   uint16 result = SP + val;
   if (val >= 0) {
-    carry = ((SP & 0xFF) + val) > 0xFF;
-    halfCarry = ((SP & 0xF) + (val & 0xF)) > 0xF;
+    carry = ((SP & BYTE_MASK) + val) > 0xFF;
+    halfCarry = ((SP & NIBBLE_MASK) + (val & NIBBLE_MASK)) > 0xF;
   } else {
-    carry = (result & 0xFF) < (SP & 0xFF);
-    halfCarry = (result & 0xF) < (SP & 0xF);
+    carry = (result & BYTE_MASK) < (SP & BYTE_MASK);
+    halfCarry = (result & NIBBLE_MASK) < (SP & NIBBLE_MASK);
   }
   subtract = false;
   zero = false;
@@ -1136,7 +1165,7 @@ uint16 CPU::addSP(int8 val) {
 uint8 CPU::sub(uint8 a, uint8 b, bool c) {
   uint8 result = a - b - c;
   carry = a < (b + c);
-  halfCarry = (a & 0xF) < ((b & 0xF) + c);
+  halfCarry = (a & NIBBLE_MASK) < ((b & NIBBLE_MASK) + c);
   subtract = true;
   zero = result == 0;
   return result;
@@ -1202,7 +1231,7 @@ void CPU::_xor(uint8 val) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::rotateLeft(uint8 val, bool thruCarry) {
-  bool bit7 = (val >> 7) & 0b1;
+  bool bit7 = (val >> 7) & BIT0_MASK;
   uint8 thruBit = thruCarry ? carry : bit7;
   uint8 result = shiftLeft(val) | thruBit;
   zero = result == 0;
@@ -1218,7 +1247,7 @@ uint8 CPU::rotateLeft(uint8 val, bool thruCarry) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::rotateRight(uint8 val, bool thruCarry) {
-  bool bit0 = val & 0b1;
+  bool bit0 = val & BIT0_MASK;
   uint8 thruBit = (thruCarry ? carry : bit0) << 7;
   uint8 result = shiftRight(val) | thruBit;
   zero = result == 0;
@@ -1234,7 +1263,7 @@ uint8 CPU::rotateRight(uint8 val, bool thruCarry) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::shiftLeft(uint8 val) {
-  bool bit7 = (val >> 7) & 0b1;
+  bool bit7 = (val >> 7) & BIT0_MASK;
   val <<= 1;
   carry = bit7;
   halfCarry = false;
@@ -1252,9 +1281,9 @@ uint8 CPU::shiftLeft(uint8 val) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::shiftRight(uint8 val, bool arithmetic) {
-  bool bit0 = val & 0b1;
-  uint8 msb = arithmetic ? (val & 0x80) : 0;
-  val = ((val >> 1) & 0x7F) | msb;
+  bool bit0 = val & BIT0_MASK;
+  uint8 msb = arithmetic ? (val & BIT7_MASK) : 0;
+  val = ((val >> 1) & ~BIT7_MASK) | msb;
   carry = bit0;
   halfCarry = false;
   subtract = false;
@@ -1271,8 +1300,8 @@ uint8 CPU::shiftRight(uint8 val, bool arithmetic) {
 // N - set to false
 // Z - true if result is zero, false otherwise
 uint8 CPU::swap(uint8 val) {
-  uint8 hiNibble = (val >> 4) & 0xF;
-  uint8 loNibble = val & 0xF;
+  uint8 hiNibble = (val >> 4) & NIBBLE_MASK;
+  uint8 loNibble = val & NIBBLE_MASK;
   uint8 result = (loNibble << 4) | hiNibble;
   carry = false;
   halfCarry = false;
@@ -1296,7 +1325,7 @@ uint8 CPU::swap(uint8 val) {
 // N - set to false
 // Z - set to complement of bit at bitpos
 void CPU::bit(uint8 val, uint8 bitpos) {
-  bool bit = (val >> bitpos) & 0b1;
+  bool bit = (val >> bitpos) & BIT0_MASK;
   halfCarry = true;
   subtract = false;
   zero = !bit;
@@ -1342,7 +1371,7 @@ bool CPU::jumpCondMet(uint8 jumpCond) {
 // binary coded decimals
 void CPU::decimalAdjAcc() {
   uint8 correction = 0;
-  if ((!subtract && (A & 0xF) > 0x9) || halfCarry) {
+  if ((!subtract && (A & NIBBLE_MASK) > 0x9) || halfCarry) {
     correction += 0x6;
   }
   if ((!subtract && A > 0x99) || carry) {
@@ -1374,12 +1403,12 @@ uint16 CPU::getAF() {
 // set register AF, the accumulator
 // combined with the flag register
 void CPU::setAF(uint16 val) {
-  A = (val >> 8) & 0xFF;
-  uint8 F = val & 0xFF;
-  zero = (F >> 7) & 0b1;
-  subtract = (F >> 6) & 0b1;
-  halfCarry = (F >> 5) & 0b1;
-  carry = (F >> 4) & 0b1;
+  A = (val >> 8) & BYTE_MASK;
+  uint8 F = val & BYTE_MASK;
+  zero = (F >> 7) & BIT0_MASK;
+  subtract = (F >> 6) & BIT0_MASK;
+  halfCarry = (F >> 5) & BIT0_MASK;
+  carry = (F >> 4) & BIT0_MASK;
 }
 
 // **************************************************
@@ -1390,7 +1419,8 @@ void CPU::setAF(uint16 val) {
 
 void CPU::handleInterrupts() {
   // resume running cpu from halt mode if there is an
-  // interrupt that needs to be serviced
+  // interrupt that needs to be serviced, halt mode
+  // exits after 1 machine cycle
   if (halt && Interrupts::pending()) {
     halt = false;
     CycleCounter::addCycles(1);
@@ -1398,30 +1428,37 @@ void CPU::handleInterrupts() {
 
   // if a button is pressed while in stop mode, exit
   // stop mode
-  if (CGB::stop && ((Controls::p1 & 0x0F) != 0x0F)) {
+  if (CGB::stop && ((Controls::p1 & NIBBLE_MASK) != 0x0F)) {
     CGB::stop = false;
   }
 
+  // if interrupts are enabled and an interrupt
+  // is pending, serivce interrupt if its enabled
+  // in the IE register
   if (IME) {
     uint16 intAddr = 0;
     if (Interrupts::requestedAndEnabled(V_BLANK_INT)) {
-      intAddr = 0x40;
+      intAddr = VBLANK_INT_ADDR;
       Interrupts::reset(PC, V_BLANK_INT);
     } else if (Interrupts::requestedAndEnabled(LCDC_INT)) {
-      intAddr = 0x48;
+      intAddr = LCDC_INT_ADDR;
       Interrupts::reset(PC, LCDC_INT);
     } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
-      intAddr = 0x50;
+      intAddr = TIMER_INT_ADDR;
       Interrupts::reset(PC, TIMER_INT);
     } else if (Interrupts::requestedAndEnabled(SERIAL_INT)) {
-      intAddr = 0x58;
+      intAddr = SERIAL_INT_ADDR;
       Memory::getByte(SB) = 0xFF;
       Interrupts::reset(PC, SERIAL_INT);
     } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
-      intAddr = 0x60;
+      intAddr = JOYPAD_INT_ADDR;
       Interrupts::reset(PC, JOYPAD_INT);
     }
 
+    // service interrupt by pushing current
+    // PC to stack and setting PC to interrupt
+    // handler address, interrupt servicing
+    // takes 5 machine cycles
     if (intAddr != 0) {
       IME = false;
       push(PC);
@@ -1429,43 +1466,4 @@ void CPU::handleInterrupts() {
       CycleCounter::addCycles(2);
     }
   }
-}
-
-void CPU::loadState() {
-  fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::in);
-  fs.seekg(0, ios::end);
-  int size = fs.tellg();
-  fs.seekg(0, ios::beg);
-
-  char readBuf[size + 1];
-  fs.read(readBuf, size);
-  readBuf[size] = 0;
-
-  auto state = nlohmann::json::parse(string(readBuf));
-  PC = state["PC"];
-  SP = state["SP"];
-  A = state["A"];
-  BC = state["BC"];
-  DE = state["DE"];
-  HL = state["HL"];
-  carry = state["carry"];
-  halfCarry = state["halfCarry"];
-  subtract = state["subtract"];
-  zero = state["zero"];
-  IME = state["IME"];
-  halt = state["halt"];
-  CGB::stop = state["stop"];
-}
-
-void CPU::saveState() {
-  nlohmann::json state = {
-      {"PC", PC},         {"SP", SP},           {"A", A},
-      {"BC", BC},         {"DE", DE},           {"HL", HL},
-      {"carry", carry},   {"halfCarry", carry}, {"subtract", subtract},
-      {"zero", zero},     {"IME", IME},         {"halt", halt},
-      {"stop", CGB::stop}};
-  string stateStr = state.dump(4);
-  fstream fs("/Users/paulscott/git/DotMatrix/debug/cpu_state.json", ios::out);
-  fs.write(stateStr.c_str(), stateStr.size());
-  fs.close();
 }

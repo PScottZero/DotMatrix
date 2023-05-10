@@ -183,15 +183,15 @@ void Memory::write(uint16 addr, uint8 val) {
   // start serial transfer if writing
   // to register SC with bit 7 and bit
   // 0 being set to 1
-  if (addr == SC && (val & 0x81) == 0x81) {
+  if (addr == SC && (val & (BIT7_MASK | BIT0_MASK)) == 0x81) {
     CycleCounter::serialTransferMode = true;
   }
 }
 
 // write 16-bit value to given memory address
 void Memory::write(uint16 addr, uint16 val) {
-  write(addr, (uint8)(val & 0xFF));
-  write(addr + 1, (uint8)((val >> 8) & 0xFF));
+  write(addr, (uint8)(val & BYTE_MASK));
+  write(addr + 1, (uint8)((val >> 8) & BYTE_MASK));
 }
 
 // only write the specified bits of the given

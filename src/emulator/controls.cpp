@@ -59,13 +59,13 @@ void Controls::update() {
 
   // set all bits to 1 except for
   // bits 4 and 5
-  Controls::p1 |= 0xCF;
+  Controls::p1 |= ~(BIT4_MASK | BIT5_MASK);
 
   // select either action buttons or diretion buttons
   vector<Button> buttons = {};
-  if (!(Controls::p1 & 0x10)) {
+  if (!(Controls::p1 & BIT4_MASK)) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if (!(Controls::p1 & 0x20)) {
+  } else if (!(Controls::p1 & BIT5_MASK)) {
     buttons = {A, B, SELECT, START};
   }
 

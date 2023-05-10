@@ -118,6 +118,11 @@ class PPU {
   static uint16 bgMapAddr();
 
   // stat register functions
+  static bool coincidenceIntEnabled();
+  static bool oamSearchIntEnabled();
+  static bool vblankIntEnabled();
+  static bool hblankIntEnabled();
+  static bool lyEqualsLyc();
   static void setMode(uint8 mode);
   static uint8 getMode();
   static void setLcdInterrupt();

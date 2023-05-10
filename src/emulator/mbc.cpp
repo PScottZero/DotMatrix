@@ -82,18 +82,18 @@ void MBC::write(uint16 addr, uint8 val) {
 void MBC::mbc1(uint16 addr, uint8 val) {
   // RAM enable register
   if (addr <= MBC1_RAM_ENABLE) {
-    ramEnabled = (val & 0x0F) == 0x0A && MBC::hasRam();
+    ramEnabled = (val & NIBBLE_MASK) == 0x0A && MBC::hasRam();
   }
 
   // rom bank number register
   else if (addr <= MBC1_ROM_BANK_NUM) {
-    romBankNum = max(val & 0x1F, 1);
+    romBankNum = max(val & FIVE_BITS_MASK, 1);
     Memory::setRomBank(&Memory::romBank1, mbc1RomBank1BankNum());
   }
 
   // ram bank number register
   else if (addr <= MBC1_RAM_BANK_NUM) {
-    ramBankNum = val & 0b11;
+    ramBankNum = val & TWO_BITS_MASK;
     Memory::setExramBank(mbc1ExramBankNum());
     Memory::setRomBank(&Memory::romBank0, mbc1RomBank0BankNum());
     Memory::setRomBank(&Memory::romBank1, mbc1RomBank1BankNum());
@@ -101,7 +101,7 @@ void MBC::mbc1(uint16 addr, uint8 val) {
 
   // bank mode select register
   else if (addr <= MBC1_BANK_MODE) {
-    bankMode = val & 0b1;
+    bankMode = val & BIT0_MASK;
     Memory::setExramBank(mbc1ExramBankNum());
     Memory::setRomBank(&Memory::romBank0, mbc1RomBank0BankNum());
   }
@@ -125,11 +125,11 @@ void MBC::mbc1(uint16 addr, uint8 val) {
 // **************************************************
 void MBC::mbc2(uint16 addr, uint8 val) {
   if (addr <= MBC2_RAM_ROM) {
-    if (addr & 0x0100) {
-      romBankNum = max(val & 0x0F, 1) & romSizeMask();
+    if (addr & BIT8_MASK) {
+      romBankNum = max(val & NIBBLE_MASK, 1) & romSizeMask();
       Memory::setRomBank(&Memory::romBank1, romBankNum);
     } else {
-      ramEnabled = (val & 0x0F) == 0x0A;
+      ramEnabled = (val & NIBBLE_MASK) == 0x0A;
     }
   }
 }
@@ -155,7 +155,7 @@ void MBC::mbc2(uint16 addr, uint8 val) {
 void MBC::mbc5(uint16 addr, uint8 val) {
   // ram enable
   if (addr <= MBC5_RAM_ENABLE) {
-    ramEnabled = (val & 0x0F) == 0x0A;
+    ramEnabled = (val & NIBBLE_MASK) == 0x0A;
   }
 
   // rom bank number lower byte
@@ -166,7 +166,7 @@ void MBC::mbc5(uint16 addr, uint8 val) {
 
   // rom bank number bit 9
   else if (addr <= MBC5_ROM_BANK_BIT_9) {
-    romBankBit9 = val & 0b1;
+    romBankBit9 = val & BIT0_MASK;
     Memory::setRomBank(&Memory::romBank1, mbc5RomBankNum());
   }
 

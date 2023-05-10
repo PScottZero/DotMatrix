@@ -11,6 +11,7 @@
 #include "cgb.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
+#include "log.h"
 #include "memory.h"
 
 QImage *PPU::screen = nullptr;
@@ -59,9 +60,9 @@ void PPU::step() {
       // check if current line number
       // is equal to the value in lyc
       if (ly == lyc) {
-        stat |= 0x04;
+        stat |= BIT2_MASK;
       } else {
-        stat &= 0xFB;
+        stat &= ~BIT2_MASK;
       }
       setLcdInterrupt();
 
@@ -85,15 +86,6 @@ void PPU::step() {
       // **************************************************
       else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
-          // check if oam search mode was skipped,
-          // a single cpu step could potentially have
-          // 20 or more cycles
-          if (getMode() != OAM_SEARCH_MODE) {
-            setMode(OAM_SEARCH_MODE);
-            setLcdInterrupt();
-            findVisibleSprites();
-          }
-
           setMode(PIXEL_TRANSFER_MODE);
           setLcdInterrupt();
 
@@ -130,9 +122,10 @@ void PPU::step() {
   } else {
     ly = 0;
     windowLineNum = 0;
-    setMode(H_BLANK_MODE);
-    screen->fill(palette->data[0]);
+    stat &= ~THREE_BITS_MASK;
+    statInt = false;
     if (CycleCounter::ppuCycles > SCANLINE_CYCLES * SCREEN_LINES) {
+      screen->fill(palette->data[0]);
       CycleCounter::ppuCycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
@@ -291,7 +284,7 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
         pal = obp1;
         break;
     }
-    uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & 0b11;
+    uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
     screen->setPixel(px, ly, palette->data[pxPalVal]);
   }
 }
@@ -327,8 +320,8 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
   TileRow tileRow;
   for (int px = 0; px < TILE_PX_DIM; px++) {
     uint8 pxShift = TILE_PX_DIM - px - 1;
-    tileRow[px] = (rowDataLo >> pxShift) & 0b1;
-    tileRow[px] |= ((rowDataHi >> pxShift) << 1) & 0b10;
+    tileRow[px] = (rowDataLo >> pxShift) & BIT0_MASK;
+    tileRow[px] |= ((rowDataHi >> pxShift) << 1) & BIT1_MASK;
   }
   return tileRow;
 }
@@ -337,8 +330,9 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
 TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
   uint8 height = spriteHeight();
   row = oamEntry.flipY ? height - row - 1 : row;
-  uint8 pattern = height == SPRITE_PX_HEIGHT_TALL ? oamEntry.pattern & 0xFE
-                                                  : oamEntry.pattern;
+  uint8 pattern = height == SPRITE_PX_HEIGHT_TALL
+                      ? oamEntry.pattern & ~BIT0_MASK
+                      : oamEntry.pattern;
   TileRow tileRow = getTileRow(BG_DATA_ADDR_1, pattern, row);
   if (oamEntry.flipX) {
     for (uint8 i = 0; i < tileRow.size() / 2; ++i) {
@@ -363,10 +357,10 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
 
   // get sprite flags
   uint8 flags = Memory::getByte(spriteAddr + 3);
-  sprite.priority = flags & 0x80;
-  sprite.flipY = flags & 0x40;
-  sprite.flipX = flags & 0x20;
-  sprite.palette = flags & 0x10;
+  sprite.priority = flags & BIT7_MASK;
+  sprite.flipY = flags & BIT6_MASK;
+  sprite.flipX = flags & BIT5_MASK;
+  sprite.palette = flags & BIT4_MASK;
 
   return sprite;
 }
@@ -377,27 +371,29 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
 // **************************************************
 // **************************************************
 
-bool PPU::lcdEnable() { return lcdc & 0x80; }
+bool PPU::lcdEnable() { return lcdc & BIT7_MASK; }
 
-bool PPU::bgEnable() { return (lcdc & 0x01) && showBackground; }
+bool PPU::bgEnable() { return (lcdc & BIT0_MASK) && showBackground; }
 
-bool PPU::windowEnable() { return (lcdc & 0x20) && showWindow; }
+bool PPU::windowEnable() { return (lcdc & BIT5_MASK) && showWindow; }
 
-bool PPU::spriteEnable() { return (lcdc & 0x02) && showSprites; }
+bool PPU::spriteEnable() { return (lcdc & BIT1_MASK) && showSprites; }
 
 uint8 PPU::spriteHeight() {
-  return lcdc & 0x04 ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;
+  return lcdc & BIT2_MASK ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;
 }
 
 uint16 PPU::windowMapAddr() {
-  return lcdc & 0x40 ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
+  return lcdc & BIT6_MASK ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
 }
 
 uint16 PPU::bgWindowDataAddr() {
-  return lcdc & 0x10 ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
+  return lcdc & BIT4_MASK ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
 }
 
-uint16 PPU::bgMapAddr() { return lcdc & 0x08 ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0; }
+uint16 PPU::bgMapAddr() {
+  return lcdc & BIT3_MASK ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
+}
 
 // **************************************************
 // **************************************************
@@ -411,7 +407,10 @@ uint16 PPU::bgMapAddr() { return lcdc & 0x08 ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0; }
 // 10 - oam search mode
 // 11 - pixel transfer mode
 void PPU::setMode(uint8 mode) {
-  stat &= 0xFC;
+  char str[256];
+  snprintf(str, 256, "PPU >> SET MODE %02X\n", mode);
+  Log::logStr(str);
+  stat &= ~TWO_BITS_MASK;
   stat |= mode;
 }
 
@@ -420,15 +419,26 @@ void PPU::setMode(uint8 mode) {
 // 01 - vblank mode
 // 10 - oam search mode
 // 11 - pixel transfer mode
-uint8 PPU::getMode() { return stat & 0b11; }
+uint8 PPU::getMode() { return stat & TWO_BITS_MASK; }
+
+bool PPU::coincidenceIntEnabled() { return stat & BIT6_MASK; }
+
+bool PPU::oamSearchIntEnabled() { return stat & BIT5_MASK; }
+
+bool PPU::vblankIntEnabled() { return stat & BIT4_MASK; }
+
+bool PPU::hblankIntEnabled() { return stat & BIT3_MASK; }
+
+bool PPU::lyEqualsLyc() { return stat & BIT2_MASK; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register
 void PPU::setLcdInterrupt() {
-  if (((stat & 0x40) && (stat & 0b100)) ||
-      ((stat & 0x20) && (stat & 0b011) == OAM_SEARCH_MODE) ||
-      ((stat & 0x10) && (stat & 0b011) == V_BLANK_MODE) ||
-      ((stat & 0x08) && (stat & 0b011) == H_BLANK_MODE)) {
+  if ((coincidenceIntEnabled() && lyEqualsLyc()) ||
+      (oamSearchIntEnabled() && getMode() == OAM_SEARCH_MODE) ||
+      ((vblankIntEnabled() || oamSearchIntEnabled()) &&
+       getMode() == V_BLANK_MODE) ||
+      (hblankIntEnabled() && getMode() == H_BLANK_MODE)) {
     // only request an interrupt if stat
     // interrupt goes from low to high
     if (!statInt) {
