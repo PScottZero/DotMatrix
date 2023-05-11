@@ -15,16 +15,39 @@
 #include "mbc.h"
 #include "timers.h"
 
+// **************************************************
+// **************************************************
+// Memory Map:
+//
+// 0000-3FFF -> rom bank 0
+// 4000-7FFF -> rom bank 1-N
+// 8000-9FFF -> video ram bank (vram)
+// A000-BFFF -> external ram bank (exram)
+// C000-CFFF -> work ram bank 0 (wram)
+// D000-DFFF -> work ram bank 1-7 (wram)
+// E000-FDFF -> echo ram (mirror of C000-DDFF)
+// FE00-FE9F -> sprite attribute table (oam)
+// FEA0-FEFF -> not usable
+// FF00-FF7F -> i/o registers
+// FF80-FFFE -> high ram (hram)
+// FFFF-FFFF -> interrupt enable register
+// **************************************************
+// **************************************************
+
 // allocate space for internal memory, cartridge rom,
 // and external ram
 uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
 uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
-uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * MAX_RAM_BANKS);
+uint8 *Memory::vram = (uint8 *)malloc(RAM_BANK_BYTES * VRAM_BANKS);
+uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * EXRAM_BANKS);
+uint8 *Memory::wram = (uint8 *)malloc(WRAM_BANK_BYTES * WRAM_BANKS);
 
-// set initial rom banks and external ram bank
+// set initial rom and ram banks
 uint8 *Memory::romBank0 = &mem[0];
 uint8 *Memory::romBank1 = &mem[ROM_BANK_BYTES];
+uint8 *Memory::vramBank = &vram[0];
 uint8 *Memory::exramBank = &exram[0];
+uint8 *Memory::wramBank = &wram[WRAM_BANK_BYTES];
 
 // **************************************************
 // **************************************************
@@ -38,7 +61,7 @@ uint8 Memory::read(uint16 addr) {
 
   // cannot access external ram if it
   // is not enabled by MBC
-  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR && !MBC::ramEnabled) {
+  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR && !MBC::ramEnabled) {
     return 0xFF;
   }
 
@@ -94,7 +117,7 @@ void Memory::write(uint16 addr, uint8 val) {
   if (addr < VRAM_ADDR) return;
 
   // external memory write
-  if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR) {
+  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR) {
     // cannot access external ram if it
     // is not enabled by MBC
     if (!MBC::ramEnabled) return;
@@ -164,7 +187,7 @@ void Memory::write(uint16 addr, uint8 val) {
   }
 
   // echo ram
-  if (addr >= WORK_RAM_ADDR && addr < OAM_ADDR) {
+  if (addr >= WRAM_ADDR && addr < OAM_ADDR) {
     echoRam(addr, val);
     return;
   }
@@ -185,6 +208,18 @@ void Memory::write(uint16 addr, uint8 val) {
   // 0 being set to 1
   if (addr == SC && (val & (BIT7_MASK | BIT0_MASK)) == 0x81) {
     CycleCounter::serialTransferMode = true;
+  }
+
+  // set vram bank if writing to
+  // VBK register (cgb only)
+  if (addr == VBK && !CGB::dmgMode) {
+    setVramBank(val & BIT0_MASK);
+  }
+
+  // set wram bank if writing to
+  // SVBL register (cgb only)
+  if (addr == SVBK && !CGB::dmgMode) {
+    setWramBank(max(val & THREE_BITS_MASK, 1));
   }
 }
 
@@ -221,10 +256,16 @@ uint8 &Memory::getByte(uint16 addr) {
     return romBank0[addr];
   } else if (addr < VRAM_ADDR) {
     return romBank1[addr - ROM_BANK_1_ADDR];
-  } else if (addr >= EXT_RAM_ADDR && addr < WORK_RAM_ADDR) {
-    return exramBank[addr - EXT_RAM_ADDR];
+  } else if (addr < EXRAM_ADDR) {
+    return vramBank[addr - VRAM_ADDR];
+  } else if (addr < WRAM_ADDR) {
+    return exramBank[addr - EXRAM_ADDR];
+  } else if (addr < WRAM_BANK_ADDR) {
+    return wram[addr - WRAM_ADDR];
+  } else if (addr < ECHO_RAM_ADDR) {
+    return wramBank[addr - WRAM_BANK_ADDR];
   }
-  return mem[addr - VRAM_ADDR];
+  return mem[addr - ECHO_RAM_ADDR];
 }
 
 // **************************************************
@@ -239,9 +280,12 @@ void Memory::loadRom(QString dir) {
   fs.read((char *)cart, CART_BYTES);
   fs.close();
 
+  // set default memory banks
   setRomBank(&romBank0, 0);
   setRomBank(&romBank1, 1);
+  setVramBank(0);
   setExramBank(0);
+  setWramBank(1);
 }
 
 // map memory rom bank to cartridge rom bank
@@ -249,9 +293,19 @@ void Memory::setRomBank(uint8 **romBank, uint8 bankNum) {
   *romBank = &cart[ROM_BANK_BYTES * bankNum];
 }
 
-// map memory external ram bank to external ram bank
+// set video ram bank (cgb only)
+void Memory::setVramBank(uint8 bankNum) {
+  vramBank = &vram[RAM_BANK_BYTES * bankNum];
+}
+
+// set external ram bank
 void Memory::setExramBank(uint8 bankNum) {
   exramBank = &exram[RAM_BANK_BYTES * bankNum];
+}
+
+// set work ram bank
+void Memory::setWramBank(uint8 bankNum) {
+  wramBank = &wram[WRAM_BANK_BYTES * bankNum];
 }
 
 // perform dma transfer
@@ -266,7 +320,7 @@ void Memory::dmaTransfer() {
 // range E000-FDFF
 void Memory::echoRam(uint16 addr, uint8 val) {
   uint16 offset = addr % RAM_BANK_BYTES;
-  getByte(WORK_RAM_ADDR + offset) = val;
+  getByte(WRAM_ADDR + offset) = val;
   if (ECHO_RAM_ADDR + offset < OAM_ADDR) {
     getByte(ECHO_RAM_ADDR + offset) = val;
   }
@@ -277,7 +331,7 @@ void Memory::echoRam(uint16 addr, uint8 val) {
 // of the external ram bank
 void Memory::echoHalfRam(uint16 addr, uint8 val) {
   uint16 offset = addr % HALF_RAM_BYTES;
-  for (int echoAddr = EXT_RAM_ADDR; echoAddr < WORK_RAM_ADDR;
+  for (int echoAddr = EXRAM_ADDR; echoAddr < WRAM_ADDR;
        echoAddr += HALF_RAM_BYTES) {
     getByte(echoAddr + offset) = val | 0xF0;
   }
@@ -306,18 +360,14 @@ void Memory::saveExram() {
 // reset memory
 void Memory::reset() {
   // clear memory
-  for (int i = 0; i < MEM_BYTES; ++i) {
-    mem[i] = 0;
-  }
+  for (int i = 0; i < MEM_BYTES; ++i) mem[i] = 0;
 
   // save external ram if current game
   // has ram and battery
   if (MBC::hasRamAndBattery()) saveExram();
 
   // clear external ram
-  for (int i = 0; i < RAM_BANK_BYTES * MAX_RAM_BANKS; ++i) {
-    exram[i] = 0;
-  }
+  for (int i = 0; i < RAM_BANK_BYTES * EXRAM_BANKS; ++i) exram[i] = 0;
 
   // set upper three bits of interrupt
   // flag register
@@ -326,5 +376,7 @@ void Memory::reset() {
   // reset rom and ram banks
   setRomBank(&romBank0, 0);
   setRomBank(&romBank1, 1);
+  setVramBank(0);
   setExramBank(0);
+  setWramBank(1);
 }

@@ -89,8 +89,6 @@ class CPU {
   static void handleInterrupts();
 
  public:
-  static bool shouldSetTimerInt, delaySetTimerInt;
-
   static void step();
   static void reset();
 };

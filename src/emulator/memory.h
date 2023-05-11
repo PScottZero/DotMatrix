@@ -16,12 +16,15 @@
 #include "types.h"
 
 // memory sizes
-#define MEM_BYTES 0x8000
+#define MEM_BYTES 0x2000
 #define CART_BYTES 0x800000
 #define ROM_BANK_BYTES 0x4000
 #define RAM_BANK_BYTES 0x2000
+#define WRAM_BANK_BYTES 0x1000
 #define HALF_RAM_BYTES 0x200
-#define MAX_RAM_BANKS 16
+#define EXRAM_BANKS 16
+#define VRAM_BANKS 2
+#define WRAM_BANKS 8
 
 // cartridge header addresses
 #define CGB_MODE 0x0143
@@ -96,12 +99,11 @@
 #define ROM_BANK_0_ADDR 0x0000
 #define ROM_BANK_1_ADDR 0x4000
 #define VRAM_ADDR 0x8000
-#define EXT_RAM_ADDR 0xA000
-#define WORK_RAM_ADDR 0xC000
-#define RAM_ECHO_END_ADDR 0xDE00
+#define EXRAM_ADDR 0xA000
+#define WRAM_ADDR 0xC000
+#define WRAM_BANK_ADDR 0xD000
 #define ECHO_RAM_ADDR 0xE000
 #define OAM_ADDR 0xFE00
-#define OAM_END_ADDR 0xFEA0
 #define ZERO_PAGE_ADDR 0xFF00
 #define HRAM_ADDR 0xFF80
 
@@ -126,12 +128,16 @@ class Memory {
   // allocated memory
   static uint8 *mem;
   static uint8 *cart;
+  static uint8 *vram;
   static uint8 *exram;
+  static uint8 *wram;
 
   // memory banks
   static uint8 *romBank0;
   static uint8 *romBank1;
+  static uint8 *vramBank;
   static uint8 *exramBank;
+  static uint8 *wramBank;
 
   // memory read + write functions
   static uint8 read(uint16 addr);
@@ -146,7 +152,9 @@ class Memory {
 
   // rom + ram bank functions
   static void setRomBank(uint8 **romBank, uint8 bankNum);
+  static void setVramBank(uint8 bankNum);
   static void setExramBank(uint8 bankNum);
+  static void setWramBank(uint8 bankNum);
 
   // save + load functions
   static void loadRom(QString dir);

@@ -27,6 +27,7 @@ using namespace chrono;
 
 QString CGB::romPath = QDir::currentPath();
 bool CGB::stop = false;
+bool CGB::dmgMode = true;
 
 CGB::CGB()
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
@@ -54,7 +55,9 @@ void CGB::run() {
   auto clock = system_clock::now();
   while (running) {
     if (!pause) {
+      Controls::update();
       CPU::step();
+      Timers::step();
       if (stop) CycleCounter::ppuCycles += 1;
       PPU::step();
 

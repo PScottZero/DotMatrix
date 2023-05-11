@@ -11,7 +11,6 @@
 #include "cgb.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
-#include "log.h"
 #include "memory.h"
 
 QImage *PPU::screen = nullptr;
@@ -365,6 +364,19 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
   return sprite;
 }
 
+// get background map attribute for a given tile in
+// the background map
+bg_map_attr_t PPU::getBgMapAttr(uint8 tileNo) {
+  bg_map_attr_t attr;
+  uint8 attrByte = Memory::getByte(bgMapAddr() + tileNo);
+  attr.priority = attrByte & BIT7_MASK;
+  attr.flipY = attrByte & BIT6_MASK;
+  attr.flipX = attrByte & BIT5_MASK;
+  attr.tileVramBankNum = attrByte & BIT3_MASK;
+  attr.bgPaletteNum = attrByte & THREE_BITS_MASK;
+  return attr;
+}
+
 // **************************************************
 // **************************************************
 // LCDC Register Functions
@@ -407,9 +419,6 @@ uint16 PPU::bgMapAddr() {
 // 10 - oam search mode
 // 11 - pixel transfer mode
 void PPU::setMode(uint8 mode) {
-  char str[256];
-  snprintf(str, 256, "PPU >> SET MODE %02X\n", mode);
-  Log::logStr(str);
   stat &= ~TWO_BITS_MASK;
   stat |= mode;
 }

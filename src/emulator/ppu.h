@@ -71,6 +71,17 @@ typedef struct {
   bool palette;
 } sprite_t;
 
+// background map attributes,
+// one per background tile in
+// cgb mode
+typedef struct {
+  bool priority;
+  bool flipY;
+  bool flipX;
+  bool tileVramBankNum;
+  uint8 bgPaletteNum;
+} bg_map_attr_t;
+
 enum PaletteType { BG, SPRITE0, SPRITE1 };
 
 typedef struct {
@@ -85,7 +96,7 @@ using TileRow = array<uint8, TILE_PX_DIM>;
 class PPU {
  private:
   static uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1,
-      &wy, &wx, windowLineNum;
+      &wy, &wx, &bcps, &bcpd, &ocps, &ocpd, windowLineNum;
   static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   static uint8 visibleSpriteCount;
   static bool statInt;
@@ -106,6 +117,7 @@ class PPU {
   static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
   static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
   static sprite_t getSpriteOAM(uint8 spriteIdx);
+  static bg_map_attr_t getBgMapAttr(uint8 tileNo);
 
   // lcdc register functions
   static bool lcdEnable();

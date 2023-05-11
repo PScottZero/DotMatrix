@@ -9,7 +9,6 @@
 #include "timers.h"
 
 #include "cgb.h"
-#include "cpu.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -39,7 +38,8 @@ void Timers::step() {
       uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
       if (counter < oldCounter) {
         if (++tima == 0) {
-          CPU::shouldSetTimerInt = true;
+          Timers::tima = Timers::tma;
+          Interrupts::request(TIMER_INT);
         }
       }
     }

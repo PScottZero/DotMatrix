@@ -47,8 +47,6 @@ bool CPU::IME = false;
 bool CPU::halt = false;
 bool CPU::shouldSetIME = false;
 bool CPU::delaySetIME = true;
-bool CPU::shouldSetTimerInt = false;
-bool CPU::delaySetTimerInt = true;
 bool CPU::triggerHaltBug = false;
 
 // initialize register maps
@@ -68,7 +66,6 @@ uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
 // a single instruction
 void CPU::step() {
   CycleCounter::cpuCycles = 0;
-  Controls::update();
 
   // check if serial transfer has completed
   if (CycleCounter::serialTransferComplete()) {
@@ -96,6 +93,7 @@ void CPU::step() {
       --PC;
       triggerHaltBug = false;
     }
+
     runInstr(opcode);
 
     Log::logCPUCycles(opcode, imm8, CycleCounter::cpuCycles);
@@ -114,23 +112,9 @@ void CPU::step() {
       delaySetIME = false;
     }
   }
-
-  Timers::step();
-
-  // delay requesting timer overflow
-  // interrupt by one machine cycle
-  if (shouldSetTimerInt) {
-    if (!delaySetTimerInt) {
-      Timers::tima = Timers::tma;
-      Interrupts::request(TIMER_INT);
-      shouldSetTimerInt = false;
-      delaySetTimerInt = true;
-    } else {
-      delaySetTimerInt = false;
-    }
-  }
 }
 
+// reset state of the cpu
 void CPU::reset() {
   PC = SP = A = BC = DE = HL = 0;
   carry = halfCarry = subtract = zero = IME = halt = shouldSetIME =

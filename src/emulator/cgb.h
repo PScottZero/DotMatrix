@@ -27,7 +27,7 @@ class CGB : public QThread {
  public:
   static QString romPath;
   QAction *actionPause;
-  static bool stop;
+  static bool stop, dmgMode;
   bool running, pause;
   Palette *tempPalette;
 
