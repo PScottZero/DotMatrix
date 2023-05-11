@@ -250,7 +250,7 @@ uint16 Memory::imm16(uint16 &PC) {
 // get byte at specified address directly
 // (no read/write intercepts)
 uint8 &Memory::getByte(uint16 addr) {
-  if (Bootstrap::enabled && addr < BOOTSTRAP_BYTES) {
+  if (Bootstrap::enabled && addr < DMG_BOOTSTRAP_BYTES) {
     return Bootstrap::at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
     return romBank0[addr];

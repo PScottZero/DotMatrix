@@ -10,15 +10,18 @@
 
 #include "types.h"
 
-#define BOOTSTRAP_BYTES 0x100
+#define DMG_BOOTSTRAP_BYTES 0x100
+#define CGB_BOOTSTRAP_BYTES 0x900
 
 class Bootstrap {
  private:
-  static uint8 bootstrap[BOOTSTRAP_BYTES];
+  static uint8 dmgBootstrap[DMG_BOOTSTRAP_BYTES];
+  static uint8 cgbBootstrap[CGB_BOOTSTRAP_BYTES];
 
  public:
   static bool enabled, skip;
 
+  static void loadBootstrap(bool dmg);
   static uint8 &at(uint16 addr);
   static bool enabledAndShouldSkip();
   static void reset();

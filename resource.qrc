@@ -4,5 +4,7 @@
         <file>assets/icons/dm_icon.icns</file>
         <file>assets/imgs/bg_new.png</file>
         <file>assets/imgs/bg_old.png</file>
+        <file>assets/bin/cgb_boot.bin</file>
+        <file>assets/bin/dmg_boot.bin</file>
     </qresource>
 </RCC>
