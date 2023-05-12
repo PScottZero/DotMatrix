@@ -41,6 +41,8 @@ uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
 uint8 *Memory::vram = (uint8 *)malloc(RAM_BANK_BYTES * VRAM_BANKS);
 uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * EXRAM_BANKS);
 uint8 *Memory::wram = (uint8 *)malloc(WRAM_BANK_BYTES * WRAM_BANKS);
+uint8 Memory::cramBg[PAL_COUNT * PAL_SIZE]{};
+uint8 Memory::cramObj[PAL_COUNT * PAL_SIZE]{};
 
 // set initial rom and ram banks
 uint8 *Memory::romBank0 = &mem[0];
@@ -48,6 +50,8 @@ uint8 *Memory::romBank1 = &mem[ROM_BANK_BYTES];
 uint8 *Memory::vramBank = &vram[0];
 uint8 *Memory::exramBank = &exram[0];
 uint8 *Memory::wramBank = &wram[WRAM_BANK_BYTES];
+uint8 *Memory::bcpd = &cramBg[0];
+uint8 *Memory::ocpd = &cramObj[0];
 
 // **************************************************
 // **************************************************
@@ -195,9 +199,19 @@ void Memory::write(uint16 addr, uint8 val) {
   // write to memory
   getByte(addr) = val;
 
-  // start dma transfer if dma
-  // address was written to
-  if (addr == DMA) dmaTransfer();
+  // start oam dma transfer if DMA
+  // register was written to
+  if (addr == DMA) oamDmaTransfer();
+
+  // start vram dma transfer if HDMA5
+  // register was written to (cgb only)
+  if (addr == HDMA5 && !CGB::dmgMode) {
+    if (vramTransferMode()) {
+      printf("hblank vram dma not supported yet\n");
+    } else {
+      vramDmaTransfer();
+    }
+  }
 
   // turn off boostrap if writing
   // nonzero value to address ff50
@@ -212,14 +226,44 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // set vram bank if writing to
   // VBK register (cgb only)
-  if (addr == VBK && !CGB::dmgMode) {
+  if (!CGB::dmgMode && addr == VBK) {
     setVramBank(val & BIT0_MASK);
   }
 
   // set wram bank if writing to
   // SVBL register (cgb only)
-  if (addr == SVBK && !CGB::dmgMode) {
+  if (!CGB::dmgMode && addr == SVBK) {
     setWramBank(max(val & THREE_BITS_MASK, 1));
+  }
+
+  // udpate register BCPD when writing
+  // to BCPS (cgb only)
+  if (!CGB::dmgMode && addr == BCPS) {
+    uint8 addr = val & FIVE_BITS_MASK;
+    bcpd = &cramBg[addr];
+  }
+
+  // udpate register OCPD when writing
+  // to OCPS (cgb only)
+  if (!CGB::dmgMode && addr == OCPS) {
+    uint8 addr = val & FIVE_BITS_MASK;
+    ocpd = &cramObj[addr];
+  }
+
+  // auto increment register BCPS if
+  // writing to register BCPD and auto
+  // increment is enabled (cgb only)
+  if (!CGB::dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
+    ++getByte(BCPS);
+    bcpd = &cramBg[getByte(BCPS) & FIVE_BITS_MASK];
+  }
+
+  // auto increment register OCPS if
+  // writing to register OCPD and auto
+  // increment is enabled (cgb only)
+  if (!CGB::dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
+    ++getByte(OCPS);
+    ocpd = &cramObj[getByte(OCPS) & FIVE_BITS_MASK];
   }
 }
 
@@ -252,6 +296,9 @@ uint16 Memory::imm16(uint16 &PC) {
 uint8 &Memory::getByte(uint16 addr) {
   if (Bootstrap::enabled && addr < DMG_BOOTSTRAP_BYTES) {
     return Bootstrap::at(addr);
+  } else if (!CGB::dmgMode && Bootstrap::enabled &&
+             addr >= CGB_BOOTSTRAP_ADDR && addr < CGB_BOOTSTRAP_BYTES) {
+    return Bootstrap::at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
     return romBank0[addr];
   } else if (addr < VRAM_ADDR) {
@@ -264,8 +311,23 @@ uint8 &Memory::getByte(uint16 addr) {
     return wram[addr - WRAM_ADDR];
   } else if (addr < ECHO_RAM_ADDR) {
     return wramBank[addr - WRAM_BANK_ADDR];
+  } else if (!CGB::dmgMode && addr == BCPD) {
+    return *bcpd;
+  } else if (!CGB::dmgMode && addr == OCPD) {
+    return *ocpd;
   }
   return mem[addr - ECHO_RAM_ADDR];
+}
+
+// get byte from cartridge
+uint8 &Memory::getCartByte(uint16 addr) { return cart[addr]; }
+
+// get byte from video ram, if bank if false
+// the get byte from vram bank 0, if bank is
+// true get byte from vram bank 1
+uint8 &Memory::getVramByte(uint16 addr, bool bank) {
+  uint16 offset = VRAM_ADDR - (bank ? RAM_BANK_BYTES : 0);
+  return vram[addr - offset];
 }
 
 // **************************************************
@@ -308,11 +370,30 @@ void Memory::setWramBank(uint8 bankNum) {
   wramBank = &wram[WRAM_BANK_BYTES * bankNum];
 }
 
-// perform dma transfer
-void Memory::dmaTransfer() {
+// get vram transfer mode, true means
+// hblank dma, false means general dma
+bool Memory::vramTransferMode() { return getByte(HDMA5) & BIT7_MASK; }
+
+// get length of vram transfer
+uint8 Memory::vramTransferLength() {
+  return ((getByte(HDMA5) & ~BIT7_MASK) + 1) * 0x10;
+}
+
+// perform oam dma transfer
+void Memory::oamDmaTransfer() {
   uint16 dmaAddr = getByte(DMA) << 8;
   for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
-    getByte(OAM_ADDR + i) = getByte(dmaAddr + i);
+    getByte(OAM_ADDR + i) = (uint8)getByte(dmaAddr + i);
+  }
+}
+
+// perform vram dma transfer
+void Memory::vramDmaTransfer() {
+  uint16 srcAddr = (getByte(HDMA1) << 8) | (getByte(HDMA2) & ~NIBBLE_MASK);
+  uint16 destAddr = VRAM_ADDR + ((getByte(HDMA3) << 8) & FIVE_BITS_MASK) |
+                    (getByte(HDMA4) & ~NIBBLE_MASK);
+  for (int i = 0; i < vramTransferLength(); ++i) {
+    getByte(srcAddr + i) = (uint8)getByte(destAddr + i);
   }
 }
 
@@ -379,4 +460,6 @@ void Memory::reset() {
   setVramBank(0);
   setExramBank(0);
   setWramBank(1);
+  bcpd = &cramBg[0];
+  ocpd = &cramObj[0];
 }

@@ -12,6 +12,7 @@
 
 #define DMG_BOOTSTRAP_BYTES 0x100
 #define CGB_BOOTSTRAP_BYTES 0x900
+#define CGB_BOOTSTRAP_ADDR 0x200
 
 class Bootstrap {
  private:
@@ -21,7 +22,6 @@ class Bootstrap {
  public:
   static bool enabled, skip;
 
-  static void loadBootstrap(bool dmg);
   static uint8 &at(uint16 addr);
   static bool enabledAndShouldSkip();
   static void reset();

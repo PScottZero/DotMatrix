@@ -72,7 +72,8 @@ MainWindow::MainWindow(QWidget *parent)
   // connect palette signal map
   connect(paletteSigMap, &QSignalMapper::mappedObject, this,
           &MainWindow::setPalette);
-  connect(ui->menuPalette, &QMenu::aboutToHide, &cgb, &CGB::resetPreviewPalette);
+  connect(ui->menuPalette, &QMenu::aboutToHide, &cgb,
+          &CGB::resetPreviewPalette);
 
   // **************************************************
   // Other Options

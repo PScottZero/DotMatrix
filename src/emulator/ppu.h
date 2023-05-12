@@ -69,6 +69,8 @@ typedef struct {
   bool flipY;
   bool flipX;
   bool palette;
+  bool vramBankNum;
+  uint8 paletteNum;
 } sprite_t;
 
 // background map attributes,
@@ -78,16 +80,18 @@ typedef struct {
   bool priority;
   bool flipY;
   bool flipX;
-  bool tileVramBankNum;
-  uint8 bgPaletteNum;
-} bg_map_attr_t;
+  bool vramBankNum;
+  uint8 paletteNum;
+} tile_map_attr_t;
 
 enum PaletteType { BG, SPRITE0, SPRITE1 };
 
 typedef struct {
   uint8 pixels[SCREEN_PX_WIDTH];
-  PaletteType palettes[SCREEN_PX_WIDTH];
+  PaletteType paletteTypes[SCREEN_PX_WIDTH];
   uint8 spriteIndices[SCREEN_PX_WIDTH];
+  uint8 paletteIndices[SCREEN_PX_WIDTH];  // cgb only
+  bool priorities[SCREEN_PX_WIDTH];       // cgb only
 } scanline_t;
 
 // tile row of eight pixels
@@ -106,18 +110,21 @@ class PPU {
 
   // rendering functions
   static void renderBg(scanline_t &scanline);
-  static void renderSprites(scanline_t &scanline);
   static void renderWindow(scanline_t &scanline);
-  static bool shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
-                                    uint8 scanlineIdx, uint8 px);
+  static void renderSprites(scanline_t &scanline);
+  static bool spriteHasPriority(sprite_t &sprite, scanline_t &scanline,
+                                uint8 scanlineIdx, uint8 px);
   static void transferScanlineToScreen(scanline_t &scanline);
   static void resetScanline(scanline_t &scanline);
 
   // read display memory functions
-  static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row);
+  static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
+                            bool vramBank = false);
+  static TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row);
   static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
   static sprite_t getSpriteOAM(uint8 spriteIdx);
-  static bg_map_attr_t getBgMapAttr(uint8 tileNo);
+  static tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint8 tileNo);
+  static void flipTileRow(TileRow &row);
 
   // lcdc register functions
   static bool lcdEnable();
@@ -137,7 +144,10 @@ class PPU {
   static bool lyEqualsLyc();
   static void setMode(uint8 mode);
   static uint8 getMode();
-  static void setLcdInterrupt();
+  static void setLcdStatInterrupt();
+
+  // lcd color palette functions
+  static uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx);
 
  public:
   static QImage *screen;

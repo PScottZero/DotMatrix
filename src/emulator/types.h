@@ -15,6 +15,7 @@
 #define TWO_BITS_MASK 0b11
 #define THREE_BITS_MASK 0b111
 #define FIVE_BITS_MASK 0x1F
+#define SIX_BITS_MASK 0x3F
 #define TWELVE_BITS_MASK 0xFFF
 
 typedef char int8;

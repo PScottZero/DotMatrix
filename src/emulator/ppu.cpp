@@ -63,7 +63,7 @@ void PPU::step() {
       } else {
         stat &= ~BIT2_MASK;
       }
-      setLcdInterrupt();
+      setLcdStatInterrupt();
 
       CycleCounter::ppuCycles %= SCANLINE_CYCLES;
     }
@@ -75,7 +75,7 @@ void PPU::step() {
       if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
         if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
-          setLcdInterrupt();
+          setLcdStatInterrupt();
           findVisibleSprites();
         }
       }
@@ -86,7 +86,7 @@ void PPU::step() {
       else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
-          setLcdInterrupt();
+          setLcdStatInterrupt();
 
           scanline_t scanline;
           resetScanline(scanline);
@@ -103,7 +103,7 @@ void PPU::step() {
       else if (CycleCounter::ppuCycles < H_BLANK_CYCLES) {
         if (getMode() != H_BLANK_MODE) {
           setMode(H_BLANK_MODE);
-          setLcdInterrupt();
+          setLcdStatInterrupt();
         }
       }
     } else {
@@ -112,7 +112,7 @@ void PPU::step() {
       // **************************************************
       if (getMode() != V_BLANK_MODE) {
         setMode(V_BLANK_MODE);
-        setLcdInterrupt();
+        setLcdStatInterrupt();
         Interrupts::request(V_BLANK_INT);
         frameRendered = true;
         windowLineNum = 0;
@@ -124,7 +124,7 @@ void PPU::step() {
     stat &= ~THREE_BITS_MASK;
     statInt = false;
     if (CycleCounter::ppuCycles > SCANLINE_CYCLES * SCREEN_LINES) {
-      screen->fill(palette->data[0]);
+      screen->fill(CGB::dmgMode ? palette->data[0] : 0x000000);
       CycleCounter::ppuCycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
@@ -184,8 +184,21 @@ void PPU::renderBg(scanline_t &scanline) {
     // get data tile number (0 to 256 or -128 to 127)
     uint8 tileNo = Memory::getByte(tileMapAddr + bgTileNo);
 
-    // get row of pixels from tile
-    TileRow row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
+    TileRow row;
+    tile_map_attr_t attr;
+    attr.priority = 0;
+    attr.paletteNum = 0;
+
+    // dmg get row of tile pixels
+    if (CGB::dmgMode) {
+      row = getTileRow(tileDataAddr, tileNo, innerBgTileY);
+    }
+
+    // cgb get row of tile pixels
+    else {
+      attr = getTileMapAttr(tileMapAddr, bgTileNo);
+      row = getTileRow(attr, tileNo, innerBgTileY);
+    }
 
     // transfer pixel row to scanline
     int start = pxCount == 0 ? innerBgTileX : 0;
@@ -193,31 +206,12 @@ void PPU::renderBg(scanline_t &scanline) {
         pxCount + 8 > SCREEN_PX_WIDTH ? SCREEN_PX_WIDTH - pxCount : TILE_PX_DIM;
     for (int i = start; i < end; ++i) {
       scanline.pixels[pxCount] = row[i];
-      scanline.palettes[pxCount] = PaletteType::BG;
-      ++pxCount;
-    }
-  }
-}
-
-// render sprite tile rows that
-// intersect the current scanline
-void PPU::renderSprites(scanline_t &scanline) {
-  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
-    sprite_t sprite = visibleSprites[spriteIdx];
-    uint8 spriteRow = (ly + 16) - sprite.y;
-    TileRow row = getSpriteRow(sprite, spriteRow);
-
-    // draw sprite row onto screen
-    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
-      int pxX = sprite.x + rowIdx - 8;
-      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
-        if (shouldDrawSpritePixel(sprite, scanline, pxX, row[rowIdx])) {
-          scanline.pixels[pxX] = row[rowIdx];
-          scanline.palettes[pxX] =
-              sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
-          scanline.spriteIndices[pxX] = spriteIdx;
-        }
+      scanline.paletteTypes[pxCount] = PaletteType::BG;
+      if (!CGB::dmgMode) {
+        scanline.paletteIndices[pxCount] = attr.paletteNum;
+        scanline.priorities[pxCount] = attr.priority;
       }
+      ++pxCount;
     }
   }
 }
@@ -237,11 +231,31 @@ void PPU::renderWindow(scanline_t &scanline) {
       uint16 winTileNo = winTileY * BG_TILE_DIM + winTileX;
       uint8 tileNo = Memory::getByte(tileMapAddr + winTileNo);
 
-      TileRow row = getTileRow(tileDataAddr, tileNo, windowLineNum % 8);
+      TileRow row;
+      tile_map_attr_t attr;
+      attr.priority = 0;
+      attr.paletteNum = 0;
+
+      // dmg get row of tile pixels
+      if (CGB::dmgMode) {
+        row = getTileRow(tileDataAddr, tileNo, windowLineNum % 8);
+      }
+
+      // cgb get row of tile pixels
+      else {
+        attr = getTileMapAttr(tileMapAddr, winTileNo);
+        row = getTileRow(attr, tileNo, windowLineNum % 8);
+      }
+
+      // transfer pixel row to scanline
       for (int i = 0; i < TILE_PX_DIM; ++i) {
         if (winX + pxCount >= 0 && winX + pxCount < SCREEN_PX_WIDTH) {
           scanline.pixels[winX + pxCount] = row[i];
-          scanline.palettes[winX + pxCount] = PaletteType::BG;
+          scanline.paletteTypes[winX + pxCount] = PaletteType::BG;
+          if (!CGB::dmgMode) {
+            scanline.paletteIndices[pxCount] = attr.paletteNum;
+            scanline.priorities[pxCount] = attr.priority;
+          }
         }
         if (++pxCount + winX >= SCREEN_PX_WIDTH) break;
       }
@@ -251,40 +265,90 @@ void PPU::renderWindow(scanline_t &scanline) {
   }
 }
 
-bool PPU::shouldDrawSpritePixel(sprite_t &sprite, scanline_t &scanline,
-                                uint8 scanlineIdx, uint8 px) {
+// render sprite tile rows that
+// intersect the current scanline
+void PPU::renderSprites(scanline_t &scanline) {
+  for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
+    sprite_t sprite = visibleSprites[spriteIdx];
+    uint8 spriteRow = (ly + 16) - sprite.y;
+    TileRow row = getSpriteRow(sprite, spriteRow);
+
+    // draw sprite row onto screen
+    for (int rowIdx = 0; rowIdx < TILE_PX_DIM; ++rowIdx) {
+      int pxX = sprite.x + rowIdx - 8;
+      if (pxX >= 0 && pxX < SCREEN_PX_WIDTH) {
+        if (spriteHasPriority(sprite, scanline, pxX, row[rowIdx])) {
+          scanline.pixels[pxX] = row[rowIdx];
+          scanline.paletteTypes[pxX] =
+              sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
+          scanline.spriteIndices[pxX] = spriteIdx;
+          if (!CGB::dmgMode) {
+            scanline.paletteIndices[pxX] = sprite.paletteNum;
+            scanline.priorities[pxX] = sprite.priority;
+          }
+        }
+      }
+    }
+  }
+}
+
+// check sprite/background priority to determine if
+// sprite pixel should be rendered
+bool PPU::spriteHasPriority(sprite_t &sprite, scanline_t &scanline,
+                            uint8 scanlineIdx, uint8 px) {
   // if another sprite is located at the current pixel,
   // draw current sprite if it has a lower x value
-  if (scanline.palettes[scanlineIdx] == PaletteType::SPRITE0 ||
-      scanline.palettes[scanlineIdx] == PaletteType::SPRITE1) {
+  if (scanline.paletteTypes[scanlineIdx] == PaletteType::SPRITE0 ||
+      scanline.paletteTypes[scanlineIdx] == PaletteType::SPRITE1) {
     auto otherSprite = visibleSprites[scanline.spriteIndices[scanlineIdx]];
     return sprite.x < otherSprite.x && px != 0;
   }
 
-  // if sprite priority is true, then only draw sprite
-  // if current scaline color is zero, otherwise draw
-  // sprite (in both bases ignoring px values of 0)
-  return (!sprite.priority || scanline.pixels[scanlineIdx] == 0) && px != 0;
+  // dmg background/sprite priority
+  if (CGB::dmgMode) {
+    // if sprite priority is true, then only draw sprite
+    // if current scaline color is zero, otherwise draw
+    // sprite (in both bases ignoring px values of 0)
+    return (!sprite.priority || scanline.pixels[scanlineIdx] == 0) && px != 0;
+  }
+
+  // cgb background/sprite priority
+  else {
+    return (!bgEnable() ||
+            (!scanline.priorities[scanlineIdx] && !sprite.priority) ||
+            scanline.pixels[scanlineIdx] == 0) &&
+           px != 0;
+  }
 }
 
 // apply palette colors to current pixel
 // values in the screen buffer
 void PPU::transferScanlineToScreen(scanline_t &scanline) {
   for (int px = 0; px < SCREEN_PX_WIDTH; ++px) {
-    uint8 pal;
-    switch (scanline.palettes[px]) {
-      case PaletteType::BG:
-        pal = bgp;
-        break;
-      case PaletteType::SPRITE0:
-        pal = obp0;
-        break;
-      case PaletteType::SPRITE1:
-        pal = obp1;
-        break;
+    auto palType = scanline.paletteTypes[px];
+    uint pxColor;
+    if (CGB::dmgMode) {
+      uint8 pal;
+      switch (palType) {
+        case PaletteType::BG:
+          pal = bgp;
+          break;
+        case PaletteType::SPRITE0:
+          pal = obp0;
+          break;
+        case PaletteType::SPRITE1:
+          pal = obp1;
+          break;
+      }
+      uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
+      pxColor = palette->data[pxPalVal];
+    } else {
+      uint8 palIdx = scanline.paletteIndices[px];
+      uint8 *cram =
+          palType == PaletteType::BG ? Memory::cramBg : Memory::cramObj;
+      pxColor = getPaletteColor(cram, palIdx, scanline.pixels[px]);
     }
-    uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
-    screen->setPixel(px, ly, palette->data[pxPalVal]);
+    screen->setPixel(px, ly, pxColor);
   }
 }
 
@@ -292,7 +356,7 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
 void PPU::resetScanline(scanline_t &scanline) {
   for (int i = 0; i < SCREEN_PX_WIDTH; ++i) {
     scanline.pixels[i] = 0;
-    scanline.palettes[i] = PaletteType::BG;
+    scanline.paletteTypes[i] = PaletteType::BG;
     scanline.spriteIndices[i] = 0;
   }
 }
@@ -304,13 +368,14 @@ void PPU::resetScanline(scanline_t &scanline) {
 // **************************************************
 
 // get specified row of the given tile
-TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
+TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
+                        bool vramBank) {
   // get tile row data
   int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
   uint16 tileRowAddr = tileAddr + 2 * row;
-  uint8 rowDataLo = Memory::getByte(tileRowAddr);
-  uint8 rowDataHi = Memory::getByte(tileRowAddr + 1);
+  uint8 rowDataLo = Memory::getVramByte(tileRowAddr, vramBank);
+  uint8 rowDataHi = Memory::getVramByte(tileRowAddr + 1, vramBank);
 
   // convert tile row data into pixel values
   // rowDataLo = abcdefgh
@@ -325,6 +390,15 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row) {
   return tileRow;
 }
 
+// get specified row of the given tile (cgb only)
+TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo, uint8 row) {
+  row = tileMapAttr.flipY ? TILE_PX_DIM - row - 1 : row;
+  TileRow tileRow =
+      getTileRow(bgWindowDataAddr(), tileNo, row, tileMapAttr.vramBankNum);
+  if (tileMapAttr.flipX) flipTileRow(tileRow);
+  return tileRow;
+}
+
 // get specified row of given sprite
 TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
   uint8 height = spriteHeight();
@@ -333,14 +407,7 @@ TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
                       ? oamEntry.pattern & ~BIT0_MASK
                       : oamEntry.pattern;
   TileRow tileRow = getTileRow(BG_DATA_ADDR_1, pattern, row);
-  if (oamEntry.flipX) {
-    for (uint8 i = 0; i < tileRow.size() / 2; ++i) {
-      uint8 swapIdx = tileRow.size() - i - 1;
-      uint8 temp = tileRow[swapIdx];
-      tileRow[swapIdx] = tileRow[i];
-      tileRow[i] = temp;
-    }
-  }
+  if (oamEntry.flipX) flipTileRow(tileRow);
   return tileRow;
 }
 
@@ -361,20 +428,36 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
   sprite.flipX = flags & BIT5_MASK;
   sprite.palette = flags & BIT4_MASK;
 
+  // cgb additional sprite flags
+  sprite.vramBankNum = flags & BIT3_MASK;
+  sprite.paletteNum = flags & THREE_BITS_MASK;
+
   return sprite;
 }
 
 // get background map attribute for a given tile in
-// the background map
-bg_map_attr_t PPU::getBgMapAttr(uint8 tileNo) {
-  bg_map_attr_t attr;
-  uint8 attrByte = Memory::getByte(bgMapAddr() + tileNo);
+// the background map (cgb only)
+tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint8 tileNo) {
+  tile_map_attr_t attr;
+  uint8 attrByte = Memory::getVramByte(baseAddr + tileNo, true);
   attr.priority = attrByte & BIT7_MASK;
   attr.flipY = attrByte & BIT6_MASK;
   attr.flipX = attrByte & BIT5_MASK;
-  attr.tileVramBankNum = attrByte & BIT3_MASK;
-  attr.bgPaletteNum = attrByte & THREE_BITS_MASK;
+  attr.vramBankNum = attrByte & BIT3_MASK;
+  attr.paletteNum = attrByte & THREE_BITS_MASK;
   return attr;
+}
+
+// flips the given tile row
+// pixels before: a b c d e f g h
+// pixels after:  h g f e d c b a
+void PPU::flipTileRow(TileRow &row) {
+  for (uint8 i = 0; i < row.size() / 2; ++i) {
+    uint8 swapIdx = row.size() - i - 1;
+    uint8 temp = row[swapIdx];
+    row[swapIdx] = row[i];
+    row[i] = temp;
+  }
 }
 
 // **************************************************
@@ -387,7 +470,9 @@ bool PPU::lcdEnable() { return lcdc & BIT7_MASK; }
 
 bool PPU::bgEnable() { return (lcdc & BIT0_MASK) && showBackground; }
 
-bool PPU::windowEnable() { return (lcdc & BIT5_MASK) && showWindow; }
+bool PPU::windowEnable() {
+  return bgEnable() && ((lcdc & BIT5_MASK) && showWindow);
+}
 
 bool PPU::spriteEnable() { return (lcdc & BIT1_MASK) && showSprites; }
 
@@ -442,7 +527,7 @@ bool PPU::lyEqualsLyc() { return stat & BIT2_MASK; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register
-void PPU::setLcdInterrupt() {
+void PPU::setLcdStatInterrupt() {
   if ((coincidenceIntEnabled() && lyEqualsLyc()) ||
       (oamSearchIntEnabled() && getMode() == OAM_SEARCH_MODE) ||
       ((vblankIntEnabled() || oamSearchIntEnabled()) &&
@@ -457,4 +542,24 @@ void PPU::setLcdInterrupt() {
   } else {
     statInt = false;
   }
+}
+
+// **************************************************
+// **************************************************
+// LCD Color Palette Functions (CGB Only)
+// **************************************************
+// **************************************************
+
+uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) {
+  // get color of palette
+  uint8 cramAddr = palIdx * PAL_SIZE + colorIdx * 2;
+  uint16 color = cram[cramAddr] << 8 | cram[cramAddr + 1];
+
+  // get color channels
+  uint8 red = color & FIVE_BITS_MASK;
+  uint8 green = (color >> 5) & FIVE_BITS_MASK;
+  uint8 blue = (color >> 10) & FIVE_BITS_MASK;
+
+  // convert to 32-bit rgb
+  return qRgb(red * 8, green * 8, blue * 8);
 }

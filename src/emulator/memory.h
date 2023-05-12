@@ -21,10 +21,13 @@
 #define ROM_BANK_BYTES 0x4000
 #define RAM_BANK_BYTES 0x2000
 #define WRAM_BANK_BYTES 0x1000
+#define PAL_RAM_BYTES 0x40
 #define HALF_RAM_BYTES 0x200
 #define EXRAM_BANKS 16
 #define VRAM_BANKS 2
 #define WRAM_BANKS 8
+#define PAL_SIZE 8
+#define PAL_COUNT 8
 
 // cartridge header addresses
 #define CGB_MODE 0x0143
@@ -113,12 +116,17 @@
 #define _OAM_SEARCH_MODE 0b10
 #define _PIXEL_TRANSFER_MODE 0b11
 
+// color ram (cram) constants
+#define PAL_SIZE 8
+#define PAL_COUNT 8
+
 using namespace std;
 
 class Memory {
  private:
   // dma tranfser
-  static void dmaTransfer();
+  static void oamDmaTransfer();
+  static void vramDmaTransfer();
 
   // echo functions
   static void echoRam(uint16 addr, uint8 val);
@@ -131,6 +139,8 @@ class Memory {
   static uint8 *vram;
   static uint8 *exram;
   static uint8 *wram;
+  static uint8 cramBg[PAL_COUNT * PAL_SIZE];
+  static uint8 cramObj[PAL_COUNT * PAL_SIZE];
 
   // memory banks
   static uint8 *romBank0;
@@ -138,6 +148,7 @@ class Memory {
   static uint8 *vramBank;
   static uint8 *exramBank;
   static uint8 *wramBank;
+  static uint8 *bcpd, *ocpd;
 
   // memory read + write functions
   static uint8 read(uint16 addr);
@@ -149,12 +160,18 @@ class Memory {
   static uint8 imm8(uint16 &PC);
   static uint16 imm16(uint16 &PC);
   static uint8 &getByte(uint16 addr);
+  static uint8 &getCartByte(uint16 addr);
+  static uint8 &getVramByte(uint16 addr, bool bank);
 
   // rom + ram bank functions
   static void setRomBank(uint8 **romBank, uint8 bankNum);
   static void setVramBank(uint8 bankNum);
   static void setExramBank(uint8 bankNum);
   static void setWramBank(uint8 bankNum);
+
+  // HDMA5 register functions
+  static bool vramTransferMode();
+  static uint8 vramTransferLength();
 
   // save + load functions
   static void loadRom(QString dir);

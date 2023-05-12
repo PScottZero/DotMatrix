@@ -47,7 +47,9 @@ CGB::~CGB() {
 
   std::free(Memory::mem);
   std::free(Memory::cart);
+  std::free(Memory::vram);
   std::free(Memory::exram);
+  std::free(Memory::wram);
 }
 
 void CGB::run() {
@@ -82,18 +84,24 @@ void CGB::run() {
 bool CGB::loadRom(const QString romPath) {
   Memory::loadRom(romPath);
 
-  MBC::bankType = Memory::getByte(BANK_TYPE);
-  MBC::romSize = Memory::getByte(ROM_SIZE);
-  MBC::ramSize = Memory::getByte(RAM_SIZE);
+  // get rom config
+  CGB::dmgMode = !romPath.contains(".gbc");
+  MBC::bankType = Memory::getCartByte(BANK_TYPE);
+  MBC::romSize = Memory::getCartByte(ROM_SIZE);
+  MBC::ramSize = Memory::getCartByte(RAM_SIZE);
   MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
 
+  // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
+  printf("Game Boy Mode: %s\n", CGB::dmgMode ? "DMG" : "CGB");
   printf("Bank Type: %s (%02X)\n", MBC::bankTypeStr().c_str(), MBC::bankType);
   printf("Has RAM: %s\n", MBC::hasRam() ? "true" : "false");
   printf("Has Battery: %s\n", MBC::hasRamAndBattery() ? "true" : "false");
   printf("ROM Size: %d KiB\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
   printf("RAM Size: %d KiB\n", MBC::ramBytes());
 
+  // check if mbc type of cartridge
+  // is implemented
   if (!MBC::bankTypeImplemented()) {
     QMessageBox mbox{};
     auto message = "Bank type " + MBC::bankTypeStr() + " is not supported";
@@ -102,6 +110,7 @@ bool CGB::loadRom(const QString romPath) {
     return false;
   }
 
+  // set rom path and load exram
   CGB::romPath = romPath;
   if (MBC::hasRamAndBattery()) Memory::loadExram();
 
@@ -127,17 +136,21 @@ void CGB::reset(bool newGame) {
 }
 
 void CGB::previewPalette(Palette *palette) {
-  if (tempPalette == nullptr) tempPalette = PPU::palette;
-  PPU::palette = palette;
-  renderInPauseMode();
+  if (dmgMode) {
+    if (tempPalette == nullptr) tempPalette = PPU::palette;
+    PPU::palette = palette;
+    renderInPauseMode();
+  }
 }
 
 void CGB::resetPreviewPalette() {
-  if (tempPalette != nullptr) {
-    PPU::palette = tempPalette;
-    tempPalette = nullptr;
+  if (dmgMode) {
+    if (tempPalette != nullptr) {
+      PPU::palette = tempPalette;
+      tempPalette = nullptr;
+    }
+    renderInPauseMode();
   }
-  renderInPauseMode();
 }
 
 void CGB::renderInPauseMode() {
