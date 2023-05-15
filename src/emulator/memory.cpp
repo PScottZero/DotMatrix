@@ -45,8 +45,8 @@ uint8 Memory::cramBg[PAL_COUNT * PAL_SIZE]{};
 uint8 Memory::cramObj[PAL_COUNT * PAL_SIZE]{};
 
 // set initial rom and ram banks
-uint8 *Memory::romBank0 = &mem[0];
-uint8 *Memory::romBank1 = &mem[ROM_BANK_BYTES];
+uint8 *Memory::romBank0 = &cart[0];
+uint8 *Memory::romBank1 = &cart[ROM_BANK_BYTES];
 uint8 *Memory::vramBank = &vram[0];
 uint8 *Memory::exramBank = &exram[0];
 uint8 *Memory::wramBank = &wram[WRAM_BANK_BYTES];
@@ -79,7 +79,9 @@ uint8 Memory::read(uint16 addr) {
 
   // only the upper 2-bits of register
   // NR11 and NR21 can be read
-  if (addr == NR11 || addr == NR21) return readBits(addr, {6, 7});
+  if (addr == NR11 || addr == NR21) {
+    return readBits(addr, {6, 7});
+  }
 
   // only bit 6 of register NR14,
   // NR24, NR34 and NR44 can be read
@@ -90,7 +92,9 @@ uint8 Memory::read(uint16 addr) {
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && Bootstrap::enabledAndShouldSkip()) return 0x90;
+  if (addr == LY && Bootstrap::enabledAndShouldSkip()) {
+    return 0x90;
+  }
 
   // read from memory
   return getByte(addr);
@@ -201,7 +205,9 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // start oam dma transfer if DMA
   // register was written to
-  if (addr == DMA) oamDmaTransfer();
+  if (addr == DMA) {
+    oamDmaTransfer();
+  }
 
   // start vram dma transfer if HDMA5
   // register was written to (cgb only)
@@ -215,7 +221,9 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // turn off boostrap if writing
   // nonzero value to address ff50
-  if (addr == BOOTSTRAP && val != 0) Bootstrap::enabled = false;
+  if (addr == BOOTSTRAP && val != 0) {
+    Bootstrap::enabled = false;
+  }
 
   // start serial transfer if writing
   // to register SC with bit 7 and bit
@@ -239,15 +247,15 @@ void Memory::write(uint16 addr, uint8 val) {
   // udpate register BCPD when writing
   // to BCPS (cgb only)
   if (!CGB::dmgMode && addr == BCPS) {
-    uint8 addr = val & FIVE_BITS_MASK;
-    bcpd = &cramBg[addr];
+    uint8 cramAddr = val & SIX_BITS_MASK;
+    bcpd = &cramBg[cramAddr];
   }
 
   // udpate register OCPD when writing
   // to OCPS (cgb only)
   if (!CGB::dmgMode && addr == OCPS) {
-    uint8 addr = val & FIVE_BITS_MASK;
-    ocpd = &cramObj[addr];
+    uint8 cramAddr = val & SIX_BITS_MASK;
+    ocpd = &cramObj[cramAddr];
   }
 
   // auto increment register BCPS if
@@ -255,7 +263,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // increment is enabled (cgb only)
   if (!CGB::dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
     ++getByte(BCPS);
-    bcpd = &cramBg[getByte(BCPS) & FIVE_BITS_MASK];
+    bcpd = &cramBg[getByte(BCPS) & SIX_BITS_MASK];
   }
 
   // auto increment register OCPS if
@@ -263,7 +271,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // increment is enabled (cgb only)
   if (!CGB::dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
     ++getByte(OCPS);
-    ocpd = &cramObj[getByte(OCPS) & FIVE_BITS_MASK];
+    ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
   }
 }
 
@@ -319,15 +327,11 @@ uint8 &Memory::getByte(uint16 addr) {
   return mem[addr - ECHO_RAM_ADDR];
 }
 
-// get byte from cartridge
-uint8 &Memory::getCartByte(uint16 addr) { return cart[addr]; }
-
 // get byte from video ram, if bank if false
 // the get byte from vram bank 0, if bank is
 // true get byte from vram bank 1
 uint8 &Memory::getVramByte(uint16 addr, bool bank) {
-  uint16 offset = VRAM_ADDR - (bank ? RAM_BANK_BYTES : 0);
-  return vram[addr - offset];
+  return vram[addr - VRAM_ADDR + (bank ? RAM_BANK_BYTES : 0)];
 }
 
 // **************************************************
@@ -375,7 +379,7 @@ void Memory::setWramBank(uint8 bankNum) {
 bool Memory::vramTransferMode() { return getByte(HDMA5) & BIT7_MASK; }
 
 // get length of vram transfer
-uint8 Memory::vramTransferLength() {
+uint16 Memory::vramTransferLength() {
   return ((getByte(HDMA5) & ~BIT7_MASK) + 1) * 0x10;
 }
 
@@ -393,7 +397,7 @@ void Memory::vramDmaTransfer() {
   uint16 destAddr = VRAM_ADDR + ((getByte(HDMA3) << 8) & FIVE_BITS_MASK) |
                     (getByte(HDMA4) & ~NIBBLE_MASK);
   for (int i = 0; i < vramTransferLength(); ++i) {
-    getByte(srcAddr + i) = (uint8)getByte(destAddr + i);
+    getByte(destAddr + i) = (uint8)getByte(srcAddr + i);
   }
 }
 

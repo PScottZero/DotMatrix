@@ -160,7 +160,6 @@ class Memory {
   static uint8 imm8(uint16 &PC);
   static uint16 imm16(uint16 &PC);
   static uint8 &getByte(uint16 addr);
-  static uint8 &getCartByte(uint16 addr);
   static uint8 &getVramByte(uint16 addr, bool bank);
 
   // rom + ram bank functions
@@ -171,7 +170,7 @@ class Memory {
 
   // HDMA5 register functions
   static bool vramTransferMode();
-  static uint8 vramTransferLength();
+  static uint16 vramTransferLength();
 
   // save + load functions
   static void loadRom(QString dir);

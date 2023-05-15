@@ -86,10 +86,11 @@ bool CGB::loadRom(const QString romPath) {
 
   // get rom config
   CGB::dmgMode = !romPath.contains(".gbc");
-  MBC::bankType = Memory::getCartByte(BANK_TYPE);
-  MBC::romSize = Memory::getCartByte(ROM_SIZE);
-  MBC::ramSize = Memory::getCartByte(RAM_SIZE);
+  MBC::bankType = Memory::getByte(BANK_TYPE);
+  MBC::romSize = Memory::getByte(ROM_SIZE);
+  MBC::ramSize = Memory::getByte(RAM_SIZE);
   MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
+  // CGB::dmgMode = false;
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());

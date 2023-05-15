@@ -123,7 +123,7 @@ class PPU {
   static TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row);
   static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
   static sprite_t getSpriteOAM(uint8 spriteIdx);
-  static tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint8 tileNo);
+  static tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo);
   static void flipTileRow(TileRow &row);
 
   // lcdc register functions

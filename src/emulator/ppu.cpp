@@ -124,7 +124,7 @@ void PPU::step() {
     stat &= ~THREE_BITS_MASK;
     statInt = false;
     if (CycleCounter::ppuCycles > SCANLINE_CYCLES * SCREEN_LINES) {
-      screen->fill(CGB::dmgMode ? palette->data[0] : 0x000000);
+      if (CGB::dmgMode) screen->fill(palette->data[0]);
       CycleCounter::ppuCycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
@@ -144,8 +144,7 @@ void PPU::findVisibleSprites() {
   for (uint8 oamIdx = 0; oamIdx < OAM_ENTRY_COUNT; oamIdx++) {
     sprite_t oamEntry = getSpriteOAM(oamIdx);
     if ((ly + SPRITE_PX_HEIGHT_TALL) >= oamEntry.y &&
-        (ly + SPRITE_PX_HEIGHT_TALL) < (oamEntry.y + spriteHeight()) &&
-        oamEntry.x != 0) {
+        (ly + SPRITE_PX_HEIGHT_TALL) < (oamEntry.y + spriteHeight())) {
       visibleSprites[visibleSpriteCount] = oamEntry;
       ++visibleSpriteCount;
 
@@ -182,7 +181,7 @@ void PPU::renderBg(scanline_t &scanline) {
     uint16 bgTileNo = bgTileY * BG_TILE_DIM + bgTileX;
 
     // get data tile number (0 to 256 or -128 to 127)
-    uint8 tileNo = Memory::getByte(tileMapAddr + bgTileNo);
+    uint8 tileNo = Memory::getVramByte(tileMapAddr + bgTileNo, false);
 
     TileRow row;
     tile_map_attr_t attr;
@@ -229,19 +228,19 @@ void PPU::renderWindow(scanline_t &scanline) {
       uint8 winTileX = pxCount / TILE_PX_DIM;
       uint8 winTileY = windowLineNum / TILE_PX_DIM;
       uint16 winTileNo = winTileY * BG_TILE_DIM + winTileX;
-      uint8 tileNo = Memory::getByte(tileMapAddr + winTileNo);
+      uint8 tileNo = Memory::getVramByte(tileMapAddr + winTileNo, false);
 
       TileRow row;
       tile_map_attr_t attr;
       attr.priority = 0;
       attr.paletteNum = 0;
 
-      // dmg get row of tile pixels
+      // dmg get tile row of pixels
       if (CGB::dmgMode) {
         row = getTileRow(tileDataAddr, tileNo, windowLineNum % 8);
       }
 
-      // cgb get row of tile pixels
+      // cgb get tile row of tile pixels
       else {
         attr = getTileMapAttr(tileMapAddr, winTileNo);
         row = getTileRow(attr, tileNo, windowLineNum % 8);
@@ -358,6 +357,8 @@ void PPU::resetScanline(scanline_t &scanline) {
     scanline.pixels[i] = 0;
     scanline.paletteTypes[i] = PaletteType::BG;
     scanline.spriteIndices[i] = 0;
+    scanline.paletteIndices[i] = 0;
+    scanline.priorities[i] = false;
   }
 }
 
@@ -390,7 +391,8 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
   return tileRow;
 }
 
-// get specified row of the given tile (cgb only)
+// get specified row of the given background
+// or window tile (cgb only)
 TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo, uint8 row) {
   row = tileMapAttr.flipY ? TILE_PX_DIM - row - 1 : row;
   TileRow tileRow =
@@ -437,9 +439,9 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
 
 // get background map attribute for a given tile in
 // the background map (cgb only)
-tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint8 tileNo) {
+tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) {
   tile_map_attr_t attr;
-  uint8 attrByte = Memory::getVramByte(baseAddr + tileNo, true);
+  uint8 attrByte = Memory::getVramByte(baseAddr + bgWinTileNo, true);
   attr.priority = attrByte & BIT7_MASK;
   attr.flipY = attrByte & BIT6_MASK;
   attr.flipX = attrByte & BIT5_MASK;
@@ -471,7 +473,7 @@ bool PPU::lcdEnable() { return lcdc & BIT7_MASK; }
 bool PPU::bgEnable() { return (lcdc & BIT0_MASK) && showBackground; }
 
 bool PPU::windowEnable() {
-  return bgEnable() && ((lcdc & BIT5_MASK) && showWindow);
+  return (lcdc & BIT0_MASK) && (lcdc & BIT5_MASK) && showWindow;
 }
 
 bool PPU::spriteEnable() { return (lcdc & BIT1_MASK) && showSprites; }
@@ -553,13 +555,13 @@ void PPU::setLcdStatInterrupt() {
 uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) {
   // get color of palette
   uint8 cramAddr = palIdx * PAL_SIZE + colorIdx * 2;
-  uint16 color = cram[cramAddr] << 8 | cram[cramAddr + 1];
+  uint16 color = cram[cramAddr + 1] << 8 | cram[cramAddr];
 
   // get color channels
   uint8 red = color & FIVE_BITS_MASK;
   uint8 green = (color >> 5) & FIVE_BITS_MASK;
   uint8 blue = (color >> 10) & FIVE_BITS_MASK;
 
-  // convert to 32-bit rgb
+  // convert to 32-bit argb color
   return qRgb(red * 8, green * 8, blue * 8);
 }
