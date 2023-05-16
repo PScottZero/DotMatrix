@@ -140,7 +140,7 @@ bool CGB::loadRom(const QString romPath) {
   mbc.romSize = mem.getByte(ROM_SIZE);
   mbc.ramSize = mem.getByte(RAM_SIZE);
   mbc.halfRAMMode = mbc.bankType == MBC2_ || mbc.bankType == MBC2_BATTERY;
-  // CGB::dmgMode = false;
+  dmgMode = false;
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());

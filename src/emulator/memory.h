@@ -153,6 +153,7 @@ class Memory {
   uint8 *exramBank;
   uint8 *wramBank;
   uint8 *bcpd, *ocpd;
+  uint16 vramDmaSrc, vramDmaDest;
 
   Memory();
 

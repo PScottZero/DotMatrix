@@ -49,7 +49,9 @@ Memory::Memory()
       exramBank(&exram[0]),
       wramBank(&wram[WRAM_BANK_BYTES]),
       bcpd(&cramBg[0]),
-      ocpd(&cramObj[0]) {}
+      ocpd(&cramObj[0]),
+      vramDmaSrc(),
+      vramDmaDest() {}
 
 // **************************************************
 // **************************************************
@@ -207,6 +209,31 @@ void Memory::write(uint16 addr, uint8 val) {
   // register was written to
   if (addr == DMA) {
     oamDmaTransfer();
+  }
+
+  // vram dma source high
+  if (addr == HDMA1) {
+    vramDmaSrc &= NIBBLE_MASK;
+    vramDmaSrc |= getByte(addr) << 8;
+  }
+
+  // vram dma source low
+  if (addr == HDMA2) {
+    vramDmaSrc &= ~NIBBLE_MASK;
+    vramDmaSrc |= getByte(addr) & ~NIBBLE_MASK;
+  }
+
+  // vram dma destination high
+  if (addr == HDMA3) {
+    vramDmaDest &= NIBBLE_MASK;
+    vramDmaDest |= (getByte(addr) & FIVE_BITS_MASK) << 8;
+    vramDmaDest |= VRAM_ADDR;
+  }
+
+  // vram dma destination low
+  if (addr == HDMA4) {
+    vramDmaDest &= ~NIBBLE_MASK;
+    vramDmaDest |= getByte(addr) & ~NIBBLE_MASK;
   }
 
   // start vram dma transfer if HDMA5
@@ -399,11 +426,18 @@ void Memory::oamDmaTransfer() {
 
 // perform vram dma transfer
 void Memory::vramDmaTransfer() {
-  uint16 srcAddr = (getByte(HDMA1) << 8) | (getByte(HDMA2) & ~NIBBLE_MASK);
-  uint16 destAddr = VRAM_ADDR + ((getByte(HDMA3) << 8) & FIVE_BITS_MASK) |
-                    (getByte(HDMA4) & ~NIBBLE_MASK);
+  printf("VRAM DMA SRC:       %04X\n", vramDmaSrc);
+  printf("VRAM DMA DEST:      %04X\n", vramDmaDest);
+  printf("VRAM BANK: %d\n", getByte(VBK) & BIT0_MASK);
+
   for (int i = 0; i < vramTransferLength(); ++i) {
-    getByte(destAddr + i) = (uint8)getByte(srcAddr + i);
+    getByte(vramDmaDest) = (uint8)getByte(vramDmaSrc);
+    vramDmaSrc++;
+    vramDmaDest++;
+  }
+
+  if (vramDmaDest > 0xA000) {
+    printf("OUT OF BOUNDS!!!\n");
   }
 }
 
