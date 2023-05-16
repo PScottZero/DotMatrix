@@ -25,14 +25,21 @@
 using namespace std;
 using namespace chrono;
 
-QString CGB::romPath = QDir::currentPath();
-bool CGB::stop = false;
-bool CGB::dmgMode = true;
-bool CGB::doubleSpeedMode = false;
-bool CGB::shouldStepPpu = false;
-
 CGB::CGB()
-    : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
+    : bootstrap(),
+      controls(),
+      cpu(),
+      interrupts(),
+      mbc(),
+      mem(),
+      ppu(),
+      timers(),
+      romPath(QDir::currentPath()),
+      stop(false),
+      dmgMode(false),
+      doubleSpeedMode(false),
+      shouldStepPpu(false),
+      screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       actionPause(nullptr),
       running(false),
       pause(false),
@@ -44,13 +51,13 @@ CGB::~CGB() {
   running = false;
   wait();
 
-  if (MBC::hasRamAndBattery()) Memory::saveExram();
+  if (mbc.hasRamAndBattery()) mem.saveExram();
 
-  std::free(Memory::mem);
-  std::free(Memory::cart);
-  std::free(Memory::vram);
-  std::free(Memory::exram);
-  std::free(Memory::wram);
+  std::free(mem.mem);
+  std::free(mem.cart);
+  std::free(mem.vram);
+  std::free(mem.exram);
+  std::free(mem.wram);
 }
 
 void CGB::run() {
@@ -58,17 +65,17 @@ void CGB::run() {
   auto clock = system_clock::now();
   while (running) {
     if (!pause) {
-      CPU::step();
-      if (stop) PPU::step();
+      cpu.step();
+      if (stop) ppu.step();
 
       // send rendered screen frame to ui
-      if (!Bootstrap::enabledAndShouldSkip()) {
-        if (PPU::frameRendered) {
+      if (!bootstrap.enabledAndShouldSkip()) {
+        if (ppu.frameRendered) {
           emit sendScreen(&screen);
           int duration = FRAME_DURATION;
           clock += microseconds(duration);
           this_thread::sleep_until(clock);
-          PPU::frameRendered = false;
+          ppu.frameRendered = false;
         }
       } else {
         clock = system_clock::now();
@@ -82,68 +89,81 @@ void CGB::run() {
 // initialize memory pointers between
 // components of game boy
 void CGB::init() {
+  // cgb pointers
+  cpu.cgb = this;
+  mem.cgb = this;
+  ppu.cgb = this;
+  timers.cgb = this;
+
+  // boostrap
+  bootstrap.dmgMode = &dmgMode;
+
   // controls
-  Controls::p1 = Memory::getBytePtr(P1);
+  controls.interrupts = &interrupts;
+  controls.p1 = mem.getBytePtr(P1);
 
   // interrupts
-  Interrupts::intEnable = Memory::getBytePtr(IE);
-  Interrupts::intFlags = Memory::getBytePtr(IF);
+  interrupts.intEnable = mem.getBytePtr(IE);
+  interrupts.intFlags = mem.getBytePtr(IF);
+
+  // mbc
+  mbc.mem = &mem;
 
   // ppu
-  PPU::screen = &screen;
-  PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
-  PPU::lcdc = Memory::getBytePtr(LCDC);
-  PPU::stat = Memory::getBytePtr(STAT);
-  PPU::scy = Memory::getBytePtr(SCY);
-  PPU::scx = Memory::getBytePtr(SCX);
-  PPU::ly = Memory::getBytePtr(LY);
-  PPU::lyc = Memory::getBytePtr(LYC);
-  PPU::bgp = Memory::getBytePtr(BGP);
-  PPU::obp0 = Memory::getBytePtr(OBP0);
-  PPU::obp1 = Memory::getBytePtr(OBP1);
-  PPU::wx = Memory::getBytePtr(WX);
-  PPU::wy = Memory::getBytePtr(WY);
+  ppu.screen = &screen;
+  ppu.palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
+  ppu.lcdc = mem.getBytePtr(LCDC);
+  ppu.stat = mem.getBytePtr(STAT);
+  ppu.scy = mem.getBytePtr(SCY);
+  ppu.scx = mem.getBytePtr(SCX);
+  ppu.ly = mem.getBytePtr(LY);
+  ppu.lyc = mem.getBytePtr(LYC);
+  ppu.bgp = mem.getBytePtr(BGP);
+  ppu.obp0 = mem.getBytePtr(OBP0);
+  ppu.obp1 = mem.getBytePtr(OBP1);
+  ppu.wx = mem.getBytePtr(WX);
+  ppu.wy = mem.getBytePtr(WY);
 
   // timers
-  Timers::div = Memory::getBytePtr(DIV);
-  Timers::tima = Memory::getBytePtr(TIMA);
-  Timers::tma = Memory::getBytePtr(TMA);
-  Timers::tac = Memory::getBytePtr(TAC);
+  timers.div = mem.getBytePtr(DIV);
+  timers.tima = mem.getBytePtr(TIMA);
+  timers.tma = mem.getBytePtr(TMA);
+  timers.tac = mem.getBytePtr(TAC);
 }
 
 bool CGB::loadRom(const QString romPath) {
-  Memory::loadRom(romPath);
+  mem.loadRom(romPath);
 
   // get rom config
-  CGB::dmgMode = !romPath.contains(".gbc");
-  MBC::bankType = Memory::getByte(BANK_TYPE);
-  MBC::romSize = Memory::getByte(ROM_SIZE);
-  MBC::ramSize = Memory::getByte(RAM_SIZE);
-  MBC::halfRAMMode = MBC::bankType == MBC2_ || MBC::bankType == MBC2_BATTERY;
+  dmgMode = !romPath.contains(".gbc");
+  mbc.bankType = mem.getByte(BANK_TYPE);
+  mbc.romSize = mem.getByte(ROM_SIZE);
+  mbc.ramSize = mem.getByte(RAM_SIZE);
+  mbc.halfRAMMode = mbc.bankType == MBC2_ || mbc.bankType == MBC2_BATTERY;
   // CGB::dmgMode = false;
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
   printf("Game Boy Mode: %s\n", CGB::dmgMode ? "DMG" : "CGB");
-  printf("Bank Type: %s (%02X)\n", MBC::bankTypeStr().c_str(), MBC::bankType);
-  printf("Has RAM: %s\n", MBC::hasRam() ? "true" : "false");
-  printf("Has Battery: %s\n", MBC::hasRamAndBattery() ? "true" : "false");
-  printf("ROM Size: %d KiB\n", (int)pow(2, MBC::romSize + 1) * ROM_BANK_BYTES);
-  printf("RAM Size: %d KiB\n", MBC::ramBytes());
+  printf("Bank Type: %s (%02X)\n", mbc.bankTypeStr().c_str(), mbc.bankType);
+  printf("Has RAM: %s\n", mbc.hasRam() ? "true" : "false");
+  printf("Has Battery: %s\n", mbc.hasRamAndBattery() ? "true" : "false");
+  printf("ROM Size: %d KiB\n", (int)pow(2, mbc.romSize + 1) * ROM_BANK_BYTES);
+  printf("RAM Size: %d KiB\n", mbc.ramBytes());
 
   // check if mbc type of cartridge
   // is implemented
-  if (!MBC::bankTypeImplemented()) {
+  if (!mbc.bankTypeImplemented()) {
     QMessageBox mbox{};
-    auto message = "Bank type " + MBC::bankTypeStr() + " is not supported";
+    auto message = "Bank type " + mbc.bankTypeStr() + " is not supported";
     mbox.setText(QString::fromStdString(message));
     mbox.exec();
     return false;
   }
 
   // set rom path and load exram
-  CGB::romPath = romPath;
-  if (MBC::hasRamAndBattery()) Memory::loadExram();
+  this->romPath = romPath;
+  if (mbc.hasRamAndBattery()) mem.loadExram();
 
   return true;
 }
@@ -153,23 +173,25 @@ void CGB::reset(bool newGame) {
   wait();
   stop = false;
   pause = false;
+  doubleSpeedMode = false;
+  shouldStepPpu = false;
   actionPause->setChecked(false);
 
-  CPU::reset();
-  Timers::reset();
-  Memory::reset();
-  MBC::reset();
-  Bootstrap::reset();
+  cpu.reset();
+  timers.reset();
+  mem.reset();
+  mbc.reset();
+  bootstrap.reset();
 
-  if (!newGame && MBC::hasRamAndBattery()) {
-    Memory::loadExram();
+  if (!newGame && mbc.hasRamAndBattery()) {
+    mem.loadExram();
   }
 }
 
 void CGB::previewPalette(Palette *palette) {
   if (dmgMode) {
-    if (tempPalette == nullptr) tempPalette = PPU::palette;
-    PPU::palette = palette;
+    if (tempPalette == nullptr) tempPalette = ppu.palette;
+    ppu.palette = palette;
     renderInPauseMode();
   }
 }
@@ -177,7 +199,7 @@ void CGB::previewPalette(Palette *palette) {
 void CGB::resetPreviewPalette() {
   if (dmgMode) {
     if (tempPalette != nullptr) {
-      PPU::palette = tempPalette;
+      ppu.palette = tempPalette;
       tempPalette = nullptr;
     }
     renderInPauseMode();
@@ -186,11 +208,11 @@ void CGB::resetPreviewPalette() {
 
 void CGB::renderInPauseMode() {
   if (pause) {
-    PPU::cycles = 0;
+    ppu.cycles = 0;
     for (int i = 0; i < SCANLINE_CYCLES * SCREEN_LINES; ++i) {
-      PPU::step();
+      ppu.step();
     }
-    PPU::frameRendered = false;
+    ppu.frameRendered = false;
     emit sendScreen(&screen);
   }
 }

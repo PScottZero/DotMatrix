@@ -13,6 +13,14 @@
 #include <QThread>
 
 #include "../ui/palettes.h"
+#include "bootstrap.h"
+#include "controls.h"
+#include "cpu.h"
+#include "interrupts.h"
+#include "mbc.h"
+#include "memory.h"
+#include "ppu.h"
+#include "timers.h"
 
 #define FRAME_RATE 59.7275
 #define US_PER_SEC 1000000.0
@@ -25,9 +33,18 @@ class CGB : public QThread {
   QImage screen;
 
  public:
-  static QString romPath;
+  Bootstrap bootstrap;
+  Controls controls;
+  CPU cpu;
+  Interrupts interrupts;
+  MBC mbc;
+  Memory mem;
+  PPU ppu;
+  Timers timers;
+
+  QString romPath;
   QAction *actionPause;
-  static bool stop, dmgMode, doubleSpeedMode, shouldStepPpu;
+  bool stop, dmgMode, doubleSpeedMode, shouldStepPpu;
   bool running, pause;
   Palette *tempPalette;
 
@@ -38,11 +55,10 @@ class CGB : public QThread {
   void init();
   void reset(bool newGame = true);
   bool loadRom(const QString romPath);
-  void addCycle(int count = 1);
   void renderInPauseMode();
 
  signals:
-  void sendScreen(QImage *screen);
+  void sendScreen(const QImage *screen);
 
  public slots:
   void previewPalette(Palette *palette);

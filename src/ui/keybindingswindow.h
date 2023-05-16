@@ -16,13 +16,14 @@ class KeyBindingsWindow : public QDialog {
   Q_OBJECT
 
  public:
-  explicit KeyBindingsWindow(QWidget *parent = nullptr);
+  explicit KeyBindingsWindow(Controls *controls, QWidget *parent = nullptr);
   ~KeyBindingsWindow();
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;
 
  private:
+  Controls *controls;
   Ui::KeyBindingsWindow *ui;
   Button selectedButton;
   bool acceptKeyPress;

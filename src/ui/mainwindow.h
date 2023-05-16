@@ -32,7 +32,7 @@ class MainWindow : public QMainWindow {
   void loadROM();
   void pause(bool shouldPause);
   void reset();
-  void setScreen(QImage *image);
+  void setScreen(const QImage *image);
   void setPalette(QObject *palette);
   void setScale(int scale);
   void openKeyBindingsWindow();

@@ -12,21 +12,17 @@
 
 #include "memory.h"
 
-// cartridge bank type and rom + ram sizes
-uint8 MBC::bankType = ROM_ONLY;
-uint8 MBC::romSize = ROM_SIZE_32KB;
-uint8 MBC::ramSize = NO_RAM;
-
-// mbc registers
-bool MBC::ramEnabled = false;
-uint8 MBC::romBankNum = 1;
-uint8 MBC::ramBankNum = 0;
-bool MBC::romBankBit9 = false;
-bool MBC::bankMode = false;
-
-// flag for half-ram mode, which is
-// exclusive to mbc2
-bool MBC::halfRAMMode = false;
+MBC::MBC()
+    : mem(nullptr),
+      bankType(ROM_ONLY),
+      romSize(ROM_SIZE_32KB),
+      ramSize(NO_RAM),
+      ramEnabled(false),
+      romBankNum(1),
+      ramBankNum(0),
+      romBankBit9(false),
+      bankMode(false),
+      halfRAMMode(false) {}
 
 // **************************************************
 // **************************************************
@@ -88,22 +84,22 @@ void MBC::mbc1(uint16 addr, uint8 val) {
   // rom bank number register
   else if (addr <= MBC1_ROM_BANK_NUM) {
     romBankNum = max(val & FIVE_BITS_MASK, 1);
-    Memory::setRomBank(&Memory::romBank1, mbc1RomBank1BankNum());
+    mem->setRomBank(&mem->romBank1, mbc1RomBank1BankNum());
   }
 
   // ram bank number register
   else if (addr <= MBC1_RAM_BANK_NUM) {
     ramBankNum = val & TWO_BITS_MASK;
-    Memory::setExramBank(mbc1ExramBankNum());
-    Memory::setRomBank(&Memory::romBank0, mbc1RomBank0BankNum());
-    Memory::setRomBank(&Memory::romBank1, mbc1RomBank1BankNum());
+    mem->setExramBank(mbc1ExramBankNum());
+    mem->setRomBank(&mem->romBank0, mbc1RomBank0BankNum());
+    mem->setRomBank(&mem->romBank1, mbc1RomBank1BankNum());
   }
 
   // bank mode select register
   else if (addr <= MBC1_BANK_MODE) {
     bankMode = val & BIT0_MASK;
-    Memory::setExramBank(mbc1ExramBankNum());
-    Memory::setRomBank(&Memory::romBank0, mbc1RomBank0BankNum());
+    mem->setExramBank(mbc1ExramBankNum());
+    mem->setRomBank(&mem->romBank0, mbc1RomBank0BankNum());
   }
 }
 
@@ -127,7 +123,7 @@ void MBC::mbc2(uint16 addr, uint8 val) {
   if (addr <= MBC2_RAM_ROM) {
     if (addr & BIT8_MASK) {
       romBankNum = max(val & NIBBLE_MASK, 1) & romSizeMask();
-      Memory::setRomBank(&Memory::romBank1, romBankNum);
+      mem->setRomBank(&mem->romBank1, romBankNum);
     } else {
       ramEnabled = (val & NIBBLE_MASK) == 0x0A;
     }
@@ -161,20 +157,20 @@ void MBC::mbc5(uint16 addr, uint8 val) {
   // rom bank number lower byte
   else if (addr <= MBC5_ROM_BANK_BYTE_LO) {
     romBankNum = val;
-    Memory::setRomBank(&Memory::romBank1, mbc5RomBankNum());
+    mem->setRomBank(&mem->romBank1, mbc5RomBankNum());
   }
 
   // rom bank number bit 9
   else if (addr <= MBC5_ROM_BANK_BIT_9) {
     romBankBit9 = val & BIT0_MASK;
-    Memory::setRomBank(&Memory::romBank1, mbc5RomBankNum());
+    mem->setRomBank(&mem->romBank1, mbc5RomBankNum());
   }
 
   // ram bank number
   else if (addr <= MBC5_RAM_BANK_NUM) {
     if (val <= 0x0F) {
       ramBankNum = val;
-      Memory::setExramBank(mbc5RamBankNum());
+      mem->setExramBank(mbc5RamBankNum());
     }
   }
 }

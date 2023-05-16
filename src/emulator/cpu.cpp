@@ -10,84 +10,62 @@
 
 #include "cgb.h"
 #include "controls.h"
-#include "cyclecounter.h"
 #include "interrupts.h"
 #include "log.h"
 #include "memory.h"
 #include "ppu.h"
 #include "timers.h"
 
-// initialize program counter
-// and stack pointer
-uint16 CPU::PC = 0;
-uint16 CPU::SP = 0;
-
-// initialize registers
-uint8 CPU::A = 0;
-uint16 CPU::BC = 0;
-uint16 CPU::DE = 0;
-uint16 CPU::HL = 0;
-
-// initialize references to
-// 8-bit registers that make
-// up the 16-bit registers
-// BC, DE, and HL
-uint8 &CPU::B = *((uint8 *)&BC + 1);
-uint8 &CPU::C = *((uint8 *)&BC);
-uint8 &CPU::D = *((uint8 *)&DE + 1);
-uint8 &CPU::E = *((uint8 *)&DE);
-uint8 &CPU::H = *((uint8 *)&HL + 1);
-uint8 &CPU::L = *((uint8 *)&HL);
-
-// initialize flags
-bool CPU::carry = false;
-bool CPU::halfCarry = false;
-bool CPU::subtract = false;
-bool CPU::zero = false;
-bool CPU::IME = false;
-bool CPU::halt = false;
-bool CPU::shouldSetIME = false;
-bool CPU::delaySetIME = true;
-bool CPU::triggerHaltBug = false;
-
-// initialize register maps
-//
-// some instructions use 3-bits of
-// the instruction to select an 8-bit
-// register (B, C, D, E, H, L, N/A, A)
-//
-// other instructions using 2-bits of
-// the instruction to select a 16-bit
-// register (BC, DE, HL, SP/AF)
-uint8 *CPU::regmap8[NUM_REG_8]{&CPU::B, &CPU::C, &CPU::D, &CPU::E,
-                               &CPU::H, &CPU::L, nullptr, &CPU::A};
-uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
-
-uint16 CPU::serialTransferCycles = 0;
-bool CPU::serialTransferMode = false;
+CPU::CPU()
+    : PC(),
+      SP(),
+      A(),
+      BC(),
+      DE(),
+      HL(),
+      B(*((uint8 *)&BC + 1)),
+      C(*((uint8 *)&BC)),
+      D(*((uint8 *)&DE + 1)),
+      E(*((uint8 *)&DE)),
+      H(*((uint8 *)&HL + 1)),
+      L(*((uint8 *)&HL)),
+      carry(),
+      halfCarry(),
+      subtract(),
+      zero(),
+      IME(),
+      halt(),
+      shouldSetIME(),
+      delaySetIME(true),
+      triggerHaltBug(),
+      regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
+      regmap16{&BC, &DE, &HL, &SP},
+      serialTransferCycles(),
+      serialTransferMode(false),
+      cgb(nullptr) {}
 
 // perform CPU step by performing
 // a single instruction
 void CPU::step() {
-  Controls::update();
+  cgb->controls.update();
 
   // check if serial transfer has completed
   if (serialTransferComplete()) {
-    Memory::getByte(SC) &= ~BIT7_MASK;
-    Interrupts::request(SERIAL_INT);
+    cgb->mem.getByte(SC) &= ~BIT7_MASK;
+    cgb->interrupts.request(SERIAL_INT);
   }
 
   // check for interrupts
   handleInterrupts();
 
   // run instruction at current PC
-  if (!halt && !CGB::stop) {
+  if (!halt && !cgb->stop) {
     Log::logCPUState(PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero,
-                     IME, *Interrupts::intEnable, *Interrupts::intFlags,
-                     Memory::getByte(LCDC), Memory::getByte(STAT),
-                     Memory::getByte(LY), Memory::getByte(DIV),
-                     Memory::getByte(TIMA));
-    uint8 opcode = Memory::imm8(PC);
+                     IME, *cgb->interrupts.intEnable, *cgb->interrupts.intFlags,
+                     cgb->mem.getByte(LCDC), cgb->mem.getByte(STAT),
+                     cgb->mem.getByte(LY), cgb->mem.getByte(DIV),
+                     cgb->mem.getByte(TIMA));
+    uint8 opcode = cgb->mem.imm8(PC);
 
     // trigger halt bug by failing to
     // increment PC (since imm8 function
@@ -120,12 +98,12 @@ void CPU::step() {
 // of ppu and timers cycles
 void CPU::ppuTimerSerialStep(int cycles) {
   for (int i = 0; i < cycles; ++i) {
-    if (!CGB::doubleSpeedMode || CGB::shouldStepPpu) PPU::step();
-    Timers::step();
-    if (CGB::doubleSpeedMode) {
-      CGB::shouldStepPpu = !CGB::shouldStepPpu;
+    if (!cgb->doubleSpeedMode || cgb->shouldStepPpu) cgb->ppu.step();
+    cgb->timers.step();
+    if (cgb->doubleSpeedMode) {
+      cgb->shouldStepPpu = !cgb->shouldStepPpu;
     } else {
-      CGB::shouldStepPpu = false;
+      cgb->shouldStepPpu = false;
     }
   }
   if (serialTransferMode) serialTransferCycles += cycles;
@@ -185,35 +163,35 @@ void CPU::runInstr(uint8 opcode) {
     // 3 ----
     // load 8-bit immediate n into memory at HL
     case 0x36:
-      Memory::write(HL, Memory::imm8(PC));
+      cgb->mem.write(HL, cgb->mem.imm8(PC));
       break;
 
     // LD A, (BC)
     // 2 ----
     // load memory at BC into accumulator
     case 0x0A:
-      A = Memory::read(BC);
+      A = cgb->mem.read(BC);
       break;
 
     // LD A, (DE)
     // 2 ----
     // load memory at DE into accumulator
     case 0x1A:
-      A = Memory::read(DE);
+      A = cgb->mem.read(DE);
       break;
 
     // LD A, (C)
     // 2 ----
     // load memory at FF00 + C into accumulator
     case 0xF2:
-      A = Memory::read(ZERO_PAGE_ADDR + C);
+      A = cgb->mem.read(ZERO_PAGE_ADDR + C);
       break;
 
     // LD (C), A
     // 2 ----
     // load accumulator into memory at FF00 + C
     case 0xE2:
-      Memory::write(ZERO_PAGE_ADDR + C, A);
+      cgb->mem.write(ZERO_PAGE_ADDR + C, A);
       break;
 
     // LD A, (n)
@@ -221,7 +199,7 @@ void CPU::runInstr(uint8 opcode) {
     // load memory at FF00 + 8-bit immediate n
     // into accumulator
     case 0xF0:
-      A = Memory::read(ZERO_PAGE_ADDR + Memory::imm8(PC));
+      A = cgb->mem.read(ZERO_PAGE_ADDR + cgb->mem.imm8(PC));
       break;
 
     // LD (n), A
@@ -229,7 +207,7 @@ void CPU::runInstr(uint8 opcode) {
     // load accumulator into memory at
     // FF00 + 8-bit immediate n
     case 0xE0:
-      Memory::write(ZERO_PAGE_ADDR + Memory::imm8(PC), A);
+      cgb->mem.write(ZERO_PAGE_ADDR + cgb->mem.imm8(PC), A);
       break;
 
     // LD A, (nn)
@@ -237,7 +215,7 @@ void CPU::runInstr(uint8 opcode) {
     // load memory at 16-bit immediate nn
     // into accumulator
     case 0xFA:
-      A = Memory::read(Memory::imm16(PC));
+      A = cgb->mem.read(cgb->mem.imm16(PC));
       break;
 
     // LD (nn), A
@@ -245,7 +223,7 @@ void CPU::runInstr(uint8 opcode) {
     // load accumulator into memory at
     // 16-bit immediate nn
     case 0xEA:
-      Memory::write(Memory::imm16(PC), A);
+      cgb->mem.write(cgb->mem.imm16(PC), A);
       break;
 
     // LD A, (HLI)
@@ -253,7 +231,7 @@ void CPU::runInstr(uint8 opcode) {
     // load memory at HL into accumulator
     // then increment HL
     case 0x2A:
-      A = Memory::read(HL++);
+      A = cgb->mem.read(HL++);
       break;
 
     // LD A, (HLD)
@@ -261,21 +239,21 @@ void CPU::runInstr(uint8 opcode) {
     // load memory at HL into accumulator
     // then decrement HL
     case 0x3A:
-      A = Memory::read(HL--);
+      A = cgb->mem.read(HL--);
       break;
 
     // LD (BC), A
     // 2 ----
     // load accumulator into memory at BC
     case 0x02:
-      Memory::write(BC, A);
+      cgb->mem.write(BC, A);
       break;
 
     // LD (DE), A
     // 2 ----
     // load accumulator into memory at DE
     case 0x12:
-      Memory::write(DE, A);
+      cgb->mem.write(DE, A);
       break;
 
     // LD (HLI), A
@@ -283,7 +261,7 @@ void CPU::runInstr(uint8 opcode) {
     // load accumulator into memory at HL
     // then increment HL
     case 0x22:
-      Memory::write(HL++, A);
+      cgb->mem.write(HL++, A);
       break;
 
     // LD (HLD), A
@@ -291,7 +269,7 @@ void CPU::runInstr(uint8 opcode) {
     // load accumulator into memory at HL
     // then decrement HL
     case 0x32:
-      Memory::write(HL--, A);
+      cgb->mem.write(HL--, A);
       break;
 
     // **************************************************
@@ -311,7 +289,7 @@ void CPU::runInstr(uint8 opcode) {
     // load the stack pointer + 8-bit signed
     // immediate e into register HL
     case 0xF8:
-      HL = addSP(Memory::imm8(PC));
+      HL = addSP(cgb->mem.imm8(PC));
       ppuTimerSerialStep(1);
       break;
 
@@ -320,7 +298,7 @@ void CPU::runInstr(uint8 opcode) {
     // load the stack pointer into memory at
     // 16-bit immediate nn
     case 0x08:
-      Memory::write(Memory::imm16(PC), SP);
+      cgb->mem.write(cgb->mem.imm16(PC), SP);
       break;
 
     // **************************************************
@@ -332,7 +310,7 @@ void CPU::runInstr(uint8 opcode) {
     // add 8-bit immediate n to accumulator and
     // store result in accumulator
     case 0xC6:
-      A = add(A, Memory::imm8(PC));
+      A = add(A, cgb->mem.imm8(PC));
       break;
 
     // ADC A, n
@@ -341,7 +319,7 @@ void CPU::runInstr(uint8 opcode) {
     // accumulator and store result
     // in accumulator
     case 0xCE:
-      A = add(A, Memory::imm8(PC), carry);
+      A = add(A, cgb->mem.imm8(PC), carry);
       break;
 
     // SUB A, n
@@ -349,7 +327,7 @@ void CPU::runInstr(uint8 opcode) {
     // subtract 8-bit immediate n to accumulator
     // and store result in accumulator
     case 0xD6:
-      A = sub(A, Memory::imm8(PC));
+      A = sub(A, cgb->mem.imm8(PC));
       break;
 
     // SBC A, n
@@ -358,7 +336,7 @@ void CPU::runInstr(uint8 opcode) {
     // accumulator and store result
     // in accumulator
     case 0xDE:
-      A = sub(A, Memory::imm8(PC), carry);
+      A = sub(A, cgb->mem.imm8(PC), carry);
       break;
 
     // AND A, n
@@ -366,7 +344,7 @@ void CPU::runInstr(uint8 opcode) {
     // and 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xE6:
-      _and(Memory::imm8(PC));
+      _and(cgb->mem.imm8(PC));
       break;
 
     // XOR A, n
@@ -374,7 +352,7 @@ void CPU::runInstr(uint8 opcode) {
     // xor 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xEE:
-      _xor(Memory::imm8(PC));
+      _xor(cgb->mem.imm8(PC));
       break;
 
     // OR A, n
@@ -382,14 +360,14 @@ void CPU::runInstr(uint8 opcode) {
     // or 8-bit immediate n with accumulator
     // and store result in accumulator
     case 0xF6:
-      _or(Memory::imm8(PC));
+      _or(cgb->mem.imm8(PC));
       break;
 
     // CP A, n
     // 2 CH1Z
     // compare 8-bit immediate n with accumulator
     case 0xFE:
-      sub(A, Memory::imm8(PC));
+      sub(A, cgb->mem.imm8(PC));
       break;
 
     // **************************************************
@@ -401,7 +379,7 @@ void CPU::runInstr(uint8 opcode) {
     // add 8-bit signed immediate e to stack pointer
     // and store result in stack pointer
     case 0xE8:
-      SP = addSP(Memory::imm8(PC));
+      SP = addSP(cgb->mem.imm8(PC));
       ppuTimerSerialStep(2);
       break;
 
@@ -449,7 +427,7 @@ void CPU::runInstr(uint8 opcode) {
 
     // run instruction with CB prefix
     case 0xCB:
-      runInstrCB(Memory::imm8(PC));
+      runInstrCB(cgb->mem.imm8(PC));
       break;
 
     // **************************************************
@@ -460,7 +438,7 @@ void CPU::runInstr(uint8 opcode) {
     // 4 ----
     // jump to 16-bit immediate address nn
     case 0xC3:
-      PC = Memory::imm16(PC);
+      PC = cgb->mem.imm16(PC);
       ppuTimerSerialStep(1);
       break;
 
@@ -469,7 +447,7 @@ void CPU::runInstr(uint8 opcode) {
     // jump to address PC + 8-bit signed
     // immediate e
     case 0x18:
-      PC += (int8)Memory::imm8(PC);
+      PC += (int8)cgb->mem.imm8(PC);
       ppuTimerSerialStep(1);
       break;
 
@@ -486,7 +464,7 @@ void CPU::runInstr(uint8 opcode) {
     // 16-bit immediate address
     case 0xCD:
       push(PC + 2);
-      PC = Memory::imm16(PC);
+      PC = cgb->mem.imm16(PC);
       break;
 
     // RET
@@ -575,7 +553,7 @@ void CPU::runInstr(uint8 opcode) {
     // halts the cpu and system clock
     case 0x76:
       halt = true;
-      if (!IME && Interrupts::pending()) {
+      if (!IME && cgb->interrupts.pending()) {
         halt = false;
         triggerHaltBug = true;
       }
@@ -590,7 +568,7 @@ void CPU::runInstr(uint8 opcode) {
     case 0x10:
       // if any buttons are pressed, do
       // not enter stop mode
-      if ((*Controls::p1 & NIBBLE_MASK) != 0x0F) {
+      if ((*cgb->controls.p1 & NIBBLE_MASK) != 0x0F) {
         // if interrupts are pending,
         // stop is a 1-byte opcode, and
         // div does not reset
@@ -598,7 +576,7 @@ void CPU::runInstr(uint8 opcode) {
         // if no interrupts are pending,
         // stop is a 2-byte opcode, and
         // halt mode is entered
-        if (!Interrupts::pending()) {
+        if (!cgb->interrupts.pending()) {
           ++PC;
           halt = true;
         }
@@ -606,22 +584,22 @@ void CPU::runInstr(uint8 opcode) {
 
       // if a speed switch was not requested,
       // enter stop mode and reset div
-      else if ((Memory::getByte(KEY1) & BIT0_MASK) != 0x01) {
-        CGB::stop = true;
-        Timers::reset();
+      else if ((cgb->mem.getByte(KEY1) & BIT0_MASK) != 0x01) {
+        cgb->stop = true;
+        cgb->timers.reset();
 
         // if interrupts are pending,
         // stop is a 1-byte opcode
         //
         // if no interrupts are pending,
         // stop is a 2-byte opcode
-        if (!Interrupts::pending()) ++PC;
+        if (!cgb->interrupts.pending()) ++PC;
       }
 
       // if a speed switch was requested,
       // do not enter stop mode and reset div
-      else if ((Memory::getByte(KEY1) & BIT0_MASK) == 0x01) {
-        Timers::reset();
+      else if ((cgb->mem.getByte(KEY1) & BIT0_MASK) == 0x01) {
+        cgb->timers.reset();
 
         // if interrupts are pending,
         // check value of IME
@@ -630,12 +608,12 @@ void CPU::runInstr(uint8 opcode) {
         // stop is a 2-byte opcode and
         // halt mode is entered (and cpu
         // changes speed on cgb)
-        if (!Interrupts::pending()) {
+        if (!cgb->interrupts.pending()) {
           ++PC;
 
           // just reset bit 0 of KEY1, do not
           // actually enter halt mode
-          Memory::getByte(KEY1) &= ~BIT0_MASK;
+          cgb->mem.getByte(KEY1) &= ~BIT0_MASK;
         } else {
           // if IME is disabled, stop is a
           // 1-byte opcode and mode does
@@ -677,7 +655,7 @@ void CPU::runInstr(uint8 opcode) {
             // 3 ----
             // load 16-bit immediate nn into register pair dd
             case 0x1:
-              *regmap16[regPair] = Memory::imm16(PC);
+              *regmap16[regPair] = cgb->mem.imm16(PC);
               break;
 
             // INC ss
@@ -714,7 +692,7 @@ void CPU::runInstr(uint8 opcode) {
                 // immediate e if jump condition cc is met
                 case 0b000:
                   if (jumpCondMet(jumpCond)) {
-                    PC += (int8)Memory::imm8(PC);
+                    PC += (int8)cgb->mem.imm8(PC);
                   } else {
                     ++PC;
                   }
@@ -726,7 +704,7 @@ void CPU::runInstr(uint8 opcode) {
                 // increment register r (or memory at HL)
                 case 0b100:
                   if (regDest == MEM_HL) {
-                    Memory::write(HL, add(Memory::read(HL), 1));
+                    cgb->mem.write(HL, add(cgb->mem.read(HL), 1));
                   } else {
                     *regmap8[regDest] = add(*regmap8[regDest], 1);
                   }
@@ -738,7 +716,7 @@ void CPU::runInstr(uint8 opcode) {
                 // decrement register r (or memory at HL)
                 case 0b101:
                   if (regDest == MEM_HL) {
-                    Memory::write(HL, sub(Memory::read(HL), 1));
+                    cgb->mem.write(HL, sub(cgb->mem.read(HL), 1));
                   } else {
                     *regmap8[regDest] = sub(*regmap8[regDest], 1);
                   }
@@ -751,9 +729,9 @@ void CPU::runInstr(uint8 opcode) {
                 // (or memory at HL)
                 case 0b110:
                   if (regDest == MEM_HL) {
-                    Memory::write(HL, Memory::imm8(PC));
+                    cgb->mem.write(HL, cgb->mem.imm8(PC));
                   } else {
-                    *regmap8[regDest] = Memory::imm8(PC);
+                    *regmap8[regDest] = cgb->mem.imm8(PC);
                   }
                   break;
               }
@@ -767,9 +745,9 @@ void CPU::runInstr(uint8 opcode) {
           // load value of register r' (or memory at HL)
           // into register r (or memory at HL)
           if (regSrc == MEM_HL) {
-            *regmap8[regDest] = Memory::read(HL);
+            *regmap8[regDest] = cgb->mem.read(HL);
           } else if (regDest == MEM_HL) {
-            Memory::write(HL, *regmap8[regSrc]);
+            cgb->mem.write(HL, *regmap8[regSrc]);
           } else {
             *regmap8[regDest] = *regmap8[regSrc];
           }
@@ -784,7 +762,7 @@ void CPU::runInstr(uint8 opcode) {
             // in accumulator
             case 0b000:
               A = add(A,
-                      regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+                      regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
 
             // ADC A, r / ADC A, (HL)
@@ -793,7 +771,8 @@ void CPU::runInstr(uint8 opcode) {
             // carry to accumulator and store result
             // in accumulator
             case 0b001:
-              A = add(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc],
+              A = add(A,
+                      regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc],
                       carry);
               break;
 
@@ -804,7 +783,7 @@ void CPU::runInstr(uint8 opcode) {
             // in accumulator
             case 0b010:
               A = sub(A,
-                      regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+                      regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
 
             // SBC A, r / SBC A, (HL)
@@ -813,7 +792,8 @@ void CPU::runInstr(uint8 opcode) {
             // carry from accumulator and store result
             // in accumulator
             case 0b011:
-              A = sub(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc],
+              A = sub(A,
+                      regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc],
                       carry);
               break;
 
@@ -822,7 +802,7 @@ void CPU::runInstr(uint8 opcode) {
             // and register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b100:
-              _and(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+              _and(regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
 
             // XOR A, r / XOR A, (HL)
@@ -830,7 +810,7 @@ void CPU::runInstr(uint8 opcode) {
             // xor register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b101:
-              _xor(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+              _xor(regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
 
             // OR A, r / OR A, (HL)
@@ -838,7 +818,7 @@ void CPU::runInstr(uint8 opcode) {
             // or register r (or memory at HL) with
             // accumulator and store result in accumulator
             case 0b110:
-              _or(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+              _or(regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
 
             // CP A, r / CP A, (HL)
@@ -846,7 +826,7 @@ void CPU::runInstr(uint8 opcode) {
             // compare register r (or memory at HL)
             // with accumulator
             case 0b111:
-              sub(A, regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc]);
+              sub(A, regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc]);
               break;
           }
           break;
@@ -893,7 +873,7 @@ void CPU::runInstr(uint8 opcode) {
                 // cc is met
                 case 0b010:
                   if (jumpCondMet(jumpCond)) {
-                    PC = Memory::imm16(PC);
+                    PC = cgb->mem.imm16(PC);
                     ppuTimerSerialStep(1);
                   } else {
                     PC += 2;
@@ -909,7 +889,7 @@ void CPU::runInstr(uint8 opcode) {
                 case 0b100:
                   if (jumpCondMet(jumpCond)) {
                     push(PC + 2);
-                    PC = Memory::imm16(PC);
+                    PC = cgb->mem.imm16(PC);
                   } else {
                     PC += 2;
                     ppuTimerSerialStep(2);
@@ -951,7 +931,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the left
         case 0b000:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, rotateLeft(Memory::read(HL)));
+            cgb->mem.write(HL, rotateLeft(cgb->mem.read(HL)));
           } else {
             *regmap8[regSrc] = rotateLeft(*regmap8[regSrc]);
           }
@@ -963,7 +943,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the right
         case 0b001:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, rotateRight(Memory::read(HL)));
+            cgb->mem.write(HL, rotateRight(cgb->mem.read(HL)));
           } else {
             *regmap8[regSrc] = rotateRight(*regmap8[regSrc]);
           }
@@ -975,7 +955,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the left through carry
         case 0b010:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, rotateLeft(Memory::read(HL), true));
+            cgb->mem.write(HL, rotateLeft(cgb->mem.read(HL), true));
           } else {
             *regmap8[regSrc] = rotateLeft(*regmap8[regSrc], true);
           }
@@ -987,7 +967,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the right through carry
         case 0b011:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, rotateRight(Memory::read(HL), true));
+            cgb->mem.write(HL, rotateRight(cgb->mem.read(HL), true));
           } else {
             *regmap8[regSrc] = rotateRight(*regmap8[regSrc], true);
           }
@@ -999,7 +979,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the left
         case 0b100:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, shiftLeft(Memory::read(HL)));
+            cgb->mem.write(HL, shiftLeft(cgb->mem.read(HL)));
           } else {
             *regmap8[regSrc] = shiftLeft(*regmap8[regSrc]);
           }
@@ -1011,7 +991,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the right arithmetically
         case 0b101:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, shiftRight(Memory::read(HL), true));
+            cgb->mem.write(HL, shiftRight(cgb->mem.read(HL), true));
           } else {
             *regmap8[regSrc] = shiftRight(*regmap8[regSrc], true);
           }
@@ -1023,7 +1003,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // register r (or memory at HL)
         case 0b110:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, swap(Memory::read(HL)));
+            cgb->mem.write(HL, swap(cgb->mem.read(HL)));
           } else {
             *regmap8[regSrc] = swap(*regmap8[regSrc]);
           }
@@ -1035,7 +1015,7 @@ void CPU::runInstrCB(uint8 opcode) {
         // to the right logically
         case 0b111:
           if (regSrc == MEM_HL) {
-            Memory::write(HL, shiftRight(Memory::read(HL)));
+            cgb->mem.write(HL, shiftRight(cgb->mem.read(HL)));
           } else {
             *regmap8[regSrc] = shiftRight(*regmap8[regSrc]);
           }
@@ -1052,7 +1032,7 @@ void CPU::runInstrCB(uint8 opcode) {
     // copies complement of bit b of register r
     // (or memory at HL) into zero flag
     case 0b01:
-      bit(regSrc == MEM_HL ? Memory::read(HL) : *regmap8[regSrc], regDest);
+      bit(regSrc == MEM_HL ? cgb->mem.read(HL) : *regmap8[regSrc], regDest);
       break;
 
     // RES b, r / RES b, (HL)
@@ -1061,7 +1041,7 @@ void CPU::runInstrCB(uint8 opcode) {
     // to zero
     case 0b10:
       if (regSrc == MEM_HL) {
-        Memory::write(HL, set(Memory::read(HL), regDest, 0));
+        cgb->mem.write(HL, set(cgb->mem.read(HL), regDest, 0));
       } else {
         *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 0);
       }
@@ -1073,7 +1053,7 @@ void CPU::runInstrCB(uint8 opcode) {
     // to one
     case 0b11:
       if (regSrc == MEM_HL) {
-        Memory::write(HL, set(Memory::read(HL), regDest, 1));
+        cgb->mem.write(HL, set(cgb->mem.read(HL), regDest, 1));
       } else {
         *regmap8[regSrc] = set(*regmap8[regSrc], regDest, 1);
       }
@@ -1090,14 +1070,14 @@ void CPU::runInstrCB(uint8 opcode) {
 // push the 16-bit number val onto the stack
 void CPU::push(uint16 val) {
   SP -= 2;
-  Memory::write(SP, val);
+  cgb->mem.write(SP, val);
   ppuTimerSerialStep(1);
 }
 
 // pop from the stack and return popped
 // 16-bit number
 uint16 CPU::pop() {
-  uint16 val = Memory::read16(SP);
+  uint16 val = cgb->mem.read16(SP);
   SP += 2;
   return val;
 }
@@ -1431,15 +1411,15 @@ void CPU::handleInterrupts() {
   // resume running cpu from halt mode if there is an
   // interrupt that needs to be serviced, halt mode
   // exits after 1 machine cycle
-  if (halt && Interrupts::pending()) {
+  if (halt && cgb->interrupts.pending()) {
     halt = false;
     ppuTimerSerialStep(1);
   }
 
   // if a button is pressed while in stop mode, exit
   // stop mode
-  if (CGB::stop && ((*Controls::p1 & NIBBLE_MASK) != 0x0F)) {
-    CGB::stop = false;
+  if (cgb->stop && ((*cgb->controls.p1 & NIBBLE_MASK) != 0x0F)) {
+    cgb->stop = false;
   }
 
   // if interrupts are enabled and an interrupt
@@ -1447,22 +1427,22 @@ void CPU::handleInterrupts() {
   // in the IE register
   if (IME) {
     uint16 intAddr = 0;
-    if (Interrupts::requestedAndEnabled(V_BLANK_INT)) {
+    if (cgb->interrupts.requestedAndEnabled(V_BLANK_INT)) {
       intAddr = VBLANK_INT_ADDR;
-      Interrupts::reset(PC, V_BLANK_INT);
-    } else if (Interrupts::requestedAndEnabled(LCDC_INT)) {
+      cgb->interrupts.reset(PC, V_BLANK_INT);
+    } else if (cgb->interrupts.requestedAndEnabled(LCDC_INT)) {
       intAddr = LCDC_INT_ADDR;
-      Interrupts::reset(PC, LCDC_INT);
-    } else if (Interrupts::requestedAndEnabled(TIMER_INT)) {
+      cgb->interrupts.reset(PC, LCDC_INT);
+    } else if (cgb->interrupts.requestedAndEnabled(TIMER_INT)) {
       intAddr = TIMER_INT_ADDR;
-      Interrupts::reset(PC, TIMER_INT);
-    } else if (Interrupts::requestedAndEnabled(SERIAL_INT)) {
+      cgb->interrupts.reset(PC, TIMER_INT);
+    } else if (cgb->interrupts.requestedAndEnabled(SERIAL_INT)) {
       intAddr = SERIAL_INT_ADDR;
-      Memory::getByte(SB) = 0xFF;
-      Interrupts::reset(PC, SERIAL_INT);
-    } else if (Interrupts::requestedAndEnabled(JOYPAD_INT)) {
+      cgb->mem.getByte(SB) = 0xFF;
+      cgb->interrupts.reset(PC, SERIAL_INT);
+    } else if (cgb->interrupts.requestedAndEnabled(JOYPAD_INT)) {
       intAddr = JOYPAD_INT_ADDR;
-      Interrupts::reset(PC, JOYPAD_INT);
+      cgb->interrupts.reset(PC, JOYPAD_INT);
     }
 
     // service interrupt by pushing current

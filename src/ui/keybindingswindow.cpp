@@ -4,8 +4,9 @@
 
 #include "ui_keybindingswindow.h"
 
-KeyBindingsWindow::KeyBindingsWindow(QWidget *parent)
-    : QDialog(parent),
+KeyBindingsWindow::KeyBindingsWindow(Controls *controls, QWidget *parent)
+    : controls(controls),
+      QDialog(parent),
       ui(new Ui::KeyBindingsWindow),
       selectedButton(UP),
       acceptKeyPress(false),
@@ -25,7 +26,7 @@ KeyBindingsWindow::KeyBindingsWindow(QWidget *parent)
 
   for (const auto &pair : setKeyButtons) {
     auto label = buttonKeyLabels[pair.first];
-    QKeySequence seq(Controls::joypadBindings[pair.first]);
+    QKeySequence seq(controls->joypadBindings[pair.first]);
     label->setText(seq.toString());
     connect(pair.second, &QPushButton::clicked, this,
             [this, pair] { startBind(pair.first); });
@@ -42,7 +43,7 @@ void KeyBindingsWindow::startBind(Button button) {
 
 void KeyBindingsWindow::keyPressEvent(QKeyEvent *event) {
   if (acceptKeyPress) {
-    Controls::bind(event->key(), selectedButton);
+    controls->bind(event->key(), selectedButton);
     acceptKeyPress = false;
     QKeySequence seq(event->key());
     buttonKeyLabels[selectedButton]->setText(seq.toString());

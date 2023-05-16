@@ -32,13 +32,9 @@ set(PROJECT_SOURCES
         src/emulator/bootstrap.h
         src/emulator/log.cpp
         src/emulator/log.h
-        src/emulator/cyclecounter.cpp
-        src/emulator/cyclecounter.h
         src/emulator/types.h
         src/emulator/mbc.cpp
         src/emulator/mbc.h
-        src/emulator/apu.cpp
-        src/emulator/apu.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui

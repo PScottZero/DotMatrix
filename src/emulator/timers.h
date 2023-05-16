@@ -21,17 +21,22 @@
 
 #define DIV_MASK 0xFF00
 
+class CGB;
+
 class Timers {
  private:
   static const uint16 internalCounterMasks[4];
 
-  static bool timerEnabled();
-  static uint8 timerFreq();
+  bool timerEnabled();
+  uint8 timerFreq();
 
  public:
-  static uint8 *div, *tima, *tma, *tac;
-  static uint16 internalCounter;
+  CGB *cgb;
+  uint8 *div, *tima, *tma, *tac;
+  uint16 internalCounter;
 
-  static void step();
-  static void reset();
+  Timers();
+
+  void step();
+  void reset();
 };

@@ -122,62 +122,68 @@
 
 using namespace std;
 
+class CGB;
+
 class Memory {
  private:
   // dma tranfser
-  static void oamDmaTransfer();
-  static void vramDmaTransfer();
+  void oamDmaTransfer();
+  void vramDmaTransfer();
 
   // echo functions
-  static void echoRam(uint16 addr, uint8 val);
-  static void echoHalfRam(uint16 addr, uint8 val);
+  void echoRam(uint16 addr, uint8 val);
+  void echoHalfRam(uint16 addr, uint8 val);
 
  public:
+  CGB *cgb;
+
   // allocated memory
-  static uint8 *mem;
-  static uint8 *cart;
-  static uint8 *vram;
-  static uint8 *exram;
-  static uint8 *wram;
-  static uint8 cramBg[PAL_COUNT * PAL_SIZE];
-  static uint8 cramObj[PAL_COUNT * PAL_SIZE];
+  uint8 *mem;
+  uint8 *cart;
+  uint8 *vram;
+  uint8 *exram;
+  uint8 *wram;
+  uint8 cramBg[PAL_COUNT * PAL_SIZE];
+  uint8 cramObj[PAL_COUNT * PAL_SIZE];
 
   // memory banks
-  static uint8 *romBank0;
-  static uint8 *romBank1;
-  static uint8 *vramBank;
-  static uint8 *exramBank;
-  static uint8 *wramBank;
-  static uint8 *bcpd, *ocpd;
+  uint8 *romBank0;
+  uint8 *romBank1;
+  uint8 *vramBank;
+  uint8 *exramBank;
+  uint8 *wramBank;
+  uint8 *bcpd, *ocpd;
+
+  Memory();
 
   // memory read + write functions
-  static uint8 read(uint16 addr);
-  static uint16 read16(uint16 addr);
-  static uint8 readBits(uint16 addr, vector<uint8> bits);
-  static void write(uint16 addr, uint8 val);
-  static void write(uint16 addr, uint16 val);
-  static void writeBits(uint16 addr, uint16 val, vector<uint8> bits);
-  static uint8 imm8(uint16 &PC);
-  static uint16 imm16(uint16 &PC);
-  static uint8 &getByte(uint16 addr);
-  static uint8 *getBytePtr(uint16 addr);
-  static uint8 &getVramByte(uint16 addr, bool bank);
+  uint8 read(uint16 addr);
+  uint16 read16(uint16 addr);
+  uint8 readBits(uint16 addr, vector<uint8> bits);
+  void write(uint16 addr, uint8 val);
+  void write(uint16 addr, uint16 val);
+  void writeBits(uint16 addr, uint16 val, vector<uint8> bits);
+  uint8 imm8(uint16 &PC);
+  uint16 imm16(uint16 &PC);
+  uint8 &getByte(uint16 addr);
+  uint8 *getBytePtr(uint16 addr);
+  uint8 &getVramByte(uint16 addr, bool bank);
 
   // rom + ram bank functions
-  static void setRomBank(uint8 **romBank, uint8 bankNum);
-  static void setVramBank(uint8 bankNum);
-  static void setExramBank(uint8 bankNum);
-  static void setWramBank(uint8 bankNum);
+  void setRomBank(uint8 **romBank, uint8 bankNum);
+  void setVramBank(uint8 bankNum);
+  void setExramBank(uint8 bankNum);
+  void setWramBank(uint8 bankNum);
 
   // HDMA5 register functions
-  static bool vramTransferMode();
-  static uint16 vramTransferLength();
+  bool vramTransferMode();
+  uint16 vramTransferLength();
 
   // save + load functions
-  static void loadRom(QString dir);
-  static void loadExram();
-  static void saveExram();
+  void loadRom(QString dir);
+  void loadExram();
+  void saveExram();
 
   // reset memory
-  static void reset();
+  void reset();
 };

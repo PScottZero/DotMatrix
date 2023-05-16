@@ -17,6 +17,10 @@
 
 #include "types.h"
 
+#define CPU_CLOCK_SPEED 0x100000
+#define SERIAL_TRANSFER_SPEED 0x2000
+#define SERIAL_TRANSFER_CYCLES (CPU_CLOCK_SPEED / SERIAL_TRANSFER_SPEED) * 8
+
 // register constants
 #define NUM_REG_16 4
 #define NUM_REG_8 8
@@ -35,67 +39,72 @@
 #define SERIAL_INT_ADDR 0x58
 #define JOYPAD_INT_ADDR 0x60
 
+class CGB;
+
 class CPU {
  private:
-  static uint16 PC, SP, BC, DE, HL;        // 16-bit registers
-  static uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
+  uint16 PC, SP, BC, DE, HL;        // 16-bit registers
+  uint8 A, &B, &C, &D, &E, &H, &L;  // 8-bit registers
 
-  static bool zero, subtract, halfCarry, carry, IME, halt;  // flags
+  bool zero, subtract, halfCarry, carry, IME, halt;  // flags
 
-  static uint8 *regmap8[NUM_REG_8];
-  static uint16 *regmap16[NUM_REG_16];
+  uint8 *regmap8[NUM_REG_8];
+  uint16 *regmap16[NUM_REG_16];
 
-  static bool shouldSetIME, delaySetIME, triggerHaltBug;
+  bool shouldSetIME, delaySetIME, triggerHaltBug;
 
-  static uint16 serialTransferCycles;
+  uint16 serialTransferCycles;
 
-  static void ppuTimerSerialStep(int cycles);
-  static bool serialTransferComplete();
+  bool serialTransferComplete();
 
   // instruction decoding functions
-  static void runInstr(uint8 opcode);
-  static void runInstrCB(uint8 opcode);
+  void runInstr(uint8 opcode);
+  void runInstrCB(uint8 opcode);
 
   // transfer functions
-  static void push(uint16 val);
-  static uint16 pop();
+  void push(uint16 val);
+  uint16 pop();
 
   // arithmetic and logical functions
-  static uint8 add(uint8 a, uint8 b, bool c = false);
-  static void addHL(uint16 val);
-  static uint16 addSP(int8 val);
-  static uint8 sub(uint8 a, uint8 b, bool c = false);
-  static void _and(uint8 val);
-  static void _or(uint8 val);
-  static void _xor(uint8 val);
+  uint8 add(uint8 a, uint8 b, bool c = false);
+  void addHL(uint16 val);
+  uint16 addSP(int8 val);
+  uint8 sub(uint8 a, uint8 b, bool c = false);
+  void _and(uint8 val);
+  void _or(uint8 val);
+  void _xor(uint8 val);
 
   // rotate shift functions
-  static uint8 rotateLeft(uint8 val, bool thruCarry = false);
-  static uint8 rotateRight(uint8 val, bool thruCarry = false);
-  static uint8 shiftLeft(uint8 val);
-  static uint8 shiftRight(uint8 val, bool arithmetic = false);
-  static uint8 swap(uint8 val);
+  uint8 rotateLeft(uint8 val, bool thruCarry = false);
+  uint8 rotateRight(uint8 val, bool thruCarry = false);
+  uint8 shiftLeft(uint8 val);
+  uint8 shiftRight(uint8 val, bool arithmetic = false);
+  uint8 swap(uint8 val);
 
   // bit functions
-  static void bit(uint8 val, uint8 bitPos);
-  static uint8 set(uint8 val, uint8 bitPos, bool bitVal);
+  void bit(uint8 val, uint8 bitPos);
+  uint8 set(uint8 val, uint8 bitPos, bool bitVal);
 
   // jump functions
-  static bool jumpCondMet(uint8 jumpCond);
+  bool jumpCondMet(uint8 jumpCond);
 
   // general-purpose arithmetic functions
-  static void decimalAdjAcc();
+  void decimalAdjAcc();
 
   // register AF setter + getter
-  static uint16 getAF();
-  static void setAF(uint16 val);
+  uint16 getAF();
+  void setAF(uint16 val);
 
   // interrupt functions
-  static void handleInterrupts();
+  void handleInterrupts();
 
  public:
-  static bool serialTransferMode;
+  bool serialTransferMode;
+  CGB *cgb;
 
-  static void step();
-  static void reset();
+  CPU();
+
+  void step();
+  void ppuTimerSerialStep(int cycles);
+  void reset();
 };

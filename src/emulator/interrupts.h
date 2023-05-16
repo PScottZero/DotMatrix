@@ -19,10 +19,12 @@
 
 class Interrupts {
  public:
-  static uint8 *intEnable, *intFlags;
+  uint8 *intEnable, *intFlags;
 
-  static void request(uint8 interrupt);
-  static void reset(uint16 PC, uint8 interrupt);
-  static bool requestedAndEnabled(uint8 interrupt);
-  static bool pending();
+  Interrupts();
+
+  void request(uint8 interrupt);
+  void reset(uint16 PC, uint8 interrupt);
+  bool requestedAndEnabled(uint8 interrupt);
+  bool pending();
 };

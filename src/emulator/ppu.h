@@ -97,66 +97,70 @@ typedef struct {
 // tile row of eight pixels
 using TileRow = array<uint8, TILE_PX_DIM>;
 
+class CGB;
+
 class PPU {
  private:
-  static uint8 &bcps, &bcpd, &ocps, &ocpd, windowLineNum;
-  static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
-  static uint8 visibleSpriteCount;
-  static bool statInt;
+  uint8 windowLineNum;
+  sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
+  uint8 visibleSpriteCount;
+  bool statInt;
 
   // OAM search functions
-  static void findVisibleSprites();
+  void findVisibleSprites();
 
   // rendering functions
-  static void renderBg(scanline_t &scanline);
-  static void renderWindow(scanline_t &scanline);
-  static void renderSprites(scanline_t &scanline);
-  static bool spriteHasPriority(sprite_t &sprite, scanline_t &scanline,
-                                uint8 scanlineIdx, uint8 px);
-  static void transferScanlineToScreen(scanline_t &scanline);
-  static void resetScanline(scanline_t &scanline);
+  void renderBg(scanline_t &scanline);
+  void renderWindow(scanline_t &scanline);
+  void renderSprites(scanline_t &scanline);
+  bool spriteHasPriority(sprite_t &sprite, scanline_t &scanline,
+                         uint8 scanlineIdx, uint8 px);
+  void transferScanlineToScreen(scanline_t &scanline);
+  void resetScanline(scanline_t &scanline);
 
   // read display memory functions
-  static TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
-                            bool vramBank = false);
-  static TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row);
-  static TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
-  static sprite_t getSpriteOAM(uint8 spriteIdx);
-  static tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo);
-  static void flipTileRow(TileRow &row);
+  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
+                     bool vramBank = false);
+  TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row);
+  TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
+  sprite_t getSpriteOAM(uint8 spriteIdx);
+  tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo);
+  void flipTileRow(TileRow &row);
 
   // lcdc register functions
-  static bool lcdEnable();
-  static bool bgEnable();
-  static bool windowEnable();
-  static bool spriteEnable();
-  static uint8 spriteHeight();
-  static uint16 windowMapAddr();
-  static uint16 bgWindowDataAddr();
-  static uint16 bgMapAddr();
+  bool lcdEnable();
+  bool bgEnable();
+  bool windowEnable();
+  bool spriteEnable();
+  uint8 spriteHeight();
+  uint16 windowMapAddr();
+  uint16 bgWindowDataAddr();
+  uint16 bgMapAddr();
 
   // stat register functions
-  static bool coincidenceIntEnabled();
-  static bool oamSearchIntEnabled();
-  static bool vblankIntEnabled();
-  static bool hblankIntEnabled();
-  static bool lyEqualsLyc();
-  static void setMode(uint8 mode);
-  static uint8 getMode();
-  static void setLcdStatInterrupt();
+  bool coincidenceIntEnabled();
+  bool oamSearchIntEnabled();
+  bool vblankIntEnabled();
+  bool hblankIntEnabled();
+  bool lyEqualsLyc();
+  void setMode(uint8 mode);
+  uint8 getMode();
+  void setLcdStatInterrupt();
 
   // lcd color palette functions
-  static uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx);
+  uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx);
 
  public:
-  static uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy,
-      *wx;
+  uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy, *wx;
 
-  static QImage *screen;
-  static bool frameRendered;
-  static Palette *palette;
-  static bool showBackground, showWindow, showSprites;
-  static uint16 cycles;
+  CGB *cgb;
+  QImage *screen;
+  bool frameRendered;
+  Palette *palette;
+  bool showBackground, showWindow, showSprites;
+  uint16 cycles;
 
-  static void step();
+  PPU();
+
+  void step();
 };

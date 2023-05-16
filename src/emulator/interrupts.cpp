@@ -10,8 +10,7 @@
 
 #include "log.h"
 
-uint8 *Interrupts::intEnable = nullptr;
-uint8 *Interrupts::intFlags = nullptr;
+Interrupts::Interrupts() : intEnable(), intFlags() {}
 
 void Interrupts::request(uint8 interrupt) {
   Log::logInterruptRequest(interrupt);

@@ -11,18 +11,18 @@
 #include "cgb.h"
 #include "interrupts.h"
 
-uint16 Timers::internalCounter = 0;
-
-// initialize hardware register references
-uint8 *Timers::div = nullptr;
-uint8 *Timers::tima = nullptr;
-uint8 *Timers::tma = nullptr;
-uint8 *Timers::tac = nullptr;
-
 const uint16 Timers::internalCounterMasks[4]{TAC_00, TAC_01, TAC_10, TAC_11};
 
+Timers::Timers()
+    : cgb(nullptr),
+      div(nullptr),
+      tima(nullptr),
+      tma(nullptr),
+      tac(nullptr),
+      internalCounter(0) {}
+
 void Timers::step() {
-  if (!CGB::stop) {
+  if (!cgb->stop) {
     // increment internal counter and
     // update DIV register
     uint16 oldInternalCounter = internalCounter;
@@ -37,7 +37,7 @@ void Timers::step() {
       if (counter < oldCounter) {
         if (++*tima == 0) {
           *tima = *tma;
-          Interrupts::request(TIMER_INT);
+          cgb->interrupts.request(TIMER_INT);
         }
       }
     }
@@ -53,6 +53,6 @@ uint8 Timers::timerFreq() { return *tac & TWO_BITS_MASK; }
 // reset timers by setting internal counter,
 // div, and tima to 0
 void Timers::reset() {
-  Timers::internalCounter = 0;
+  internalCounter = 0;
   *div = 0;
 }

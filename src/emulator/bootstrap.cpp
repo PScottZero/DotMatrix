@@ -11,12 +11,6 @@
 #include <QCoreApplication>
 #include <QFile>
 
-#include "cgb.h"
-
-// bootstrap status flags
-bool Bootstrap::enabled = true;
-bool Bootstrap::skip = true;
-
 // dmg bootstrap bytes (256 bytes)
 uint8 Bootstrap::dmgBootstrap[DMG_BOOTSTRAP_BYTES]{
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB,
@@ -237,20 +231,20 @@ uint8 Bootstrap::cgbBootstrap[CGB_BOOTSTRAP_BYTES]{
     0x21, 0x22, 0x80, 0x81, 0x82, 0x10, 0x11, 0x12, 0x12, 0xB0, 0x79, 0xB8,
     0xAD, 0x16, 0x17, 0x07, 0xBA, 0x05, 0x7C, 0x13, 0x00, 0x00, 0x00, 0x00};
 
+Bootstrap::Bootstrap() : enabled(true), skip(true), dmgMode(nullptr) {}
+
 // get byte of bootstrap at given address
-uint8 &Bootstrap::at(uint16 addr) {
-  if (CGB::dmgMode) {
-    return Bootstrap::dmgBootstrap[addr];
+uint8 &Bootstrap::at(uint16 addr) const {
+  if (*dmgMode) {
+    return dmgBootstrap[addr];
   } else {
-    return Bootstrap::cgbBootstrap[addr];
+    return cgbBootstrap[addr];
   }
 }
 
 // check if bootstrap is enabled and should be
 // fast-forwarded through
-bool Bootstrap::enabledAndShouldSkip() {
-  return Bootstrap::enabled && Bootstrap::skip;
-}
+bool Bootstrap::enabledAndShouldSkip() const { return enabled && skip; }
 
 // reset bootstrap
-void Bootstrap::reset() { Bootstrap::enabled = true; }
+void Bootstrap::reset() { enabled = true; }

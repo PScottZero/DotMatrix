@@ -29,19 +29,24 @@ enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 #define SELECT_MASK 0x4
 #define START_MASK 0x8
 
+class Interrupts;
+
 class Controls {
  private:
-  static map<Button, bool> state;
-  static map<int, Button> getKeyBindings();
+  map<Button, bool> state;
+  map<int, Button> getKeyBindings();
 
  public:
-  static map<int, Button> keyBindings;
-  static map<Button, int> joypadBindings;
-  const static map<Button, uint8> buttonToMask;
-  static uint8 *p1;
+  Interrupts *interrupts;
+  map<Button, int> joypadBindings;
+  map<int, Button> keyBindings;
+  const map<Button, uint8> buttonToMask;
+  uint8 *p1;
 
-  static void update();
-  static void press(int key);
-  static void release(int key);
-  static void bind(int key, Button button);
+  Controls();
+
+  void update();
+  void press(int key);
+  void release(int key);
+  void bind(int key, Button button);
 };

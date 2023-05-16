@@ -20,9 +20,11 @@ class Bootstrap {
   static uint8 cgbBootstrap[CGB_BOOTSTRAP_BYTES];
 
  public:
-  static bool enabled, skip;
+  bool enabled, skip, *dmgMode;
 
-  static uint8 &at(uint16 addr);
-  static bool enabledAndShouldSkip();
-  static void reset();
+  Bootstrap();
+
+  uint8 &at(uint16 addr) const;
+  bool enabledAndShouldSkip() const;
+  void reset();
 };

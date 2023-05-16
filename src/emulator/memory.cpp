@@ -11,10 +11,9 @@
 #include "bootstrap.h"
 #include "cgb.h"
 #include "cpu.h"
-#include "cyclecounter.h"
 #include "interrupts.h"
+#include "log.h"
 #include "mbc.h"
-#include "timers.h"
 
 // **************************************************
 // **************************************************
@@ -35,24 +34,22 @@
 // **************************************************
 // **************************************************
 
-// allocate space for internal memory, cartridge rom,
-// and external ram
-uint8 *Memory::mem = (uint8 *)malloc(MEM_BYTES);
-uint8 *Memory::cart = (uint8 *)malloc(CART_BYTES);
-uint8 *Memory::vram = (uint8 *)malloc(RAM_BANK_BYTES * VRAM_BANKS);
-uint8 *Memory::exram = (uint8 *)malloc(RAM_BANK_BYTES * EXRAM_BANKS);
-uint8 *Memory::wram = (uint8 *)malloc(WRAM_BANK_BYTES * WRAM_BANKS);
-uint8 Memory::cramBg[PAL_COUNT * PAL_SIZE]{};
-uint8 Memory::cramObj[PAL_COUNT * PAL_SIZE]{};
-
-// set initial rom and ram banks
-uint8 *Memory::romBank0 = &cart[0];
-uint8 *Memory::romBank1 = &cart[ROM_BANK_BYTES];
-uint8 *Memory::vramBank = &vram[0];
-uint8 *Memory::exramBank = &exram[0];
-uint8 *Memory::wramBank = &wram[WRAM_BANK_BYTES];
-uint8 *Memory::bcpd = &cramBg[0];
-uint8 *Memory::ocpd = &cramObj[0];
+Memory::Memory()
+    : cgb(nullptr),
+      mem((uint8 *)malloc(MEM_BYTES)),
+      cart((uint8 *)malloc(CART_BYTES)),
+      vram((uint8 *)malloc(RAM_BANK_BYTES * VRAM_BANKS)),
+      exram((uint8 *)malloc(RAM_BANK_BYTES * EXRAM_BANKS)),
+      wram((uint8 *)malloc(WRAM_BANK_BYTES * WRAM_BANKS)),
+      cramBg{},
+      cramObj{},
+      romBank0(&cart[0]),
+      romBank1(&cart[ROM_BANK_BYTES]),
+      vramBank(&vram[0]),
+      exramBank(&exram[0]),
+      wramBank(&wram[WRAM_BANK_BYTES]),
+      bcpd(&cramBg[0]),
+      ocpd(&cramObj[0]) {}
 
 // **************************************************
 // **************************************************
@@ -62,11 +59,11 @@ uint8 *Memory::ocpd = &cramObj[0];
 
 // read 8-bit value from given memory address
 uint8 Memory::read(uint16 addr) {
-  CycleCounter::addCycles(1);
+  cgb->cpu.ppuTimerSerialStep(1);
 
   // cannot access external ram if it
   // is not enabled by MBC
-  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR && !MBC::ramEnabled) {
+  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR && !cgb->mbc.ramEnabled) {
     return 0xFF;
   }
 
@@ -93,7 +90,7 @@ uint8 Memory::read(uint16 addr) {
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && Bootstrap::enabledAndShouldSkip()) {
+  if (addr == LY && cgb->bootstrap.enabledAndShouldSkip()) {
     return 0x90;
   }
 
@@ -117,10 +114,10 @@ uint8 Memory::readBits(uint16 addr, vector<uint8> bits) {
 
 // write 8-bit value to given memory address
 void Memory::write(uint16 addr, uint8 val) {
-  CycleCounter::addCycles(1);
+  cgb->cpu.ppuTimerSerialStep(1);
 
   // check for MBC writes
-  MBC::write(addr, val);
+  cgb->mbc.write(addr, val);
 
   // rom bank area is read-only
   if (addr < VRAM_ADDR) return;
@@ -129,13 +126,13 @@ void Memory::write(uint16 addr, uint8 val) {
   if (addr >= EXRAM_ADDR && addr < WRAM_ADDR) {
     // cannot access external ram if it
     // is not enabled by MBC
-    if (!MBC::ramEnabled) return;
+    if (!cgb->mbc.ramEnabled) return;
 
     // if using MBC2, ram only uses lower nibble
     // of each ram byte, and ram only consists of
     // 512 half bytes with rest of ram area
     // echoing A000-A1FF
-    if (MBC::halfRAMMode) {
+    if (cgb->mbc.halfRAMMode) {
       echoHalfRam(addr, val);
       return;
     }
@@ -155,7 +152,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // will reset the internal counter
   // and the DIV register
   if (addr == DIV) {
-    Timers::reset();
+    cgb->timers.reset();
     return;
   }
 
@@ -173,10 +170,12 @@ void Memory::write(uint16 addr, uint8 val) {
     return;
   }
 
-  // only bit 0 of register KEY1 can
+  // prepare speed switch, only
+  // bit 0 of register KEY1 can
   // be written to
   if (addr == KEY1) {
     writeBits(addr, val, {0});
+    if (val & BIT0_MASK) cgb->doubleSpeedMode = val & BIT7_MASK;
     return;
   }
 
@@ -212,49 +211,51 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // start vram dma transfer if HDMA5
   // register was written to (cgb only)
-  if (addr == HDMA5 && !CGB::dmgMode) {
+  if (addr == HDMA5 && !cgb->dmgMode) {
     if (vramTransferMode()) {
       printf("hblank vram dma not supported yet\n");
     } else {
       vramDmaTransfer();
+      getByte(addr) |= 0x80;
     }
   }
 
   // turn off boostrap if writing
   // nonzero value to address ff50
   if (addr == BOOTSTRAP && val != 0) {
-    Bootstrap::enabled = false;
+    cgb->bootstrap.enabled = false;
+    Log::bootstrap = false;
   }
 
   // start serial transfer if writing
   // to register SC with bit 7 and bit
   // 0 being set to 1
   if (addr == SC && (val & (BIT7_MASK | BIT0_MASK)) == 0x81) {
-    CPU::serialTransferMode = true;
+    cgb->cpu.serialTransferMode = true;
   }
 
   // set vram bank if writing to
   // VBK register (cgb only)
-  if (!CGB::dmgMode && addr == VBK) {
+  if (!cgb->dmgMode && addr == VBK) {
     setVramBank(val & BIT0_MASK);
   }
 
   // set wram bank if writing to
-  // SVBL register (cgb only)
-  if (!CGB::dmgMode && addr == SVBK) {
+  // SVBK register (cgb only)
+  if (!cgb->dmgMode && addr == SVBK) {
     setWramBank(max(val & THREE_BITS_MASK, 1));
   }
 
   // udpate register BCPD when writing
   // to BCPS (cgb only)
-  if (!CGB::dmgMode && addr == BCPS) {
+  if (!cgb->dmgMode && addr == BCPS) {
     uint8 cramAddr = val & SIX_BITS_MASK;
     bcpd = &cramBg[cramAddr];
   }
 
   // udpate register OCPD when writing
   // to OCPS (cgb only)
-  if (!CGB::dmgMode && addr == OCPS) {
+  if (!cgb->dmgMode && addr == OCPS) {
     uint8 cramAddr = val & SIX_BITS_MASK;
     ocpd = &cramObj[cramAddr];
   }
@@ -262,7 +263,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // auto increment register BCPS if
   // writing to register BCPD and auto
   // increment is enabled (cgb only)
-  if (!CGB::dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
+  if (!cgb->dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
     ++getByte(BCPS);
     bcpd = &cramBg[getByte(BCPS) & SIX_BITS_MASK];
   }
@@ -270,14 +271,9 @@ void Memory::write(uint16 addr, uint8 val) {
   // auto increment register OCPS if
   // writing to register OCPD and auto
   // increment is enabled (cgb only)
-  if (!CGB::dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
+  if (!cgb->dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
     ++getByte(OCPS);
     ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
-  }
-
-  // prepare speed switch (cgb only)
-  if (!CGB::dmgMode && addr == KEY1) {
-    if (val & BIT0_MASK) CGB::doubleSpeedMode = val & BIT7_MASK;
   }
 }
 
@@ -312,11 +308,11 @@ uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
 // get pointer to byte at specified address
 // directly (no read/write intercepts)
 uint8 *Memory::getBytePtr(uint16 addr) {
-  if (Bootstrap::enabled && addr < DMG_BOOTSTRAP_BYTES) {
-    return &Bootstrap::at(addr);
-  } else if (!CGB::dmgMode && Bootstrap::enabled &&
+  if (cgb->bootstrap.enabled && addr < DMG_BOOTSTRAP_BYTES) {
+    return &cgb->bootstrap.at(addr);
+  } else if (!cgb->dmgMode && cgb->bootstrap.enabled &&
              addr >= CGB_BOOTSTRAP_ADDR && addr < CGB_BOOTSTRAP_BYTES) {
-    return &Bootstrap::at(addr);
+    return &cgb->bootstrap.at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
     return &romBank0[addr];
   } else if (addr < VRAM_ADDR) {
@@ -329,9 +325,9 @@ uint8 *Memory::getBytePtr(uint16 addr) {
     return &wram[addr - WRAM_ADDR];
   } else if (addr < ECHO_RAM_ADDR) {
     return &wramBank[addr - WRAM_BANK_ADDR];
-  } else if (!CGB::dmgMode && addr == BCPD) {
+  } else if (!cgb->dmgMode && addr == BCPD) {
     return bcpd;
-  } else if (!CGB::dmgMode && addr == OCPD) {
+  } else if (!cgb->dmgMode && addr == OCPD) {
     return ocpd;
   }
   return &mem[addr - ECHO_RAM_ADDR];
@@ -436,20 +432,20 @@ void Memory::echoHalfRam(uint16 addr, uint8 val) {
 // and be in the same directory as the rom,
 // except with a .sav extension
 void Memory::loadExram() {
-  string exramPath = CGB::romPath.toStdString();
+  string exramPath = cgb->romPath.toStdString();
   exramPath.replace(exramPath.find(".gb"), 4, ".sav");
   fstream fs(exramPath, ios::in);
-  if (!fs.fail()) fs.read((char *)exram, MBC::ramBytes());
+  if (!fs.fail()) fs.read((char *)exram, cgb->mbc.ramBytes());
 }
 
 // save external ram, will be saved in the same
 // directory as the rom and have the same name
 // except with a .sav extension
 void Memory::saveExram() {
-  string exramPath = CGB::romPath.toStdString();
+  string exramPath = cgb->romPath.toStdString();
   exramPath.replace(exramPath.find(".gb"), 4, ".sav");
   fstream fs(exramPath, ios::out);
-  fs.write((char *)exram, MBC::ramBytes());
+  fs.write((char *)exram, cgb->mbc.ramBytes());
 }
 
 // reset memory
@@ -459,14 +455,14 @@ void Memory::reset() {
 
   // save external ram if current game
   // has ram and battery
-  if (MBC::hasRamAndBattery()) saveExram();
+  if (cgb->mbc.hasRamAndBattery()) saveExram();
 
   // clear external ram
   for (int i = 0; i < RAM_BANK_BYTES * EXRAM_BANKS; ++i) exram[i] = 0;
 
   // set upper three bits of interrupt
   // flag register
-  *Interrupts::intFlags = 0xE0;
+  *cgb->interrupts.intFlags = 0xE0;
 
   // reset rom and ram banks
   setRomBank(&romBank0, 0);

@@ -131,10 +131,10 @@ QString MainWindow::getPaletteLabel(Palette *palette) {
 void MainWindow::loadROM() {
   cgb.pause = true;
   QString romName = QFileDialog::getOpenFileName(
-      this, tr("Open File"), CGB::romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
+      this, tr("Open File"), cgb.romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
   cgb.pause = false;
   if (romName != "") {
-    CGB::romPath = romName;
+    cgb.romPath = romName;
     cgb.reset();
     bool romSupported = cgb.loadRom(romName);
     if (romSupported) cgb.start();
@@ -148,7 +148,7 @@ void MainWindow::reset() {
   cgb.start();
 }
 
-void MainWindow::setScreen(QImage *image) {
+void MainWindow::setScreen(const QImage *image) {
   // no anti-aliasing when resizing image
   auto pixmap = QPixmap::fromImage(*image).scaled(
       ui->screen->width(), ui->screen->height(), Qt::KeepAspectRatio,
@@ -169,38 +169,40 @@ void MainWindow::setScale(int scale) {
 }
 
 void MainWindow::setPalette(QObject *palette) {
-  PPU::palette = (Palette *)palette;
+  cgb.ppu.palette = (Palette *)palette;
   cgb.tempPalette = nullptr;
   cgb.renderInPauseMode();
 }
 
 void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin{};
+  KeyBindingsWindow kbWin(&cgb.controls);
   kbWin.exec();
 }
 
 void MainWindow::toggleBootScreen(bool showBootScreen) {
-  Bootstrap::skip = !showBootScreen;
+  cgb.bootstrap.skip = !showBootScreen;
 }
 
 void MainWindow::toggleBackground(bool showBackground) {
-  PPU::showBackground = showBackground;
+  cgb.ppu.showBackground = showBackground;
 }
 
-void MainWindow::toggleWindow(bool showWindow) { PPU::showWindow = showWindow; }
+void MainWindow::toggleWindow(bool showWindow) {
+  cgb.ppu.showWindow = showWindow;
+}
 
 void MainWindow::toggleSprites(bool showSprites) {
-  PPU::showSprites = showSprites;
+  cgb.ppu.showSprites = showSprites;
 }
 
 void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-  Controls::press(event->key());
+  cgb.controls.press(event->key());
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
-    Controls::release(event->key());
+    cgb.controls.release(event->key());
   }
 }
