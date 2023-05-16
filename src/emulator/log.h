@@ -29,7 +29,7 @@ class Log {
   static void logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,
                           uint16 HL, bool carry, bool halfCarry, bool subtract,
                           bool zero, bool IME, uint8 intEnable, uint8 intFlags,
-                          uint8 lcdc, uint8 stat, uint8 ly);
+                          uint8 lcdc, uint8 stat, uint8 ly, uint8 div, uint8 tima);
   static void logCPUCycles(uint8 opcode, uint8 cbOpcode, uint8 cycles);
   static void logInterruptEnable(uint16 PC);
   static void logInterruptDisable(uint16 PC);

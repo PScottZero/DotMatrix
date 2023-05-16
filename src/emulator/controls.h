@@ -38,7 +38,7 @@ class Controls {
   static map<int, Button> keyBindings;
   static map<Button, int> joypadBindings;
   const static map<Button, uint8> buttonToMask;
-  static uint8 &p1;
+  static uint8 *p1;
 
   static void update();
   static void press(int key);

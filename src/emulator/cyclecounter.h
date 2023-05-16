@@ -16,8 +16,7 @@
 
 class CycleCounter {
  public:
-  static uint8 cpuCycles;
-  static uint16 ppuCycles, serialTransferCycles;
+  static uint16 serialTransferCycles;
   static bool serialTransferMode;
 
   static void addCycles(uint8 count);

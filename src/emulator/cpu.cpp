@@ -14,6 +14,7 @@
 #include "interrupts.h"
 #include "log.h"
 #include "memory.h"
+#include "ppu.h"
 #include "timers.h"
 
 // initialize program counter
@@ -62,13 +63,16 @@ uint8 *CPU::regmap8[NUM_REG_8]{&CPU::B, &CPU::C, &CPU::D, &CPU::E,
                                &CPU::H, &CPU::L, nullptr, &CPU::A};
 uint16 *CPU::regmap16[NUM_REG_16]{&CPU::BC, &CPU::DE, &CPU::HL, &CPU::SP};
 
+uint16 CPU::serialTransferCycles = 0;
+bool CPU::serialTransferMode = false;
+
 // perform CPU step by performing
 // a single instruction
 void CPU::step() {
-  CycleCounter::cpuCycles = 0;
+  Controls::update();
 
   // check if serial transfer has completed
-  if (CycleCounter::serialTransferComplete()) {
+  if (serialTransferComplete()) {
     Memory::getByte(SC) &= ~BIT7_MASK;
     Interrupts::request(SERIAL_INT);
   }
@@ -79,11 +83,11 @@ void CPU::step() {
   // run instruction at current PC
   if (!halt && !CGB::stop) {
     Log::logCPUState(PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero,
-                     IME, Interrupts::intEnable, Interrupts::intFlags,
+                     IME, *Interrupts::intEnable, *Interrupts::intFlags,
                      Memory::getByte(LCDC), Memory::getByte(STAT),
-                     Memory::getByte(LY));
+                     Memory::getByte(LY), Memory::getByte(DIV),
+                     Memory::getByte(TIMA));
     uint8 opcode = Memory::imm8(PC);
-    uint8 imm8 = Memory::getByte(PC);
 
     // trigger halt bug by failing to
     // increment PC (since imm8 function
@@ -95,10 +99,8 @@ void CPU::step() {
     }
 
     runInstr(opcode);
-
-    Log::logCPUCycles(opcode, imm8, CycleCounter::cpuCycles);
   } else {
-    CycleCounter::addCycles(1);
+    ppuTimerSerialStep(1);
   }
 
   // delay setting IME after an EI
@@ -112,6 +114,30 @@ void CPU::step() {
       delaySetIME = false;
     }
   }
+}
+
+// step through the specified number
+// of ppu and timers cycles
+void CPU::ppuTimerSerialStep(int cycles) {
+  for (int i = 0; i < cycles; ++i) {
+    if (!CGB::doubleSpeedMode || CGB::shouldStepPpu) PPU::step();
+    Timers::step();
+    if (CGB::doubleSpeedMode) {
+      CGB::shouldStepPpu = !CGB::shouldStepPpu;
+    } else {
+      CGB::shouldStepPpu = false;
+    }
+  }
+  if (serialTransferMode) serialTransferCycles += cycles;
+}
+
+bool CPU::serialTransferComplete() {
+  bool completed = serialTransferCycles >= SERIAL_TRANSFER_CYCLES;
+  if (completed) {
+    serialTransferCycles = 0;
+    serialTransferMode = false;
+  }
+  return completed;
 }
 
 // reset state of the cpu
@@ -277,7 +303,7 @@ void CPU::runInstr(uint8 opcode) {
     // load register HL into the stack pointer
     case 0xF9:
       SP = HL;
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // LDHL SP, e
@@ -286,7 +312,7 @@ void CPU::runInstr(uint8 opcode) {
     // immediate e into register HL
     case 0xF8:
       HL = addSP(Memory::imm8(PC));
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // LD (nn), SP
@@ -376,7 +402,7 @@ void CPU::runInstr(uint8 opcode) {
     // and store result in stack pointer
     case 0xE8:
       SP = addSP(Memory::imm8(PC));
-      CycleCounter::addCycles(2);
+      ppuTimerSerialStep(2);
       break;
 
     // **************************************************
@@ -435,7 +461,7 @@ void CPU::runInstr(uint8 opcode) {
     // jump to 16-bit immediate address nn
     case 0xC3:
       PC = Memory::imm16(PC);
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // JR e
@@ -444,7 +470,7 @@ void CPU::runInstr(uint8 opcode) {
     // immediate e
     case 0x18:
       PC += (int8)Memory::imm8(PC);
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // JP (HL)
@@ -468,7 +494,7 @@ void CPU::runInstr(uint8 opcode) {
     // return from subroutine
     case 0xC9:
       PC = pop();
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // RETI
@@ -478,7 +504,7 @@ void CPU::runInstr(uint8 opcode) {
       PC = pop();
       Log::logInterruptReturn(PC);
       IME = true;
-      CycleCounter::addCycles(1);
+      ppuTimerSerialStep(1);
       break;
 
     // **************************************************
@@ -564,7 +590,7 @@ void CPU::runInstr(uint8 opcode) {
     case 0x10:
       // if any buttons are pressed, do
       // not enter stop mode
-      if ((Controls::p1 & NIBBLE_MASK) != 0x0F) {
+      if ((*Controls::p1 & NIBBLE_MASK) != 0x0F) {
         // if interrupts are pending,
         // stop is a 1-byte opcode, and
         // div does not reset
@@ -580,7 +606,7 @@ void CPU::runInstr(uint8 opcode) {
 
       // if a speed switch was not requested,
       // enter stop mode and reset div
-      else if (Memory::getByte(KEY1) != 0x01) {
+      else if ((Memory::getByte(KEY1) & BIT0_MASK) != 0x01) {
         CGB::stop = true;
         Timers::reset();
 
@@ -594,7 +620,7 @@ void CPU::runInstr(uint8 opcode) {
 
       // if a speed switch was requested,
       // do not enter stop mode and reset div
-      else if (Memory::getByte(KEY1) == 0x01) {
+      else if ((Memory::getByte(KEY1) & BIT0_MASK) == 0x01) {
         Timers::reset();
 
         // if interrupts are pending,
@@ -606,10 +632,10 @@ void CPU::runInstr(uint8 opcode) {
         // changes speed on cgb)
         if (!Interrupts::pending()) {
           ++PC;
-          // ignore setting halt for dmg
-          // TODO implement automatic halt
-          // exit after 0x20000 t-cycles
-          // halt = true;
+
+          // just reset bit 0 of KEY1, do not
+          // actually enter halt mode
+          Memory::getByte(KEY1) &= ~BIT0_MASK;
         } else {
           // if IME is disabled, stop is a
           // 1-byte opcode and mode does
@@ -659,7 +685,7 @@ void CPU::runInstr(uint8 opcode) {
             // increment register pair ss
             case 0x3:
               ++*regmap16[regPair];
-              CycleCounter::addCycles(1);
+              ppuTimerSerialStep(1);
               break;
 
             // ADD HL, ss
@@ -669,7 +695,7 @@ void CPU::runInstr(uint8 opcode) {
             case 0x9:
               addHL(*regmap16[regPair]);
               zero = prevZero;
-              CycleCounter::addCycles(1);
+              ppuTimerSerialStep(1);
               break;
 
             // DEC ss
@@ -677,7 +703,7 @@ void CPU::runInstr(uint8 opcode) {
             // decrement register pair ss
             case 0xB:
               --*regmap16[regPair];
-              CycleCounter::addCycles(1);
+              ppuTimerSerialStep(1);
               break;
 
             default:
@@ -692,7 +718,7 @@ void CPU::runInstr(uint8 opcode) {
                   } else {
                     ++PC;
                   }
-                  CycleCounter::addCycles(1);
+                  ppuTimerSerialStep(1);
                   break;
 
                 // INC r / INC (HL)
@@ -855,9 +881,9 @@ void CPU::runInstr(uint8 opcode) {
                 case 0b000:
                   if (jumpCondMet(jumpCond)) {
                     PC = pop();
-                    CycleCounter::addCycles(2);
+                    ppuTimerSerialStep(2);
                   } else {
-                    CycleCounter::addCycles(1);
+                    ppuTimerSerialStep(1);
                   }
                   break;
 
@@ -868,10 +894,10 @@ void CPU::runInstr(uint8 opcode) {
                 case 0b010:
                   if (jumpCondMet(jumpCond)) {
                     PC = Memory::imm16(PC);
-                    CycleCounter::addCycles(1);
+                    ppuTimerSerialStep(1);
                   } else {
                     PC += 2;
-                    CycleCounter::addCycles(2);
+                    ppuTimerSerialStep(2);
                   }
                   break;
 
@@ -886,7 +912,7 @@ void CPU::runInstr(uint8 opcode) {
                     PC = Memory::imm16(PC);
                   } else {
                     PC += 2;
-                    CycleCounter::addCycles(2);
+                    ppuTimerSerialStep(2);
                   }
                   break;
 
@@ -1065,7 +1091,7 @@ void CPU::runInstrCB(uint8 opcode) {
 void CPU::push(uint16 val) {
   SP -= 2;
   Memory::write(SP, val);
-  CycleCounter::addCycles(1);
+  ppuTimerSerialStep(1);
 }
 
 // pop from the stack and return popped
@@ -1355,8 +1381,8 @@ bool CPU::jumpCondMet(uint8 jumpCond) {
 // binary coded decimals
 void CPU::decimalAdjAcc() {
   uint8 correction = 0;
-  if ((!subtract && (A & NIBBLE_MASK) > 0x9) || halfCarry) {
-    correction += 0x6;
+  if ((!subtract && (A & NIBBLE_MASK) > 0x09) || halfCarry) {
+    correction += 0x06;
   }
   if ((!subtract && A > 0x99) || carry) {
     correction += 0x60;
@@ -1407,12 +1433,12 @@ void CPU::handleInterrupts() {
   // exits after 1 machine cycle
   if (halt && Interrupts::pending()) {
     halt = false;
-    CycleCounter::addCycles(1);
+    ppuTimerSerialStep(1);
   }
 
   // if a button is pressed while in stop mode, exit
   // stop mode
-  if (CGB::stop && ((Controls::p1 & NIBBLE_MASK) != 0x0F)) {
+  if (CGB::stop && ((*Controls::p1 & NIBBLE_MASK) != 0x0F)) {
     CGB::stop = false;
   }
 
@@ -1447,7 +1473,7 @@ void CPU::handleInterrupts() {
       IME = false;
       push(PC);
       PC = intAddr;
-      CycleCounter::addCycles(2);
+      ppuTimerSerialStep(2);
     }
   }
 }

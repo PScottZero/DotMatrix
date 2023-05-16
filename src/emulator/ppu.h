@@ -99,8 +99,7 @@ using TileRow = array<uint8, TILE_PX_DIM>;
 
 class PPU {
  private:
-  static uint8 &lcdc, &stat, &scy, &scx, &ly, &lyc, &dma, &bgp, &obp0, &obp1,
-      &wy, &wx, &bcps, &bcpd, &ocps, &ocpd, windowLineNum;
+  static uint8 &bcps, &bcpd, &ocps, &ocpd, windowLineNum;
   static sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
   static uint8 visibleSpriteCount;
   static bool statInt;
@@ -150,10 +149,14 @@ class PPU {
   static uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx);
 
  public:
+  static uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy,
+      *wx;
+
   static QImage *screen;
   static bool frameRendered;
   static Palette *palette;
   static bool showBackground, showWindow, showSprites;
+  static uint16 cycles;
 
   static void step();
 };

@@ -27,7 +27,7 @@ class CGB : public QThread {
  public:
   static QString romPath;
   QAction *actionPause;
-  static bool stop, dmgMode;
+  static bool stop, dmgMode, doubleSpeedMode, shouldStepPpu;
   bool running, pause;
   Palette *tempPalette;
 
@@ -35,8 +35,10 @@ class CGB : public QThread {
   ~CGB();
 
   void run() override;
+  void init();
   void reset(bool newGame = true);
   bool loadRom(const QString romPath);
+  void addCycle(int count = 1);
   void renderInPauseMode();
 
  signals:

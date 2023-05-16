@@ -16,7 +16,7 @@
 #include "bootstrap.h"
 #include "controls.h"
 #include "cpu.h"
-#include "cyclecounter.h"
+#include "interrupts.h"
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
@@ -28,6 +28,8 @@ using namespace chrono;
 QString CGB::romPath = QDir::currentPath();
 bool CGB::stop = false;
 bool CGB::dmgMode = true;
+bool CGB::doubleSpeedMode = false;
+bool CGB::shouldStepPpu = false;
 
 CGB::CGB()
     : screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
@@ -35,8 +37,7 @@ CGB::CGB()
       running(false),
       pause(false),
       tempPalette(nullptr) {
-  PPU::screen = &screen;
-  PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
+  init();
 }
 
 CGB::~CGB() {
@@ -57,11 +58,8 @@ void CGB::run() {
   auto clock = system_clock::now();
   while (running) {
     if (!pause) {
-      Controls::update();
       CPU::step();
-      Timers::step();
-      if (stop) CycleCounter::ppuCycles += 1;
-      PPU::step();
+      if (stop) PPU::step();
 
       // send rendered screen frame to ui
       if (!Bootstrap::enabledAndShouldSkip()) {
@@ -79,6 +77,38 @@ void CGB::run() {
       clock = system_clock::now();
     }
   }
+}
+
+// initialize memory pointers between
+// components of game boy
+void CGB::init() {
+  // controls
+  Controls::p1 = Memory::getBytePtr(P1);
+
+  // interrupts
+  Interrupts::intEnable = Memory::getBytePtr(IE);
+  Interrupts::intFlags = Memory::getBytePtr(IF);
+
+  // ppu
+  PPU::screen = &screen;
+  PPU::palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
+  PPU::lcdc = Memory::getBytePtr(LCDC);
+  PPU::stat = Memory::getBytePtr(STAT);
+  PPU::scy = Memory::getBytePtr(SCY);
+  PPU::scx = Memory::getBytePtr(SCX);
+  PPU::ly = Memory::getBytePtr(LY);
+  PPU::lyc = Memory::getBytePtr(LYC);
+  PPU::bgp = Memory::getBytePtr(BGP);
+  PPU::obp0 = Memory::getBytePtr(OBP0);
+  PPU::obp1 = Memory::getBytePtr(OBP1);
+  PPU::wx = Memory::getBytePtr(WX);
+  PPU::wy = Memory::getBytePtr(WY);
+
+  // timers
+  Timers::div = Memory::getBytePtr(DIV);
+  Timers::tima = Memory::getBytePtr(TIMA);
+  Timers::tma = Memory::getBytePtr(TMA);
+  Timers::tac = Memory::getBytePtr(TAC);
 }
 
 bool CGB::loadRom(const QString romPath) {
@@ -156,14 +186,11 @@ void CGB::resetPreviewPalette() {
 
 void CGB::renderInPauseMode() {
   if (pause) {
-    uint16 ppuCycles = CycleCounter::ppuCycles;
-    CycleCounter::ppuCycles = 0;
+    PPU::cycles = 0;
     for (int i = 0; i < SCANLINE_CYCLES * SCREEN_LINES; ++i) {
-      CycleCounter::ppuCycles += 1;
       PPU::step();
     }
     PPU::frameRendered = false;
     emit sendScreen(&screen);
-    CycleCounter::ppuCycles = ppuCycles;
   }
 }

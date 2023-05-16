@@ -10,6 +10,7 @@
 
 #include "bootstrap.h"
 #include "cgb.h"
+#include "cpu.h"
 #include "cyclecounter.h"
 #include "interrupts.h"
 #include "mbc.h"
@@ -229,7 +230,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // to register SC with bit 7 and bit
   // 0 being set to 1
   if (addr == SC && (val & (BIT7_MASK | BIT0_MASK)) == 0x81) {
-    CycleCounter::serialTransferMode = true;
+    CPU::serialTransferMode = true;
   }
 
   // set vram bank if writing to
@@ -273,6 +274,11 @@ void Memory::write(uint16 addr, uint8 val) {
     ++getByte(OCPS);
     ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
   }
+
+  // prepare speed switch (cgb only)
+  if (!CGB::dmgMode && addr == KEY1) {
+    if (val & BIT0_MASK) CGB::doubleSpeedMode = val & BIT7_MASK;
+  }
 }
 
 // write 16-bit value to given memory address
@@ -301,30 +307,34 @@ uint16 Memory::imm16(uint16 &PC) {
 
 // get byte at specified address directly
 // (no read/write intercepts)
-uint8 &Memory::getByte(uint16 addr) {
+uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
+
+// get pointer to byte at specified address
+// directly (no read/write intercepts)
+uint8 *Memory::getBytePtr(uint16 addr) {
   if (Bootstrap::enabled && addr < DMG_BOOTSTRAP_BYTES) {
-    return Bootstrap::at(addr);
+    return &Bootstrap::at(addr);
   } else if (!CGB::dmgMode && Bootstrap::enabled &&
              addr >= CGB_BOOTSTRAP_ADDR && addr < CGB_BOOTSTRAP_BYTES) {
-    return Bootstrap::at(addr);
+    return &Bootstrap::at(addr);
   } else if (addr < ROM_BANK_1_ADDR) {
-    return romBank0[addr];
+    return &romBank0[addr];
   } else if (addr < VRAM_ADDR) {
-    return romBank1[addr - ROM_BANK_1_ADDR];
+    return &romBank1[addr - ROM_BANK_1_ADDR];
   } else if (addr < EXRAM_ADDR) {
-    return vramBank[addr - VRAM_ADDR];
+    return &vramBank[addr - VRAM_ADDR];
   } else if (addr < WRAM_ADDR) {
-    return exramBank[addr - EXRAM_ADDR];
+    return &exramBank[addr - EXRAM_ADDR];
   } else if (addr < WRAM_BANK_ADDR) {
-    return wram[addr - WRAM_ADDR];
+    return &wram[addr - WRAM_ADDR];
   } else if (addr < ECHO_RAM_ADDR) {
-    return wramBank[addr - WRAM_BANK_ADDR];
+    return &wramBank[addr - WRAM_BANK_ADDR];
   } else if (!CGB::dmgMode && addr == BCPD) {
-    return *bcpd;
+    return bcpd;
   } else if (!CGB::dmgMode && addr == OCPD) {
-    return *ocpd;
+    return ocpd;
   }
-  return mem[addr - ECHO_RAM_ADDR];
+  return &mem[addr - ECHO_RAM_ADDR];
 }
 
 // get byte from video ram, if bank if false
@@ -456,7 +466,7 @@ void Memory::reset() {
 
   // set upper three bits of interrupt
   // flag register
-  Interrupts::intFlags = 0xE0;
+  *Interrupts::intFlags = 0xE0;
 
   // reset rom and ram banks
   setRomBank(&romBank0, 0);

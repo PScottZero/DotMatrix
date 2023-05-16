@@ -17,18 +17,17 @@ QImage *PPU::screen = nullptr;
 
 // initialize references to in-memory
 // registers used by the PPU
-uint8 &PPU::lcdc = Memory::getByte(LCDC);
-uint8 &PPU::stat = Memory::getByte(STAT);
-uint8 &PPU::scy = Memory::getByte(SCY);
-uint8 &PPU::scx = Memory::getByte(SCX);
-uint8 &PPU::ly = Memory::getByte(LY);
-uint8 &PPU::lyc = Memory::getByte(LYC);
-uint8 &PPU::dma = Memory::getByte(DMA);
-uint8 &PPU::bgp = Memory::getByte(BGP);
-uint8 &PPU::obp0 = Memory::getByte(OBP0);
-uint8 &PPU::obp1 = Memory::getByte(OBP1);
-uint8 &PPU::wx = Memory::getByte(WX);
-uint8 &PPU::wy = Memory::getByte(WY);
+uint8 *PPU::lcdc = nullptr;
+uint8 *PPU::stat = nullptr;
+uint8 *PPU::scy = nullptr;
+uint8 *PPU::scx = nullptr;
+uint8 *PPU::ly = nullptr;
+uint8 *PPU::lyc = nullptr;
+uint8 *PPU::bgp = nullptr;
+uint8 *PPU::obp0 = nullptr;
+uint8 *PPU::obp1 = nullptr;
+uint8 *PPU::wx = nullptr;
+uint8 *PPU::wy = nullptr;
 uint8 PPU::windowLineNum = 0;
 
 // initialize visible sprite
@@ -50,29 +49,32 @@ bool PPU::showSprites = true;
 // initialize stat register interrupt
 bool PPU::statInt = false;
 
+uint16 PPU::cycles = 0;
+
 void PPU::step() {
+  cycles += 1;
   if (lcdEnable() && !CGB::stop) {
     // if scanline completed, increment ly
-    if (CycleCounter::ppuCycles > SCANLINE_CYCLES) {
-      if (++ly >= SCREEN_LINES) ly = 0;
+    if (cycles > SCANLINE_CYCLES) {
+      if (++*ly >= SCREEN_LINES) *ly = 0;
 
       // check if current line number
       // is equal to the value in lyc
-      if (ly == lyc) {
-        stat |= BIT2_MASK;
+      if (*ly == *lyc) {
+        *stat |= BIT2_MASK;
       } else {
-        stat &= ~BIT2_MASK;
+        *stat &= ~BIT2_MASK;
       }
       setLcdStatInterrupt();
 
-      CycleCounter::ppuCycles %= SCANLINE_CYCLES;
+      cycles %= SCANLINE_CYCLES;
     }
 
-    if (ly < SCREEN_PX_HEIGHT) {
+    if (*ly < SCREEN_PX_HEIGHT) {
       // **************************************************
       // OAM Search
       // **************************************************
-      if (CycleCounter::ppuCycles < OAM_SEARCH_CYCLES) {
+      if (cycles < OAM_SEARCH_CYCLES) {
         if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
           setLcdStatInterrupt();
@@ -83,7 +85,7 @@ void PPU::step() {
       // **************************************************
       // Pixel Transfer
       // **************************************************
-      else if (CycleCounter::ppuCycles < PIXEL_TRANSFER_CYCLES) {
+      else if (cycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
           setLcdStatInterrupt();
@@ -100,7 +102,7 @@ void PPU::step() {
       // **************************************************
       // H-Blank
       // **************************************************
-      else if (CycleCounter::ppuCycles < H_BLANK_CYCLES) {
+      else if (cycles < H_BLANK_CYCLES) {
         if (getMode() != H_BLANK_MODE) {
           setMode(H_BLANK_MODE);
           setLcdStatInterrupt();
@@ -119,13 +121,13 @@ void PPU::step() {
       }
     }
   } else {
-    ly = 0;
+    *ly = 0;
     windowLineNum = 0;
-    stat &= ~THREE_BITS_MASK;
+    *stat &= ~THREE_BITS_MASK;
     statInt = false;
-    if (CycleCounter::ppuCycles > SCANLINE_CYCLES * SCREEN_LINES) {
+    if (cycles > SCANLINE_CYCLES * SCREEN_LINES) {
       if (CGB::dmgMode) screen->fill(palette->data[0]);
-      CycleCounter::ppuCycles %= SCANLINE_CYCLES * SCREEN_LINES;
+      cycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
   }
@@ -143,8 +145,8 @@ void PPU::findVisibleSprites() {
   visibleSpriteCount = 0;
   for (uint8 oamIdx = 0; oamIdx < OAM_ENTRY_COUNT; oamIdx++) {
     sprite_t oamEntry = getSpriteOAM(oamIdx);
-    if ((ly + SPRITE_PX_HEIGHT_TALL) >= oamEntry.y &&
-        (ly + SPRITE_PX_HEIGHT_TALL) < (oamEntry.y + spriteHeight())) {
+    if ((*ly + SPRITE_PX_HEIGHT_TALL) >= oamEntry.y &&
+        (*ly + SPRITE_PX_HEIGHT_TALL) < (oamEntry.y + spriteHeight())) {
       visibleSprites[visibleSpriteCount] = oamEntry;
       ++visibleSpriteCount;
 
@@ -170,10 +172,10 @@ void PPU::renderBg(scanline_t &scanline) {
 
   // render background row
   uint8 pxCount = 0;
-  uint8 pxY = scy + ly;
+  uint8 pxY = *scy + *ly;
   while (pxCount < SCREEN_PX_WIDTH) {
     // get background tile number (0 to 1023)
-    uint8 pxX = scx + pxCount;
+    uint8 pxX = *scx + pxCount;
     uint8 bgTileX = pxX / TILE_PX_DIM;
     uint8 bgTileY = pxY / TILE_PX_DIM;
     uint8 innerBgTileX = pxX % TILE_PX_DIM;
@@ -218,12 +220,12 @@ void PPU::renderBg(scanline_t &scanline) {
 // render window tile rows that
 // intersect the current scanline
 void PPU::renderWindow(scanline_t &scanline) {
-  if (ly >= wy) {
+  if (*ly >= *wy) {
     uint16 tileMapAddr = windowMapAddr();
     uint16 tileDataAddr = bgWindowDataAddr();
 
     uint8 pxCount = 0;
-    uint8 winX = wx - 7;
+    uint8 winX = *wx - 7;
     while (pxCount + winX < SCREEN_PX_WIDTH) {
       uint8 winTileX = pxCount / TILE_PX_DIM;
       uint8 winTileY = windowLineNum / TILE_PX_DIM;
@@ -269,7 +271,7 @@ void PPU::renderWindow(scanline_t &scanline) {
 void PPU::renderSprites(scanline_t &scanline) {
   for (int spriteIdx = 0; spriteIdx < visibleSpriteCount; ++spriteIdx) {
     sprite_t sprite = visibleSprites[spriteIdx];
-    uint8 spriteRow = (ly + 16) - sprite.y;
+    uint8 spriteRow = (*ly + 16) - sprite.y;
     TileRow row = getSpriteRow(sprite, spriteRow);
 
     // draw sprite row onto screen
@@ -330,13 +332,13 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
       uint8 pal;
       switch (palType) {
         case PaletteType::BG:
-          pal = bgp;
+          pal = *bgp;
           break;
         case PaletteType::SPRITE0:
-          pal = obp0;
+          pal = *obp0;
           break;
         case PaletteType::SPRITE1:
-          pal = obp1;
+          pal = *obp1;
           break;
       }
       uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
@@ -347,7 +349,7 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
           palType == PaletteType::BG ? Memory::cramBg : Memory::cramObj;
       pxColor = getPaletteColor(cram, palIdx, scanline.pixels[px]);
     }
-    screen->setPixel(px, ly, pxColor);
+    screen->setPixel(px, *ly, pxColor);
   }
 }
 
@@ -468,30 +470,30 @@ void PPU::flipTileRow(TileRow &row) {
 // **************************************************
 // **************************************************
 
-bool PPU::lcdEnable() { return lcdc & BIT7_MASK; }
+bool PPU::lcdEnable() { return *lcdc & BIT7_MASK; }
 
-bool PPU::bgEnable() { return (lcdc & BIT0_MASK) && showBackground; }
+bool PPU::bgEnable() { return (*lcdc & BIT0_MASK) && showBackground; }
 
 bool PPU::windowEnable() {
-  return (lcdc & BIT0_MASK) && (lcdc & BIT5_MASK) && showWindow;
+  return (*lcdc & BIT0_MASK) && (*lcdc & BIT5_MASK) && showWindow;
 }
 
-bool PPU::spriteEnable() { return (lcdc & BIT1_MASK) && showSprites; }
+bool PPU::spriteEnable() { return (*lcdc & BIT1_MASK) && showSprites; }
 
 uint8 PPU::spriteHeight() {
-  return lcdc & BIT2_MASK ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;
+  return *lcdc & BIT2_MASK ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;
 }
 
 uint16 PPU::windowMapAddr() {
-  return lcdc & BIT6_MASK ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
+  return *lcdc & BIT6_MASK ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
 }
 
 uint16 PPU::bgWindowDataAddr() {
-  return lcdc & BIT4_MASK ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
+  return *lcdc & BIT4_MASK ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
 }
 
 uint16 PPU::bgMapAddr() {
-  return lcdc & BIT3_MASK ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
+  return *lcdc & BIT3_MASK ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
 }
 
 // **************************************************
@@ -506,8 +508,8 @@ uint16 PPU::bgMapAddr() {
 // 10 - oam search mode
 // 11 - pixel transfer mode
 void PPU::setMode(uint8 mode) {
-  stat &= ~TWO_BITS_MASK;
-  stat |= mode;
+  *stat &= ~TWO_BITS_MASK;
+  *stat |= mode;
 }
 
 // return the current lcd mode
@@ -515,17 +517,17 @@ void PPU::setMode(uint8 mode) {
 // 01 - vblank mode
 // 10 - oam search mode
 // 11 - pixel transfer mode
-uint8 PPU::getMode() { return stat & TWO_BITS_MASK; }
+uint8 PPU::getMode() { return *stat & TWO_BITS_MASK; }
 
-bool PPU::coincidenceIntEnabled() { return stat & BIT6_MASK; }
+bool PPU::coincidenceIntEnabled() { return *stat & BIT6_MASK; }
 
-bool PPU::oamSearchIntEnabled() { return stat & BIT5_MASK; }
+bool PPU::oamSearchIntEnabled() { return *stat & BIT5_MASK; }
 
-bool PPU::vblankIntEnabled() { return stat & BIT4_MASK; }
+bool PPU::vblankIntEnabled() { return *stat & BIT4_MASK; }
 
-bool PPU::hblankIntEnabled() { return stat & BIT3_MASK; }
+bool PPU::hblankIntEnabled() { return *stat & BIT3_MASK; }
 
-bool PPU::lyEqualsLyc() { return stat & BIT2_MASK; }
+bool PPU::lyEqualsLyc() { return *stat & BIT2_MASK; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register

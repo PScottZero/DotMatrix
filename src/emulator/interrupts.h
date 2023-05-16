@@ -19,7 +19,7 @@
 
 class Interrupts {
  public:
-  static uint8 &intEnable, &intFlags;
+  static uint8 *intEnable, *intFlags;
 
   static void request(uint8 interrupt);
   static void reset(uint16 PC, uint8 interrupt);

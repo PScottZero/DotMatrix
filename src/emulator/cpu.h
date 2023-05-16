@@ -47,6 +47,11 @@ class CPU {
 
   static bool shouldSetIME, delaySetIME, triggerHaltBug;
 
+  static uint16 serialTransferCycles;
+
+  static void ppuTimerSerialStep(int cycles);
+  static bool serialTransferComplete();
+
   // instruction decoding functions
   static void runInstr(uint8 opcode);
   static void runInstrCB(uint8 opcode);
@@ -89,6 +94,8 @@ class CPU {
   static void handleInterrupts();
 
  public:
+  static bool serialTransferMode;
+
   static void step();
   static void reset();
 };

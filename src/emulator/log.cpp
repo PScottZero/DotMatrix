@@ -14,7 +14,8 @@
 #include "interrupts.h"
 
 // fstream Log::log("/home/paul/git/DotMatrix/debug/log.txt", ios::out);
-fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
+//fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
+fstream Log::log("C:/Users/Paul/git/DotMatrix/debug/log.txt", ios::out);
 
 bool Log::enable = false;
 
@@ -26,14 +27,14 @@ const map<uint8, string> Log::intName = {
 void Log::logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,
                       uint16 HL, bool carry, bool halfCarry, bool subtract,
                       bool zero, bool IME, uint8 intEnable, uint8 intFlags,
-                      uint8 lcdc, uint8 stat, uint8 ly) {
+                      uint8 lcdc, uint8 stat, uint8 ly, uint8 div, uint8 tima) {
   char logLine[LINE_BYTES];
   snprintf(logLine, LINE_BYTES,
            "CPU >>> PC: %04X | SP: %04X | A: %02X | BC: %04X | DE: %04X | HL: "
            "%04X | CHNZ: %d%d%d%d | IME: %d | IE: %02X | IF: %02X | LCDC: %02X "
-           "| STAT: %02X | LY: %02X\n",
+           "| STAT: %02X | LY: %02X | DIV %02X | TIMA %02X\n",
            PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero, IME,
-           intEnable, intFlags, lcdc, stat, ly);
+           intEnable, intFlags, lcdc, stat, ly, div, tima);
   if (!Bootstrap::enabled && enable) log.write(logLine, strlen(logLine));
 }
 

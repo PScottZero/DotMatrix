@@ -9,7 +9,6 @@
 #include "controls.h"
 
 #include "interrupts.h"
-#include "memory.h"
 
 // joypad bindings: Button -> int (key)
 map<Button, int> Controls::joypadBindings = {
@@ -34,8 +33,8 @@ map<Button, bool> Controls::state = {
     {RIGHT, false}, {LEFT, false}, {UP, false},     {DOWN, false},
     {A, false},     {B, false},    {SELECT, false}, {START, false}};
 
-// P1 register reference
-uint8 &Controls::p1 = Memory::getByte(P1);
+// P1 register pointer
+uint8 *Controls::p1 = nullptr;
 
 // update joypad register P1 based on
 // the keys currently being pressed on
@@ -55,17 +54,17 @@ uint8 &Controls::p1 = Memory::getByte(P1);
 // 0: right / a
 void Controls::update() {
   // save previous value of P1
-  uint8 oldP1 = Controls::p1;
+  uint8 oldP1 = *Controls::p1;
 
   // set all bits to 1 except for
   // bits 4 and 5
-  Controls::p1 |= ~(BIT4_MASK | BIT5_MASK);
+  *Controls::p1 |= ~(BIT4_MASK | BIT5_MASK);
 
   // select either action buttons or diretion buttons
   vector<Button> buttons = {};
-  if (!(Controls::p1 & BIT4_MASK)) {
+  if (!(*Controls::p1 & BIT4_MASK)) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if (!(Controls::p1 & BIT5_MASK)) {
+  } else if (!(*Controls::p1 & BIT5_MASK)) {
     buttons = {A, B, SELECT, START};
   }
 
@@ -77,11 +76,11 @@ void Controls::update() {
     // button is pressed, set its corresponding
     // bit in P1 to 0
     if (Controls::state[button]) {
-      Controls::p1 &= ~mask;
+      *Controls::p1 &= ~mask;
 
       // request joypad interrupt if button
       // goes from high to low
-      if ((Controls::p1 & mask) != (oldP1 & mask)) {
+      if ((*Controls::p1 & mask) != (oldP1 & mask)) {
         Interrupts::request(JOYPAD_INT);
       }
     }
@@ -90,7 +89,7 @@ void Controls::update() {
     // button is not pressed, set its
     // corresponding bit in P1 to 1
     else {
-      Controls::p1 |= mask;
+      *Controls::p1 |= mask;
     }
   }
 }

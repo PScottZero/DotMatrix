@@ -160,6 +160,7 @@ class Memory {
   static uint8 imm8(uint16 &PC);
   static uint16 imm16(uint16 &PC);
   static uint8 &getByte(uint16 addr);
+  static uint8 *getBytePtr(uint16 addr);
   static uint8 &getVramByte(uint16 addr, bool bank);
 
   // rom + ram bank functions
