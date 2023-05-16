@@ -426,18 +426,10 @@ void Memory::oamDmaTransfer() {
 
 // perform vram dma transfer
 void Memory::vramDmaTransfer() {
-  printf("VRAM DMA SRC:       %04X\n", vramDmaSrc);
-  printf("VRAM DMA DEST:      %04X\n", vramDmaDest);
-  printf("VRAM BANK: %d\n", getByte(VBK) & BIT0_MASK);
-
   for (int i = 0; i < vramTransferLength(); ++i) {
     getByte(vramDmaDest) = (uint8)getByte(vramDmaSrc);
     vramDmaSrc++;
     vramDmaDest++;
-  }
-
-  if (vramDmaDest > 0xA000) {
-    printf("OUT OF BOUNDS!!!\n");
   }
 }
 
