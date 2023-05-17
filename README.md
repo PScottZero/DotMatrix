@@ -1,5 +1,16 @@
 # Dot Matrix: Project Status
 
+## May 17th 2023
+Game Boy Color mode is mostly working. Added a new app icon and splash screen.
+<div>
+  <img src="screenshots/newest_splash_screen.png" width="350" height="350">
+  <img src="screenshots/gbc_bootstrap.png" width="350" height="350">
+  <img src="screenshots/gbc_smb_title.png" width="350" height="350">
+  <img src="screenshots/gbc_smb.png" width="350" height="350">
+  <img src="screenshots/gbc_gwgal.png" width="350" height="350">
+  <img src="screenshots/gbc_mr_driller.png" width="350" height="350">
+</div>
+
 ## May 7th 2023
 After three years of inactivity, I decided to finally come back to working on this emulator. I am rewriting the code to be cleaner, and I will be continuing to fix bugs in the emulator code. I will also be implementing sound as well as Game Boy Color mode.
 
