@@ -132,14 +132,15 @@ QString MainWindow::getPaletteLabel(Palette *palette) {
 // select rom to run
 void MainWindow::loadROM() {
   cgb.pause = true;
-  QString romName = QFileDialog::getOpenFileName(
+  QString romPath = QFileDialog::getOpenFileName(
       this, tr("Open File"), cgb.romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
   cgb.pause = false;
-  if (romName != "") {
-    cgb.romPath = romName;
+  if (romPath != "") {
+    setWindowTitle(romPath.split("/").last());
+    cgb.romPath = romPath;
     cgb.reset();
-    bool romSupported = cgb.loadRom(romName);
-    if (romSupported) cgb.start();
+    bool romSupported = cgb.loadRom(romPath);
+    if (romSupported) cgb.start(QThread::HighestPriority);
   }
 }
 
@@ -147,7 +148,7 @@ void MainWindow::pause(bool shouldPause) { cgb.pause = shouldPause; }
 
 void MainWindow::reset() {
   cgb.reset(false);
-  cgb.start();
+  cgb.start(QThread::HighestPriority);
 }
 
 void MainWindow::setScreen(const QImage *image) {
@@ -202,7 +203,7 @@ void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
 void MainWindow::toggleDmgMode(bool dmgMode) {
   cgb.dmgMode = dmgMode;
   cgb.reset();
-  cgb.start();
+  cgb.start(QThread::HighestPriority);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

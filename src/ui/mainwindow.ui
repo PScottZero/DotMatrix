@@ -26,8 +26,8 @@
    <string>Dot Matrix: Game Boy Emulator</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>:/img/dm_icon.ico</normaloff>:/img/dm_icon.ico</iconset>
+   <iconset resource="../../resource.qrc">
+    <normaloff>:/assets/icons/icon.ico</normaloff>:/assets/icons/icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QLabel" name="screen">
@@ -151,6 +151,12 @@
      <addaction name="action2x"/>
     </widget>
     <widget class="QMenu" name="menuPalette">
+     <property name="font">
+      <font>
+       <family>Silkscreen</family>
+       <pointsize>11</pointsize>
+      </font>
+     </property>
      <property name="title">
       <string>DMG Palette</string>
      </property>
@@ -353,6 +359,12 @@
    </property>
   </action>
   <action name="action1x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>1x</string>
    </property>
@@ -364,6 +376,9 @@
    </property>
   </action>
   <action name="action1_5x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>1.5x</string>
    </property>
@@ -375,6 +390,9 @@
    </property>
   </action>
   <action name="action2x">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>2x</string>
    </property>
