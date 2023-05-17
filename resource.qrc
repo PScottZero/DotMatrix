@@ -1,13 +1,10 @@
 <RCC>
     <qresource prefix="/">
-        <file>assets/icons/dm_icon.ico</file>
-        <file>assets/icons/dm_icon.icns</file>
-        <file>assets/imgs/bg_new.png</file>
-        <file>assets/imgs/bg_old.png</file>
         <file>assets/bin/cgb_boot.bin</file>
         <file>assets/bin/dmg_boot.bin</file>
         <file>assets/icons/icon.ico</file>
         <file>assets/icons/icon.png</file>
         <file>assets/icons/icon.icns</file>
+        <file>assets/imgs/background.png</file>
     </qresource>
 </RCC>
