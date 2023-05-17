@@ -181,23 +181,23 @@ void MBC::mbc5(uint16 addr, uint8 val) {
 // **************************************************
 // **************************************************
 
-uint8 MBC::mbc1RomBank0BankNum() {
+uint8 MBC::mbc1RomBank0BankNum() const {
   return bankMode ? (ramBankNum << 5) & romSizeMask() : 0;
 }
 
-uint8 MBC::mbc1RomBank1BankNum() {
+uint8 MBC::mbc1RomBank1BankNum() const {
   return (ramBankNum << 5 | romBankNum) & romSizeMask();
 }
 
-uint8 MBC::mbc1ExramBankNum() {
+uint8 MBC::mbc1ExramBankNum() const {
   return bankMode ? ramBankNum & ramSizeMask() : 0;
 }
 
-uint16 MBC::mbc5RomBankNum() {
+uint16 MBC::mbc5RomBankNum() const {
   return ((romBankBit9 << 9) | romBankNum) & romSizeMask();
 }
 
-uint8 MBC::mbc5RamBankNum() { return ramBankNum & ramSizeMask(); }
+uint8 MBC::mbc5RamBankNum() const { return ramBankNum & ramSizeMask(); }
 
 // **************************************************
 // **************************************************
@@ -205,11 +205,11 @@ uint8 MBC::mbc5RamBankNum() { return ramBankNum & ramSizeMask(); }
 // **************************************************
 // **************************************************
 
-uint8 MBC::romSizeMask() { return pow(2, romSize + 1) - 1; }
+uint8 MBC::romSizeMask() const { return pow(2, romSize + 1) - 1; }
 
-uint8 MBC::ramSizeMask() { return ramSize == RAM_SIZE_8KB ? 0b00 : 0b11; }
+uint8 MBC::ramSizeMask() const { return ramSize == RAM_SIZE_8KB ? 0b00 : 0b11; }
 
-string MBC::bankTypeStr() {
+string MBC::bankTypeStr() const {
   switch (bankType) {
     case ROM_ONLY:
       return "ROM Only";
@@ -253,7 +253,7 @@ string MBC::bankTypeStr() {
   return "Unknown";
 }
 
-bool MBC::bankTypeImplemented() {
+bool MBC::bankTypeImplemented() const {
   switch (bankType) {
     case ROM_ONLY:
     case MBC1_:
@@ -273,7 +273,7 @@ bool MBC::bankTypeImplemented() {
   }
 }
 
-bool MBC::hasRam() {
+bool MBC::hasRam() const {
   switch (bankType) {
     case MBC1_RAM:
     case MBC1_RAM_BATTERY:
@@ -294,7 +294,7 @@ bool MBC::hasRam() {
   }
 }
 
-bool MBC::hasRamAndBattery() {
+bool MBC::hasRamAndBattery() const {
   switch (bankType) {
     case MBC1_RAM_BATTERY:
     case MMM01_RAM_BATTERY:
@@ -310,7 +310,7 @@ bool MBC::hasRamAndBattery() {
   }
 }
 
-int MBC::ramBytes() {
+int MBC::ramBytes() const {
   switch (ramSize) {
     case RAM_SIZE_8KB:
       return RAM_BANK_BYTES;

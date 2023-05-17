@@ -41,6 +41,7 @@ class MainWindow : public QMainWindow {
   void toggleWindow(bool showWindow);
   void toggleSprites(bool showSprites);
   void toggleLogging(bool enableLog);
+  void toggleDmgMode(bool dmgMode);
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;

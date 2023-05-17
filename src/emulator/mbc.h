@@ -90,19 +90,19 @@ class MBC {
   void mbc5(uint16 addr, uint8 val);
 
   // mbc helper functions
-  uint8 mbc1RomBank0BankNum();
-  uint8 mbc1RomBank1BankNum();
-  uint8 mbc1ExramBankNum();
-  uint16 mbc5RomBankNum();
-  uint8 mbc5RamBankNum();
+  uint8 mbc1RomBank0BankNum() const;
+  uint8 mbc1RomBank1BankNum() const;
+  uint8 mbc1ExramBankNum() const;
+  uint16 mbc5RomBankNum() const;
+  uint8 mbc5RamBankNum() const;
 
   // mbc config functions
-  uint8 romSizeMask();
-  uint8 ramSizeMask();
-  bool bankTypeImplemented();
-  string bankTypeStr();
-  bool hasRam();
-  bool hasRamAndBattery();
-  int ramBytes();
+  uint8 romSizeMask() const;
+  uint8 ramSizeMask() const;
+  bool bankTypeImplemented() const;
+  string bankTypeStr() const;
+  bool hasRam() const;
+  bool hasRamAndBattery() const;
+  int ramBytes() const;
   void reset();
 };

@@ -86,13 +86,13 @@ class CPU {
   uint8 set(uint8 val, uint8 bitPos, bool bitVal);
 
   // jump functions
-  bool jumpCondMet(uint8 jumpCond);
+  bool jumpCondMet(uint8 jumpCond) const;
 
   // general-purpose arithmetic functions
   void decimalAdjAcc();
 
   // register AF setter + getter
-  uint16 getAF();
+  uint16 getAF() const;
   void setAF(uint16 val);
 
   // interrupt functions

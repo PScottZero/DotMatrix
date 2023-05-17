@@ -158,17 +158,17 @@ class Memory {
   Memory();
 
   // memory read + write functions
-  uint8 read(uint16 addr);
-  uint16 read16(uint16 addr);
-  uint8 readBits(uint16 addr, vector<uint8> bits);
+  uint8 read(uint16 addr) const;
+  uint16 read16(uint16 addr) const;
+  uint8 readBits(uint16 addr, vector<uint8> bits) const;
   void write(uint16 addr, uint8 val);
   void write(uint16 addr, uint16 val);
   void writeBits(uint16 addr, uint16 val, vector<uint8> bits);
-  uint8 imm8(uint16 &PC);
-  uint16 imm16(uint16 &PC);
-  uint8 &getByte(uint16 addr);
-  uint8 *getBytePtr(uint16 addr);
-  uint8 &getVramByte(uint16 addr, bool bank);
+  uint8 imm8(uint16 &PC) const;
+  uint16 imm16(uint16 &PC) const;
+  uint8 &getByte(uint16 addr) const;
+  uint8 *getBytePtr(uint16 addr) const;
+  uint8 &getVramByte(uint16 addr, bool bank) const;
 
   // rom + ram bank functions
   void setRomBank(uint8 **romBank, uint8 bankNum);
@@ -177,8 +177,8 @@ class Memory {
   void setWramBank(uint8 bankNum);
 
   // HDMA5 register functions
-  bool vramTransferMode();
-  uint16 vramTransferLength();
+  bool vramTransferMode() const;
+  uint16 vramTransferLength() const;
 
   // save + load functions
   void loadRom(QString dir);

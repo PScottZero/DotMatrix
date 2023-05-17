@@ -33,10 +33,10 @@ MainWindow::MainWindow(QWidget *parent)
   auto scaleActionGroup = new QActionGroup(this);
   auto scaleSigMap = new QSignalMapper(this);
   scaleActionGroup->setExclusive(true);
-  addToActionGroup(scaleActionGroup, ui->actionScale0_5x, scaleSigMap, 0);
-  addToActionGroup(scaleActionGroup, ui->actionScale1x, scaleSigMap, 1);
-  addToActionGroup(scaleActionGroup, ui->actionScale1_5x, scaleSigMap, 2);
-  addToActionGroup(scaleActionGroup, ui->actionScale2x, scaleSigMap, 3);
+  addToActionGroup(scaleActionGroup, ui->action0_5x, scaleSigMap, 0);
+  addToActionGroup(scaleActionGroup, ui->action1x, scaleSigMap, 1);
+  addToActionGroup(scaleActionGroup, ui->action1_5x, scaleSigMap, 2);
+  addToActionGroup(scaleActionGroup, ui->action2x, scaleSigMap, 3);
   connect(scaleSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setScale);
 
   // **************************************************
@@ -82,6 +82,8 @@ MainWindow::MainWindow(QWidget *parent)
           &MainWindow::openKeyBindingsWindow);
   connect(ui->actionShowBootScreen, &QAction::toggled, this,
           &MainWindow::toggleBootScreen);
+  connect(ui->actionDmgMode, &QAction::toggled, this,
+          &MainWindow::toggleDmgMode);
 
   // **************************************************
   // **************************************************
@@ -196,6 +198,12 @@ void MainWindow::toggleSprites(bool showSprites) {
 }
 
 void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
+
+void MainWindow::toggleDmgMode(bool dmgMode) {
+  cgb.dmgMode = dmgMode;
+  cgb.reset();
+  cgb.start();
+}
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
   cgb.controls.press(event->key());

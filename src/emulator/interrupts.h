@@ -25,6 +25,6 @@ class Interrupts {
 
   void request(uint8 interrupt);
   void reset(uint16 PC, uint8 interrupt);
-  bool requestedAndEnabled(uint8 interrupt);
-  bool pending();
+  bool requestedAndEnabled(uint8 interrupt) const;
+  bool pending() const;
 };

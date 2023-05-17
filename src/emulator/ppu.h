@@ -120,35 +120,35 @@ class PPU {
 
   // read display memory functions
   TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
-                     bool vramBank = false);
-  TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row);
-  TileRow getSpriteRow(sprite_t oamEntry, uint8 row);
-  sprite_t getSpriteOAM(uint8 spriteIdx);
-  tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo);
-  void flipTileRow(TileRow &row);
+                     bool vramBank = false) const;
+  TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row) const;
+  TileRow getSpriteRow(sprite_t oamEntry, uint8 row) const;
+  sprite_t getSpriteOAM(uint8 spriteIdx) const;
+  tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) const;
+  void flipTileRow(TileRow &row) const;
 
   // lcdc register functions
-  bool lcdEnable();
-  bool bgEnable();
-  bool windowEnable();
-  bool spriteEnable();
-  uint8 spriteHeight();
-  uint16 windowMapAddr();
-  uint16 bgWindowDataAddr();
-  uint16 bgMapAddr();
+  bool lcdEnable() const;
+  bool bgEnable() const;
+  bool windowEnable() const;
+  bool spriteEnable() const;
+  uint8 spriteHeight() const;
+  uint16 windowMapAddr() const;
+  uint16 bgWindowDataAddr() const;
+  uint16 bgMapAddr() const;
 
   // stat register functions
-  bool coincidenceIntEnabled();
-  bool oamSearchIntEnabled();
-  bool vblankIntEnabled();
-  bool hblankIntEnabled();
-  bool lyEqualsLyc();
+  bool coincidenceIntEnabled() const;
+  bool oamSearchIntEnabled() const;
+  bool vblankIntEnabled() const;
+  bool hblankIntEnabled() const;
+  bool lyEqualsLyc() const;
   void setMode(uint8 mode);
-  uint8 getMode();
+  uint8 getMode() const;
   void setLcdStatInterrupt();
 
   // lcd color palette functions
-  uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx);
+  uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const;
 
  public:
   uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy, *wx;

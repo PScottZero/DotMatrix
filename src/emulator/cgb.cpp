@@ -135,16 +135,14 @@ bool CGB::loadRom(const QString romPath) {
   mem.loadRom(romPath);
 
   // get rom config
-  dmgMode = !romPath.contains(".gbc");
   mbc.bankType = mem.getByte(BANK_TYPE);
   mbc.romSize = mem.getByte(ROM_SIZE);
   mbc.ramSize = mem.getByte(RAM_SIZE);
   mbc.halfRAMMode = mbc.bankType == MBC2_ || mbc.bankType == MBC2_BATTERY;
-  dmgMode = false;
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
-  printf("Game Boy Mode: %s\n", CGB::dmgMode ? "DMG" : "CGB");
+  printf("Game Boy Mode: %s\n", dmgMode ? "DMG" : "CGB");
   printf("Bank Type: %s (%02X)\n", mbc.bankTypeStr().c_str(), mbc.bankType);
   printf("Has RAM: %s\n", mbc.hasRam() ? "true" : "false");
   printf("Has Battery: %s\n", mbc.hasRamAndBattery() ? "true" : "false");

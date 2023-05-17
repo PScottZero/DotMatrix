@@ -1336,7 +1336,7 @@ uint8 CPU::set(uint8 val, uint8 bitPos, bool bitVal) {
 // **************************************************
 
 // return true if given jump condition is met
-bool CPU::jumpCondMet(uint8 jumpCond) {
+bool CPU::jumpCondMet(uint8 jumpCond) const {
   switch (jumpCond) {
     case JUMP_NZ:
       return zero == false;
@@ -1381,7 +1381,7 @@ void CPU::decimalAdjAcc() {
 
 // get register AF, the accumulator
 // combined with the flag register
-uint16 CPU::getAF() {
+uint16 CPU::getAF() const {
   uint16 AF = A << 8;
   AF |= (zero << 7);
   AF |= (subtract << 6);

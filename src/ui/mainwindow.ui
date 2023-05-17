@@ -106,12 +106,10 @@
      <string>File</string>
     </property>
     <addaction name="actionOpenROM"/>
-    <addaction name="actionPause"/>
-    <addaction name="actionReset"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuSettings">
+   <widget class="QMenu" name="menuEmulation">
     <property name="font">
      <font>
       <family>Silkscreen</family>
@@ -119,15 +117,40 @@
      </font>
     </property>
     <property name="title">
-     <string>Settings</string>
+     <string>Emulation</string>
     </property>
-    <widget class="QMenu" name="menuPalette">
+    <addaction name="actionPause"/>
+    <addaction name="actionReset"/>
+    <addaction name="separator"/>
+    <addaction name="actionDmgMode"/>
+    <addaction name="actionShowBootScreen"/>
+   </widget>
+   <widget class="QMenu" name="menuDisplay">
+    <property name="font">
+     <font>
+      <family>Silkscreen</family>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="title">
+     <string>Display</string>
+    </property>
+    <widget class="QMenu" name="menuScale">
      <property name="font">
       <font>
        <family>Silkscreen</family>
        <pointsize>11</pointsize>
       </font>
      </property>
+     <property name="title">
+      <string>Scale</string>
+     </property>
+     <addaction name="action0_5x"/>
+     <addaction name="action1x"/>
+     <addaction name="action1_5x"/>
+     <addaction name="action2x"/>
+    </widget>
+    <widget class="QMenu" name="menuPalette">
      <property name="title">
       <string>DMG Palette</string>
      </property>
@@ -144,38 +167,29 @@
      </widget>
      <addaction name="menuSGB"/>
     </widget>
-    <widget class="QMenu" name="menuScale">
-     <property name="title">
-      <string>Scale</string>
-     </property>
-     <addaction name="actionScale0_5x"/>
-     <addaction name="actionScale1x"/>
-     <addaction name="actionScale1_5x"/>
-     <addaction name="actionScale2x"/>
-    </widget>
     <addaction name="menuScale"/>
     <addaction name="menuPalette"/>
-    <addaction name="actionKeyBindings"/>
-    <addaction name="actionShowBootScreen"/>
-   </widget>
-   <widget class="QMenu" name="menuDebug">
-    <property name="font">
-     <font>
-      <family>Silkscreen</family>
-      <pointsize>11</pointsize>
-     </font>
-    </property>
-    <property name="title">
-     <string>Debug</string>
-    </property>
+    <addaction name="separator"/>
     <addaction name="actionShowBackground"/>
     <addaction name="actionShowWindow"/>
     <addaction name="actionShowSprites"/>
-    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuControls">
+    <property name="title">
+     <string>Controls</string>
+    </property>
+    <addaction name="actionKeyBindings"/>
+   </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
     <addaction name="actionEnableLogging"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuSettings"/>
+   <addaction name="menuEmulation"/>
+   <addaction name="menuDisplay"/>
+   <addaction name="menuControls"/>
    <addaction name="menuDebug"/>
   </widget>
   <action name="actionOpenROM">
@@ -199,57 +213,12 @@
     </font>
    </property>
   </action>
-  <action name="actionScale0_5x">
+  <action name="action0_5x">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
     <string>0.5x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-     <pointsize>11</pointsize>
-    </font>
-   </property>
-  </action>
-  <action name="actionScale1x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>1x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-     <pointsize>11</pointsize>
-    </font>
-   </property>
-  </action>
-  <action name="actionScale1_5x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>1.5x</string>
-   </property>
-   <property name="font">
-    <font>
-     <family>Silkscreen</family>
-     <pointsize>11</pointsize>
-    </font>
-   </property>
-  </action>
-  <action name="actionScale2x">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>2x</string>
    </property>
    <property name="font">
     <font>
@@ -271,6 +240,9 @@
   </action>
   <action name="actionShowBootScreen">
    <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -370,6 +342,52 @@
      <family>Silkscreen</family>
      <pointsize>11</pointsize>
     </font>
+   </property>
+  </action>
+  <action name="actionDmgMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>DMG Mode</string>
+   </property>
+  </action>
+  <action name="action1x">
+   <property name="text">
+    <string>1x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="action1_5x">
+   <property name="text">
+    <string>1.5x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="action2x">
+   <property name="text">
+    <string>2x</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionWho_did_this">
+   <property name="text">
+    <string>Who did this?</string>
    </property>
   </action>
  </widget>

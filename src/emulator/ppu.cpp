@@ -359,7 +359,7 @@ void PPU::resetScanline(scanline_t &scanline) {
 
 // get specified row of the given tile
 TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
-                        bool vramBank) {
+                        bool vramBank) const {
   // get tile row data
   int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
@@ -382,7 +382,8 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
 
 // get specified row of the given background
 // or window tile (cgb only)
-TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo, uint8 row) {
+TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo,
+                        uint8 row) const {
   row = tileMapAttr.flipY ? TILE_PX_DIM - row - 1 : row;
   TileRow tileRow =
       getTileRow(bgWindowDataAddr(), tileNo, row, tileMapAttr.vramBankNum);
@@ -391,7 +392,7 @@ TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo, uint8 row) {
 }
 
 // get specified row of given sprite
-TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
+TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) const {
   uint8 height = spriteHeight();
   row = oamEntry.flipY ? height - row - 1 : row;
   uint8 pattern = height == SPRITE_PX_HEIGHT_TALL
@@ -404,7 +405,7 @@ TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) {
 }
 
 // get sprite oam entry at a given sprite index
-sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
+sprite_t PPU::getSpriteOAM(uint8 spriteIdx) const {
   sprite_t sprite;
   uint16 spriteAddr = OAM_ADDR + spriteIdx * OAM_ENTRY_BYTES;
 
@@ -429,7 +430,7 @@ sprite_t PPU::getSpriteOAM(uint8 spriteIdx) {
 
 // get background map attribute for a given tile in
 // the background map (cgb only)
-tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) {
+tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) const {
   tile_map_attr_t attr;
   uint8 attrByte = cgb->mem.getVramByte(baseAddr + bgWinTileNo, true);
   attr.priority = attrByte & BIT7_MASK;
@@ -443,7 +444,7 @@ tile_map_attr_t PPU::getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) {
 // flips the given tile row
 // pixels before: a b c d e f g h
 // pixels after:  h g f e d c b a
-void PPU::flipTileRow(TileRow &row) {
+void PPU::flipTileRow(TileRow &row) const {
   for (uint8 i = 0; i < row.size() / 2; ++i) {
     uint8 swapIdx = row.size() - i - 1;
     uint8 temp = row[swapIdx];
@@ -458,27 +459,29 @@ void PPU::flipTileRow(TileRow &row) {
 // **************************************************
 // **************************************************
 
-bool PPU::lcdEnable() { return *lcdc & BIT7_MASK; }
+bool PPU::lcdEnable() const { return *lcdc & BIT7_MASK; }
 
-bool PPU::bgEnable() { return (*lcdc & BIT0_MASK); }
+bool PPU::bgEnable() const { return (*lcdc & BIT0_MASK); }
 
-bool PPU::windowEnable() { return (*lcdc & BIT0_MASK) && (*lcdc & BIT5_MASK); }
+bool PPU::windowEnable() const {
+  return (*lcdc & BIT0_MASK) && (*lcdc & BIT5_MASK);
+}
 
-bool PPU::spriteEnable() { return (*lcdc & BIT1_MASK); }
+bool PPU::spriteEnable() const { return (*lcdc & BIT1_MASK); }
 
-uint8 PPU::spriteHeight() {
+uint8 PPU::spriteHeight() const {
   return *lcdc & BIT2_MASK ? SPRITE_PX_HEIGHT_TALL : SPRITE_PX_HEIGHT_SHORT;
 }
 
-uint16 PPU::windowMapAddr() {
+uint16 PPU::windowMapAddr() const {
   return *lcdc & BIT6_MASK ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
 }
 
-uint16 PPU::bgWindowDataAddr() {
+uint16 PPU::bgWindowDataAddr() const {
   return *lcdc & BIT4_MASK ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
 }
 
-uint16 PPU::bgMapAddr() {
+uint16 PPU::bgMapAddr() const {
   return *lcdc & BIT3_MASK ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
 }
 
@@ -503,17 +506,17 @@ void PPU::setMode(uint8 mode) {
 // 01 - vblank mode
 // 10 - oam search mode
 // 11 - pixel transfer mode
-uint8 PPU::getMode() { return *stat & TWO_BITS_MASK; }
+uint8 PPU::getMode() const { return *stat & TWO_BITS_MASK; }
 
-bool PPU::coincidenceIntEnabled() { return *stat & BIT6_MASK; }
+bool PPU::coincidenceIntEnabled() const { return *stat & BIT6_MASK; }
 
-bool PPU::oamSearchIntEnabled() { return *stat & BIT5_MASK; }
+bool PPU::oamSearchIntEnabled() const { return *stat & BIT5_MASK; }
 
-bool PPU::vblankIntEnabled() { return *stat & BIT4_MASK; }
+bool PPU::vblankIntEnabled() const { return *stat & BIT4_MASK; }
 
-bool PPU::hblankIntEnabled() { return *stat & BIT3_MASK; }
+bool PPU::hblankIntEnabled() const { return *stat & BIT3_MASK; }
 
-bool PPU::lyEqualsLyc() { return *stat & BIT2_MASK; }
+bool PPU::lyEqualsLyc() const { return *stat & BIT2_MASK; }
 
 // set the interrupt register IF based on
 // the current state of the STAT register
@@ -540,7 +543,7 @@ void PPU::setLcdStatInterrupt() {
 // **************************************************
 // **************************************************
 
-uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) {
+uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const {
   // get color of palette
   uint8 cramAddr = palIdx * PAL_SIZE + colorIdx * 2;
   uint16 color = cram[cramAddr + 1] << 8 | cram[cramAddr];

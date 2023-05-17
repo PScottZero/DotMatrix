@@ -22,8 +22,10 @@ void Interrupts::reset(uint16 PC, uint8 interrupt) {
   *intFlags &= ~interrupt;
 }
 
-bool Interrupts::requestedAndEnabled(uint8 interrupt) {
+bool Interrupts::requestedAndEnabled(uint8 interrupt) const {
   return (*intEnable & *intFlags & interrupt);
 }
 
-bool Interrupts::pending() { return *intEnable & *intFlags & FIVE_BITS_MASK; }
+bool Interrupts::pending() const {
+  return *intEnable & *intFlags & FIVE_BITS_MASK;
+}

@@ -60,7 +60,7 @@ Memory::Memory()
 // **************************************************
 
 // read 8-bit value from given memory address
-uint8 Memory::read(uint16 addr) {
+uint8 Memory::read(uint16 addr) const {
   cgb->cpu.ppuTimerSerialStep(1);
 
   // cannot access external ram if it
@@ -101,14 +101,14 @@ uint8 Memory::read(uint16 addr) {
 }
 
 // read 16-bit value from given memory address
-uint16 Memory::read16(uint16 addr) {
+uint16 Memory::read16(uint16 addr) const {
   return read(addr) | (read(addr + 1) << 8);
 }
 
 // only read the specified bits of the given
 // 8-bit value at the given memory address,
 // all other bits are set to 1
-uint8 Memory::readBits(uint16 addr, vector<uint8> bits) {
+uint8 Memory::readBits(uint16 addr, vector<uint8> bits) const {
   uint8 mask = 0xFF;
   for (uint8 bit : bits) mask ^= (uint8)pow(2, bit);
   return getByte(addr) | mask;
@@ -213,34 +213,37 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // vram dma source high
   if (addr == HDMA1) {
-    vramDmaSrc &= NIBBLE_MASK;
-    vramDmaSrc |= getByte(addr) << 8;
+    vramDmaSrc &= BYTE_MASK;
+    vramDmaSrc |= val << 8;
   }
 
   // vram dma source low
   if (addr == HDMA2) {
-    vramDmaSrc &= ~NIBBLE_MASK;
-    vramDmaSrc |= getByte(addr) & ~NIBBLE_MASK;
+    vramDmaSrc &= ~BYTE_MASK;
+    vramDmaSrc |= val & ~NIBBLE_MASK;
   }
 
   // vram dma destination high
   if (addr == HDMA3) {
-    vramDmaDest &= NIBBLE_MASK;
-    vramDmaDest |= (getByte(addr) & FIVE_BITS_MASK) << 8;
+    vramDmaDest &= BYTE_MASK;
+    vramDmaDest |= (val & FIVE_BITS_MASK) << 8;
     vramDmaDest |= VRAM_ADDR;
   }
 
   // vram dma destination low
   if (addr == HDMA4) {
-    vramDmaDest &= ~NIBBLE_MASK;
-    vramDmaDest |= getByte(addr) & ~NIBBLE_MASK;
+    vramDmaDest &= ~BYTE_MASK;
+    vramDmaDest |= val & ~NIBBLE_MASK;
+    vramDmaDest |= VRAM_ADDR;
   }
 
   // start vram dma transfer if HDMA5
   // register was written to (cgb only)
   if (addr == HDMA5 && !cgb->dmgMode) {
     if (vramTransferMode()) {
-      printf("hblank vram dma not supported yet\n");
+      // printf("hblank vram dma not supported yet\n");
+      vramDmaTransfer();
+      getByte(addr) |= 0x80;
     } else {
       vramDmaTransfer();
       getByte(addr) |= 0x80;
@@ -292,6 +295,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // increment is enabled (cgb only)
   if (!cgb->dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
     ++getByte(BCPS);
+    getByte(BCPS) &= 0xBF;
     bcpd = &cramBg[getByte(BCPS) & SIX_BITS_MASK];
   }
 
@@ -300,6 +304,7 @@ void Memory::write(uint16 addr, uint8 val) {
   // increment is enabled (cgb only)
   if (!cgb->dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
     ++getByte(OCPS);
+    getByte(OCPS) &= 0xBF;
     ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
   }
 }
@@ -319,10 +324,10 @@ void Memory::writeBits(uint16 addr, uint16 val, vector<uint8> bits) {
 }
 
 // get 8-bit immediate value
-uint8 Memory::imm8(uint16 &PC) { return read(PC++); }
+uint8 Memory::imm8(uint16 &PC) const { return read(PC++); }
 
 // get 16-bit immediate value
-uint16 Memory::imm16(uint16 &PC) {
+uint16 Memory::imm16(uint16 &PC) const {
   uint16 val = read16(PC++);
   ++PC;
   return val;
@@ -330,11 +335,11 @@ uint16 Memory::imm16(uint16 &PC) {
 
 // get byte at specified address directly
 // (no read/write intercepts)
-uint8 &Memory::getByte(uint16 addr) { return *getBytePtr(addr); }
+uint8 &Memory::getByte(uint16 addr) const { return *getBytePtr(addr); }
 
 // get pointer to byte at specified address
 // directly (no read/write intercepts)
-uint8 *Memory::getBytePtr(uint16 addr) {
+uint8 *Memory::getBytePtr(uint16 addr) const {
   if (cgb->bootstrap.enabled && addr < DMG_BOOTSTRAP_BYTES) {
     return &cgb->bootstrap.at(addr);
   } else if (!cgb->dmgMode && cgb->bootstrap.enabled &&
@@ -363,7 +368,7 @@ uint8 *Memory::getBytePtr(uint16 addr) {
 // get byte from video ram, if bank if false
 // the get byte from vram bank 0, if bank is
 // true get byte from vram bank 1
-uint8 &Memory::getVramByte(uint16 addr, bool bank) {
+uint8 &Memory::getVramByte(uint16 addr, bool bank) const {
   return vram[addr - VRAM_ADDR + (bank ? RAM_BANK_BYTES : 0)];
 }
 
@@ -409,10 +414,10 @@ void Memory::setWramBank(uint8 bankNum) {
 
 // get vram transfer mode, true means
 // hblank dma, false means general dma
-bool Memory::vramTransferMode() { return getByte(HDMA5) & BIT7_MASK; }
+bool Memory::vramTransferMode() const { return getByte(HDMA5) & BIT7_MASK; }
 
 // get length of vram transfer
-uint16 Memory::vramTransferLength() {
+uint16 Memory::vramTransferLength() const {
   return ((getByte(HDMA5) & ~BIT7_MASK) + 1) * 0x10;
 }
 
