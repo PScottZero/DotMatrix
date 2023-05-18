@@ -589,12 +589,10 @@ uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const {
 // **************************************************
 
 // toggle background display layer
-void PPU::toggleBackground(bool showBackground) {
-  showBackground = showBackground;
-}
+void PPU::toggleBackground(bool show) { showBackground = show; }
 
 // toggle window display layer
-void PPU::toggleWindow(bool showWindow) { showWindow = showWindow; }
+void PPU::toggleWindow(bool show) { showWindow = show; }
 
 // toggle sprite display layer
-void PPU::toggleSprites(bool showSprites) { showSprites = showSprites; }
+void PPU::toggleSprites(bool show) { showSprites = show; }

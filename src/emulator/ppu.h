@@ -167,7 +167,7 @@ class PPU : public QObject {
   void step();
 
  public slots:
-  void toggleBackground(bool showBackground);
-  void toggleWindow(bool showWindow);
-  void toggleSprites(bool showSprites);
+  void toggleBackground(bool show);
+  void toggleWindow(bool show);
+  void toggleSprites(bool show);
 };
