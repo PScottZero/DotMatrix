@@ -324,8 +324,8 @@ void Memory::write(uint16 addr, uint8 val) {
     }
   }
 
-  // turn off boostrap if writing
-  // nonzero value to address ff50
+  // turn off bootstrap if writing
+  // nonzero value to address FF50
   if (addr == BOOTSTRAP && val != 0) {
     cgb->bootstrap.enabled = false;
     Log::bootstrap = false;
@@ -337,8 +337,8 @@ void Memory::write(uint16 addr, uint8 val) {
     // false   | true    | DMG
     // true    | true    | CGB (DMG mode)
     // true    | false   | CGB
-    cgb->dmgMode = !(cgb->mem.getByte(CGB_MODE) == 0x80 ||
-                     cgb->mem.getByte(CGB_MODE) == 0xC0);
+    cgb->dmgMode |= !(cgb->mem.getByte(CGB_MODE) == 0x80 ||
+                      cgb->mem.getByte(CGB_MODE) == 0xC0);
   }
 
   // start serial transfer if writing

@@ -19,6 +19,7 @@ Timers::Timers()
       tima(nullptr),
       tma(nullptr),
       tac(nullptr),
+      timaOverflow(false),
       internalCounter(0) {}
 
 void Timers::step() {
@@ -31,13 +32,23 @@ void Timers::step() {
 
     // update TIMA timer if enabled
     if (timerEnabled()) {
-      uint16 oldCounter =
-          oldInternalCounter & internalCounterMasks[timerFreq()];
-      uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
-      if (counter < oldCounter) {
-        if (++*tima == 0) {
-          *tima = *tma;
-          cgb->interrupts.request(TIMER_INT);
+      // TIMA overflow interrupt and modulo
+      // delayed by one cycle
+      if (timaOverflow) {
+        *tima = *tma;
+        cgb->interrupts.request(TIMER_INT);
+        timaOverflow = false;
+      }
+
+      // increment TIMA
+      else {
+        uint16 oldCounter =
+            oldInternalCounter & internalCounterMasks[timerFreq()];
+        uint16 counter = internalCounter & internalCounterMasks[timerFreq()];
+        if (counter < oldCounter) {
+          if (++*tima == 0) {
+            timaOverflow = true;
+          }
         }
       }
     }

@@ -26,6 +26,7 @@ class CGB;
 class Timers {
  private:
   static const uint16 internalCounterMasks[4];
+  bool timaOverflow;
 
   bool timerEnabled() const;
   uint8 timerFreq() const;
