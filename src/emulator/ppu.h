@@ -99,7 +99,9 @@ using TileRow = array<uint8, TILE_PX_DIM>;
 
 class CGB;
 
-class PPU {
+class PPU : public QObject {
+  Q_OBJECT
+
  private:
   uint8 windowLineNum;
   sprite_t visibleSprites[MAX_SPRITES_PER_LINE];
@@ -163,4 +165,9 @@ class PPU {
   PPU();
 
   void step();
+
+ public slots:
+  void toggleBackground(bool showBackground);
+  void toggleWindow(bool showWindow);
+  void toggleSprites(bool showSprites);
 };

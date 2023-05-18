@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 
-#include "../emulator/bootstrap.h"
 #include "../emulator/log.h"
 #include "../emulator/ppu.h"
 #include "keybindingswindow.h"
@@ -9,42 +8,49 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
   ui->setupUi(this);
 
-  cgb.actionPause = ui->actionPause;
-
-  // **************************************************
   // **************************************************
   // File Menu
   // **************************************************
-  // **************************************************
   connect(ui->actionOpenROM, &QAction::triggered, this, &MainWindow::loadROM);
-  connect(ui->actionPause, &QAction::toggled, this, &MainWindow::pause);
-  connect(ui->actionReset, &QAction::triggered, this, &MainWindow::reset);
   connect(ui->actionQuit, &QAction::triggered, this, &QApplication::quit);
 
   // **************************************************
+  // Emulation Menu
   // **************************************************
-  // Settings Menu
-  // **************************************************
-  // **************************************************
+  connect(ui->actionPause, &QAction::toggled, &cgb, &CGB::togglePause);
+  connect(ui->actionReset, &QAction::triggered, &cgb, &CGB::restart);
+
+  // device options
+  auto deviceGroup = new QActionGroup(this);
+  ui->actionGameBoy->setActionGroup(deviceGroup);
+  ui->actionGameBoyColor->setActionGroup(deviceGroup);
+  connect(ui->actionGameBoy, &QAction::triggered, &cgb,
+          [this] { cgb.setDevice(false); });
+  connect(ui->actionGameBoyColor, &QAction::triggered, &cgb,
+          [this] { cgb.setDevice(true); });
+
+  connect(ui->actionSkipDmgBootstrap, &QAction::toggled, &cgb,
+          &CGB::toggleDmgBootstrap);
 
   // **************************************************
-  // Scale Options
+  // Display Menu
   // **************************************************
-  auto scaleActionGroup = new QActionGroup(this);
-  auto scaleSigMap = new QSignalMapper(this);
-  scaleActionGroup->setExclusive(true);
-  addToActionGroup(scaleActionGroup, ui->action0_5x, scaleSigMap, 0);
-  addToActionGroup(scaleActionGroup, ui->action1x, scaleSigMap, 1);
-  addToActionGroup(scaleActionGroup, ui->action1_5x, scaleSigMap, 2);
-  addToActionGroup(scaleActionGroup, ui->action2x, scaleSigMap, 3);
-  connect(scaleSigMap, &QSignalMapper::mappedInt, this, &MainWindow::setScale);
 
-  // **************************************************
-  // Palette Options
-  // **************************************************
-  auto paletteActionGroup = new QActionGroup(this);
-  auto paletteSigMap = new QSignalMapper(this);
-  paletteActionGroup->setExclusive(true);
+  // scale options
+  auto scaleGroup = new QActionGroup(this);
+  scaleGroup->setExclusive(true);
+  ui->action0_5x->setActionGroup(scaleGroup);
+  ui->action1x->setActionGroup(scaleGroup);
+  ui->action1_5x->setActionGroup(scaleGroup);
+  ui->action2x->setActionGroup(scaleGroup);
+  connect(ui->action0_5x, &QAction::triggered, this, [this] { setScale(0.5); });
+  connect(ui->action1x, &QAction::triggered, this, [this] { setScale(1.0); });
+  connect(ui->action1_5x, &QAction::triggered, this, [this] { setScale(1.5); });
+  connect(ui->action2x, &QAction::triggered, this, [this] { setScale(2.0); });
+
+  // palette options
+  auto paletteGroup = new QActionGroup(this);
+  paletteGroup->setExclusive(true);
 
   // add non-sgb palettes to palettes menu
   for (auto palette : Palettes::allPalettes) {
@@ -52,8 +58,10 @@ MainWindow::MainWindow(QWidget *parent)
     action->setCheckable(true);
     if (palette->name == "Game Boy Pocket") action->setChecked(true);
     action->setText(getPaletteLabel(palette));
+    action->setActionGroup(paletteGroup);
     ui->menuPalette->addAction(action);
-    addToActionGroup(paletteActionGroup, action, paletteSigMap, palette);
+    connect(action, &QAction::triggered, this,
+            [this, palette] { setPalette(palette); });
     connect(action, &QAction::hovered, this,
             [this, palette] { cgb.previewPalette(palette); });
   }
@@ -63,64 +71,48 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *action = new QAction();
     action->setCheckable(true);
     action->setText(sgbPalette->name);
+    action->setActionGroup(paletteGroup);
     ui->menuSGB->addAction(action);
-    addToActionGroup(paletteActionGroup, action, paletteSigMap, sgbPalette);
+    connect(action, &QAction::triggered, this,
+            [this, sgbPalette] { setPalette(sgbPalette); });
     connect(action, &QAction::hovered, this,
             [this, sgbPalette] { cgb.previewPalette(sgbPalette); });
   }
 
-  // connect palette signal map
-  connect(paletteSigMap, &QSignalMapper::mappedObject, this,
-          &MainWindow::setPalette);
+  // reset palette preview
   connect(ui->menuPalette, &QMenu::aboutToHide, &cgb,
           &CGB::resetPreviewPalette);
+  connect(ui->actionShowBackground, &QAction::toggled, &cgb.ppu,
+          &PPU::toggleBackground);
+  connect(ui->actionShowWindow, &QAction::toggled, &cgb.ppu,
+          &PPU::toggleWindow);
+  connect(ui->actionShowSprites, &QAction::toggled, &cgb.ppu,
+          &PPU::toggleSprites);
 
   // **************************************************
-  // Other Options
+  // Controls Menu
   // **************************************************
   connect(ui->actionKeyBindings, &QAction::triggered, this,
           &MainWindow::openKeyBindingsWindow);
-  connect(ui->actionShowBootScreen, &QAction::toggled, this,
-          &MainWindow::toggleBootScreen);
-  connect(ui->actionDmgMode, &QAction::toggled, this,
-          &MainWindow::toggleDmgMode);
 
-  // **************************************************
   // **************************************************
   // Debug Menu
   // **************************************************
-  // **************************************************
-  connect(ui->actionShowBackground, &QAction::toggled, this,
-          &MainWindow::toggleBackground);
-  connect(ui->actionShowWindow, &QAction::toggled, this,
-          &MainWindow::toggleWindow);
-  connect(ui->actionShowSprites, &QAction::toggled, this,
-          &MainWindow::toggleSprites);
   connect(ui->actionEnableLogging, &QAction::toggled, this,
           &MainWindow::toggleLogging);
 
+  // cgb sends rendered screen to ui
   connect(&cgb, &CGB::sendScreen, this, &MainWindow::setScreen);
 
-  // set main window size
+  // finalize setup
+  cgb.actionPause = ui->actionPause;
   setScale(1);
 }
 
 MainWindow::~MainWindow() { delete ui; }
 
-void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                                  QSignalMapper *sigMap, int mapVal) {
-  action->setActionGroup(actionGroup);
-  sigMap->setMapping(action, mapVal);
-  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
-}
-
-void MainWindow::addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                                  QSignalMapper *sigMap, Palette *mapVal) {
-  action->setActionGroup(actionGroup);
-  sigMap->setMapping(action, mapVal);
-  connect(action, SIGNAL(triggered()), sigMap, SLOT(map()));
-}
-
+// get palette label, display authoriship if
+// palette has a specified author
 QString MainWindow::getPaletteLabel(Palette *palette) {
   QString label = palette->name;
   if (palette->creator != "") {
@@ -144,13 +136,13 @@ void MainWindow::loadROM() {
   }
 }
 
-void MainWindow::pause(bool shouldPause) { cgb.pause = shouldPause; }
+// **************************************************
+// **************************************************
+// QT Slots
+// **************************************************
+// **************************************************
 
-void MainWindow::reset() {
-  cgb.reset(false);
-  cgb.start(QThread::HighestPriority);
-}
-
+// set screen to the given image
 void MainWindow::setScreen(const QImage *image) {
   // no anti-aliasing when resizing image
   auto pixmap = QPixmap::fromImage(*image).scaled(
@@ -159,10 +151,10 @@ void MainWindow::setScreen(const QImage *image) {
   ui->screen->setPixmap(pixmap);
 }
 
-void MainWindow::setScale(int scale) {
-  float scaleFloat = 0.5 + scale * 0.5;
-  int width = WINDOW_BASE_WIDTH * scaleFloat;
-  int height = WINDOW_BASE_HEIGHT * scaleFloat;
+// set screen scale
+void MainWindow::setScale(float scale) {
+  int width = WINDOW_BASE_WIDTH * scale;
+  int height = WINDOW_BASE_HEIGHT * scale;
 #ifdef Q_OS_MAC
   this->setFixedSize(width, height);
 #else
@@ -171,45 +163,28 @@ void MainWindow::setScale(int scale) {
   ui->screen->setFixedSize(width, height);
 }
 
-void MainWindow::setPalette(QObject *palette) {
+// set dmg palette
+void MainWindow::setPalette(Palette *palette) {
   cgb.ppu.palette = (Palette *)palette;
   cgb.tempPalette = nullptr;
   cgb.renderInPauseMode();
 }
 
+// open the key bindings window
 void MainWindow::openKeyBindingsWindow() {
   KeyBindingsWindow kbWin(&cgb.controls);
   kbWin.exec();
 }
 
-void MainWindow::toggleBootScreen(bool showBootScreen) {
-  cgb.bootstrap.skip = !showBootScreen;
-}
-
-void MainWindow::toggleBackground(bool showBackground) {
-  cgb.ppu.showBackground = showBackground;
-}
-
-void MainWindow::toggleWindow(bool showWindow) {
-  cgb.ppu.showWindow = showWindow;
-}
-
-void MainWindow::toggleSprites(bool showSprites) {
-  cgb.ppu.showSprites = showSprites;
-}
-
+// toggle logging
 void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
 
-void MainWindow::toggleDmgMode(bool dmgMode) {
-  cgb.dmgMode = dmgMode;
-  cgb.reset();
-  cgb.start(QThread::HighestPriority);
-}
-
+// game boy button press event
 void MainWindow::keyPressEvent(QKeyEvent *event) {
   cgb.controls.press(event->key());
 }
 
+// game boy button release event
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
     cgb.controls.release(event->key());

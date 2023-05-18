@@ -22,11 +22,11 @@
 #define RAM_BANK_BYTES 0x2000
 #define WRAM_BANK_BYTES 0x1000
 #define PAL_RAM_BYTES 0x40
+#define PAL_BYTES 0x08
 #define HALF_RAM_BYTES 0x200
 #define EXRAM_BANKS 16
 #define VRAM_BANKS 2
 #define WRAM_BANKS 8
-#define PAL_SIZE 8
 #define PAL_COUNT 8
 
 // cartridge header addresses

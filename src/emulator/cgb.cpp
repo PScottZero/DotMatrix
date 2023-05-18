@@ -34,8 +34,10 @@ CGB::CGB()
       mem(),
       ppu(),
       timers(),
+      rtc(),
       romPath(QDir::currentPath()),
       stop(false),
+      cgbMode(true),
       dmgMode(false),
       doubleSpeedMode(false),
       shouldStepPpu(false),
@@ -44,7 +46,48 @@ CGB::CGB()
       running(false),
       pause(false),
       tempPalette(nullptr) {
-  init();
+  // cgb pointers
+  cpu.cgb = this;
+  mem.cgb = this;
+  ppu.cgb = this;
+  timers.cgb = this;
+  rtc.cgb = this;
+
+  // boostrap
+  bootstrap.cgbMode = &cgbMode;
+
+  // controls
+  controls.interrupts = &interrupts;
+  controls.p1 = mem.getBytePtr(P1);
+
+  // interrupts
+  interrupts.intEnable = mem.getBytePtr(IE);
+  interrupts.intFlags = mem.getBytePtr(IF);
+
+  // mbc
+  mbc.mem = &mem;
+  mbc.rtc = &rtc;
+
+  // ppu
+  ppu.screen = &screen;
+  ppu.palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
+  ppu.lcdc = mem.getBytePtr(LCDC);
+  ppu.stat = mem.getBytePtr(STAT);
+  ppu.scy = mem.getBytePtr(SCY);
+  ppu.scx = mem.getBytePtr(SCX);
+  ppu.ly = mem.getBytePtr(LY);
+  ppu.lyc = mem.getBytePtr(LYC);
+  ppu.bgp = mem.getBytePtr(BGP);
+  ppu.obp0 = mem.getBytePtr(OBP0);
+  ppu.obp1 = mem.getBytePtr(OBP1);
+  ppu.wx = mem.getBytePtr(WX);
+  ppu.wy = mem.getBytePtr(WY);
+
+  // timers
+  timers.div = mem.getBytePtr(DIV);
+  timers.tima = mem.getBytePtr(TIMA);
+  timers.tma = mem.getBytePtr(TMA);
+  timers.tac = mem.getBytePtr(TAC);
 }
 
 CGB::~CGB() {
@@ -69,7 +112,7 @@ void CGB::run() {
       if (stop) ppu.step();
 
       // send rendered screen frame to ui
-      if (!bootstrap.enabledAndShouldSkip()) {
+      if (!bootstrap.skipDmgBootstrap()) {
         if (ppu.frameRendered) {
           emit sendScreen(&screen);
           int duration = FRAME_DURATION;
@@ -86,51 +129,6 @@ void CGB::run() {
   }
 }
 
-// initialize memory pointers between
-// components of game boy
-void CGB::init() {
-  // cgb pointers
-  cpu.cgb = this;
-  mem.cgb = this;
-  ppu.cgb = this;
-  timers.cgb = this;
-
-  // boostrap
-  bootstrap.dmgMode = &dmgMode;
-
-  // controls
-  controls.interrupts = &interrupts;
-  controls.p1 = mem.getBytePtr(P1);
-
-  // interrupts
-  interrupts.intEnable = mem.getBytePtr(IE);
-  interrupts.intFlags = mem.getBytePtr(IF);
-
-  // mbc
-  mbc.mem = &mem;
-
-  // ppu
-  ppu.screen = &screen;
-  ppu.palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
-  ppu.lcdc = mem.getBytePtr(LCDC);
-  ppu.stat = mem.getBytePtr(STAT);
-  ppu.scy = mem.getBytePtr(SCY);
-  ppu.scx = mem.getBytePtr(SCX);
-  ppu.ly = mem.getBytePtr(LY);
-  ppu.lyc = mem.getBytePtr(LYC);
-  ppu.bgp = mem.getBytePtr(BGP);
-  ppu.obp0 = mem.getBytePtr(OBP0);
-  ppu.obp1 = mem.getBytePtr(OBP1);
-  ppu.wx = mem.getBytePtr(WX);
-  ppu.wy = mem.getBytePtr(WY);
-
-  // timers
-  timers.div = mem.getBytePtr(DIV);
-  timers.tima = mem.getBytePtr(TIMA);
-  timers.tma = mem.getBytePtr(TMA);
-  timers.tac = mem.getBytePtr(TAC);
-}
-
 bool CGB::loadRom(const QString romPath) {
   mem.loadRom(romPath);
 
@@ -138,14 +136,17 @@ bool CGB::loadRom(const QString romPath) {
   mbc.bankType = mem.getByte(BANK_TYPE);
   mbc.romSize = mem.getByte(ROM_SIZE);
   mbc.ramSize = mem.getByte(RAM_SIZE);
-  mbc.halfRAMMode = mbc.bankType == MBC2_ || mbc.bankType == MBC2_BATTERY;
+  mbc.halfRAMMode = mbc.bankType == MBC2 || mbc.bankType == MBC2_BATTERY;
+  dmgMode = !cgbMode;
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
-  printf("Game Boy Mode: %s\n", dmgMode ? "DMG" : "CGB");
+  printf("Device: %s\n", cgbMode ? "CGB" : "DMG");
+  printf("Mode: %s\n", dmgMode ? "DMG" : "CGB");
   printf("Bank Type: %s (%02X)\n", mbc.bankTypeStr().c_str(), mbc.bankType);
-  printf("Has RAM: %s\n", mbc.hasRam() ? "true" : "false");
-  printf("Has Battery: %s\n", mbc.hasRamAndBattery() ? "true" : "false");
+  printf("Has RAM: %s\n", mbc.hasRam() ? "True" : "False");
+  printf("Has Battery: %s\n", mbc.hasRamAndBattery() ? "True" : "False");
+  printf("Has Timer: %s\n", mbc.hasTimerAndBattery() ? "True" : "False");
   printf("ROM Size: %d KiB\n", (int)pow(2, mbc.romSize + 1) * ROM_BANK_BYTES);
   printf("RAM Size: %d KiB\n", mbc.ramBytes());
 
@@ -166,36 +167,59 @@ bool CGB::loadRom(const QString romPath) {
   return true;
 }
 
+// reset game boy
 void CGB::reset(bool newGame) {
+  // stop current thread and wait for
+  // the thread to exit
   running = false;
   wait();
+
+  // reset flags
   stop = false;
   pause = false;
   doubleSpeedMode = false;
   shouldStepPpu = false;
+  dmgMode = !cgbMode;
   actionPause->setChecked(false);
 
+  // reset components
   cpu.reset();
   timers.reset();
   mem.reset();
   mbc.reset();
   bootstrap.reset();
 
-  if (!newGame && mbc.hasRamAndBattery()) {
-    mem.loadExram();
-  }
+  // load external ram if not loading a new game
+  // and current game has external ram and
+  // a battery
+  if (!newGame && mbc.hasRamAndBattery()) mem.loadExram();
 }
 
+// set device to either game boy color (cgb)
+// or original game boy (dmg)
+void CGB::setDevice(bool cgb) {
+  cgbMode = cgb;
+  restart();
+}
+
+// toggle whether boot screen should appear
+// before a game is started
+void CGB::toggleDmgBootstrap(bool skip) { bootstrap.skip = skip; }
+
+// save current palette and preview
+// the specified palette
 void CGB::previewPalette(Palette *palette) {
-  if (dmgMode) {
+  if (!cgbMode) {
     if (tempPalette == nullptr) tempPalette = ppu.palette;
     ppu.palette = palette;
     renderInPauseMode();
   }
 }
 
+// reset palette to original palette
+// before palette preview
 void CGB::resetPreviewPalette() {
-  if (dmgMode) {
+  if (!cgbMode) {
     if (tempPalette != nullptr) {
       ppu.palette = tempPalette;
       tempPalette = nullptr;
@@ -204,6 +228,7 @@ void CGB::resetPreviewPalette() {
   }
 }
 
+// render screen while in pause mode
 void CGB::renderInPauseMode() {
   if (pause) {
     ppu.cycles = 0;
@@ -213,4 +238,25 @@ void CGB::renderInPauseMode() {
     ppu.frameRendered = false;
     emit sendScreen(&screen);
   }
+}
+
+// toggle pause mode
+void CGB::togglePause(bool shouldPause) { pause = shouldPause; }
+
+// restart game boy (reset and start)
+void CGB::restart() {
+  reset(false);
+  if (romPath != QDir::currentPath()) {
+    start(QThread::HighestPriority);
+  }
+}
+
+void CGB::save() {
+  if (mbc.hasRamAndBattery()) mem.saveExram();
+  if (mbc.hasTimerAndBattery()) rtc.save();
+}
+
+void CGB::load() {
+  if (mbc.hasRamAndBattery()) mem.loadExram();
+  if (mbc.hasTimerAndBattery()) rtc.load();
 }

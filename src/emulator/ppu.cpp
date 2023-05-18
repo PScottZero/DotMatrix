@@ -78,7 +78,7 @@ void PPU::step() {
 
           scanline_t scanline;
           resetScanline(scanline);
-          if ((bgEnable() || !cgb->dmgMode) && showBackground)
+          if ((bgEnable() || cgb->cgbMode) && showBackground)
             renderBg(scanline);
           if (windowEnable() && showWindow) renderWindow(scanline);
           if (spriteEnable() && showSprites) renderSprites(scanline);
@@ -113,7 +113,7 @@ void PPU::step() {
     *stat &= ~THREE_BITS_MASK;
     statInt = false;
     if (cycles > SCANLINE_CYCLES * SCREEN_LINES) {
-      if (cgb->dmgMode) screen->fill(palette->data[0]);
+      if (!cgb->cgbMode) screen->fill(palette->data[0]);
       cycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
@@ -195,7 +195,7 @@ void PPU::renderBg(scanline_t &scanline) {
     for (int i = start; i < end; ++i) {
       scanline.pixels[pxCount] = row[i];
       scanline.paletteTypes[pxCount] = PaletteType::BG;
-      if (!cgb->dmgMode) {
+      if (cgb->cgbMode) {
         scanline.paletteIndices[pxCount] = attr.paletteNum;
         scanline.priorities[pxCount] = attr.priority;
       }
@@ -240,7 +240,7 @@ void PPU::renderWindow(scanline_t &scanline) {
         if (winX + pxCount >= 0 && winX + pxCount < SCREEN_PX_WIDTH) {
           scanline.pixels[winX + pxCount] = row[i];
           scanline.paletteTypes[winX + pxCount] = PaletteType::BG;
-          if (!cgb->dmgMode) {
+          if (cgb->cgbMode) {
             scanline.paletteIndices[pxCount] = attr.paletteNum;
             scanline.priorities[pxCount] = attr.priority;
           }
@@ -270,7 +270,7 @@ void PPU::renderSprites(scanline_t &scanline) {
           scanline.paletteTypes[pxX] =
               sprite.palette ? PaletteType::SPRITE1 : PaletteType::SPRITE0;
           scanline.spriteIndices[pxX] = spriteIdx;
-          if (!cgb->dmgMode) {
+          if (cgb->cgbMode) {
             scanline.paletteIndices[pxX] = sprite.paletteNum;
             scanline.priorities[pxX] = sprite.priority;
           }
@@ -315,22 +315,47 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
   for (int px = 0; px < SCREEN_PX_WIDTH; ++px) {
     auto palType = scanline.paletteTypes[px];
     uint pxColor;
+
+    // dmg palette
     if (cgb->dmgMode) {
-      uint8 pal;
-      switch (palType) {
-        case PaletteType::BG:
-          pal = *bgp;
-          break;
-        case PaletteType::SPRITE0:
-          pal = *obp0;
-          break;
-        case PaletteType::SPRITE1:
-          pal = *obp1;
-          break;
+      // use game boy color palettes when using
+      // game boy color in dmg mode
+      if (cgb->cgbMode) {
+        switch (palType) {
+          case PaletteType::BG:
+            pxColor = getPaletteColor(cgb->mem.cramBg, 0, scanline.pixels[px]);
+            break;
+          case PaletteType::SPRITE0:
+            pxColor = getPaletteColor(cgb->mem.cramObj, 0, scanline.pixels[px]);
+            break;
+          case PaletteType::SPRITE1:
+            pxColor = getPaletteColor(cgb->mem.cramObj, 1, scanline.pixels[px]);
+            break;
+        }
       }
-      uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
-      pxColor = palette->data[pxPalVal];
-    } else {
+
+      // use original game boy palettes when
+      // using original game boy
+      else {
+        uint8 pal;
+        switch (palType) {
+          case PaletteType::BG:
+            pal = *bgp;
+            break;
+          case PaletteType::SPRITE0:
+            pal = *obp0;
+            break;
+          case PaletteType::SPRITE1:
+            pal = *obp1;
+            break;
+        }
+        uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
+        pxColor = palette->data[pxPalVal];
+      }
+    }
+
+    // cgb palette
+    else {
       uint8 palIdx = scanline.paletteIndices[px];
       uint8 *cram =
           palType == PaletteType::BG ? cgb->mem.cramBg : cgb->mem.cramObj;
@@ -556,3 +581,20 @@ uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const {
   // convert to 32-bit argb color
   return qRgb(red * 8, green * 8, blue * 8);
 }
+
+// **************************************************
+// **************************************************
+// QT Slots
+// **************************************************
+// **************************************************
+
+// toggle background display layer
+void PPU::toggleBackground(bool showBackground) {
+  showBackground = showBackground;
+}
+
+// toggle window display layer
+void PPU::toggleWindow(bool showWindow) { showWindow = showWindow; }
+
+// toggle sprite display layer
+void PPU::toggleSprites(bool showSprites) { showSprites = showSprites; }

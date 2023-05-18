@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// MEMORY
+// Memory (Cartridge, VRAM, WRAM, etc.)
 // **************************************************
 // **************************************************
 // **************************************************
@@ -63,10 +63,30 @@ Memory::Memory()
 uint8 Memory::read(uint16 addr) const {
   cgb->cpu.ppuTimerSerialStep(1);
 
-  // cannot access external ram if it
-  // is not enabled by MBC
-  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR && !cgb->mbc.ramEnabled) {
-    return 0xFF;
+  // **************************************************
+  // Read Intercepts
+  // **************************************************
+
+  // bootstrap
+  if (cgb->bootstrap.enabled) {
+    bool dmgBoot = addr < DMG_BOOTSTRAP_BYTES;
+    bool cgbBoot = cgb->cgbMode && addr >= CGB_BOOTSTRAP_ADDR &&
+                   addr < CGB_BOOTSTRAP_BYTES;
+    if (dmgBoot || cgbBoot) return *cgb->bootstrap.at(addr);
+  }
+
+  // external ram access
+  if (addr >= EXRAM_ADDR && addr < WRAM_ADDR) {
+    // cannot access external ram if it
+    // is not enabled by mbc
+    if (!cgb->mbc.ramEnabled) return 0xFF;
+
+    // if using mbc3 and external ram is
+    // mapped to an rtc register, read
+    // from rtc register
+    if (cgb->mbc.usingMbc3() && cgb->mbc.ramBankNum >= RTC_REG_START_IDX) {
+      return *cgb->rtc.rtcReg;
+    }
   }
 
   // do not read value if reading from
@@ -89,14 +109,20 @@ uint8 Memory::read(uint16 addr) const {
     return readBits(addr, {6});
   }
 
+  // read from game boy color palette data
+  if (cgb->cgbMode && addr == BCPD) return *bcpd;
+  if (cgb->cgbMode && addr == OCPD) return *ocpd;
+
   // skip waiting for screen frame in
   // bootstrap by returning hex 90 when
   // reading the LY register
-  if (addr == LY && cgb->bootstrap.enabledAndShouldSkip()) {
+  if (addr == LY && cgb->bootstrap.skipDmgBootstrap()) {
     return 0x90;
   }
 
-  // read from memory
+  // **************************************************
+  // Read From Memory
+  // **************************************************
   return getByte(addr);
 }
 
@@ -118,7 +144,11 @@ uint8 Memory::readBits(uint16 addr, vector<uint8> bits) const {
 void Memory::write(uint16 addr, uint8 val) {
   cgb->cpu.ppuTimerSerialStep(1);
 
-  // check for MBC writes
+  // **************************************************
+  // Write Intercepts
+  // **************************************************
+
+  // check for mbc writes
   cgb->mbc.write(addr, val);
 
   // rom bank area is read-only
@@ -130,12 +160,21 @@ void Memory::write(uint16 addr, uint8 val) {
     // is not enabled by MBC
     if (!cgb->mbc.ramEnabled) return;
 
-    // if using MBC2, ram only uses lower nibble
+    // if using mbc2, ram only uses lower nibble
     // of each ram byte, and ram only consists of
     // 512 half bytes with rest of ram area
     // echoing A000-A1FF
-    if (cgb->mbc.halfRAMMode) {
+    if (cgb->mbc.usingMbc2()) {
       echoHalfRam(addr, val);
+      return;
+    }
+
+    // if using mbc3 and external ram is
+    // mapped to an rtc register, write
+    // to rtc register
+    if (cgb->mbc.usingMbc3() && cgb->mbc.ramBankNum >= RTC_REG_START_IDX) {
+      *cgb->rtc.rtcReg = val;
+      cgb->rtc.resetClock();
       return;
     }
   }
@@ -177,7 +216,8 @@ void Memory::write(uint16 addr, uint8 val) {
   // be written to
   if (addr == KEY1) {
     writeBits(addr, val, {0});
-    if (val & BIT0_MASK) cgb->doubleSpeedMode = val & BIT7_MASK;
+    if (val & BIT0_MASK) cgb->doubleSpeedMode = !cgb->doubleSpeedMode;
+    writeBits(addr, cgb->doubleSpeedMode << 7, {7});
     return;
   }
 
@@ -202,8 +242,42 @@ void Memory::write(uint16 addr, uint8 val) {
     return;
   }
 
-  // write to memory
+  // write to cgb background palette data (cgb only)
+  if (cgb->cgbMode && addr == BCPD) {
+    *bcpd = val;
+
+    // auto increment register BCPS if
+    // writing to register BCPD and auto
+    // increment is enabled (cgb only)
+    if (getByte(BCPS) & BIT7_MASK) {
+      ++getByte(BCPS);
+      getByte(BCPS) &= 0xBF;
+      bcpd = &cramBg[getByte(BCPS) & SIX_BITS_MASK];
+    }
+  }
+
+  // write to cgb object palette data (cgb only)
+  if (cgb->cgbMode && addr == OCPD) {
+    *ocpd = val;
+
+    // auto increment register OCPS if
+    // writing to register OCPD and auto
+    // increment is enabled
+    if (getByte(OCPS) & BIT7_MASK) {
+      ++getByte(OCPS);
+      getByte(OCPS) &= 0xBF;
+      ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
+    }
+  }
+
+  // **************************************************
+  // Write To Memory
+  // **************************************************
   getByte(addr) = val;
+
+  // **************************************************
+  // Post-Write Actions
+  // **************************************************
 
   // start oam dma transfer if DMA
   // register was written to
@@ -239,7 +313,7 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // start vram dma transfer if HDMA5
   // register was written to (cgb only)
-  if (addr == HDMA5 && !cgb->dmgMode) {
+  if (addr == HDMA5 && cgb->cgbMode) {
     if (vramTransferMode()) {
       // printf("hblank vram dma not supported yet\n");
       vramDmaTransfer();
@@ -255,6 +329,16 @@ void Memory::write(uint16 addr, uint8 val) {
   if (addr == BOOTSTRAP && val != 0) {
     cgb->bootstrap.enabled = false;
     Log::bootstrap = false;
+
+    // set dmg mode
+    //
+    // cgbMode | dmgMode | device
+    // ----------------------------------
+    // false   | true    | DMG
+    // true    | true    | CGB (DMG mode)
+    // true    | false   | CGB
+    cgb->dmgMode = !(cgb->mem.getByte(CGB_MODE) == 0x80 ||
+                     cgb->mem.getByte(CGB_MODE) == 0xC0);
   }
 
   // start serial transfer if writing
@@ -266,46 +350,28 @@ void Memory::write(uint16 addr, uint8 val) {
 
   // set vram bank if writing to
   // VBK register (cgb only)
-  if (!cgb->dmgMode && addr == VBK) {
+  if (cgb->cgbMode && addr == VBK) {
     setVramBank(val & BIT0_MASK);
   }
 
   // set wram bank if writing to
   // SVBK register (cgb only)
-  if (!cgb->dmgMode && addr == SVBK) {
+  if (cgb->cgbMode && addr == SVBK) {
     setWramBank(max(val & THREE_BITS_MASK, 1));
   }
 
   // udpate register BCPD when writing
   // to BCPS (cgb only)
-  if (!cgb->dmgMode && addr == BCPS) {
+  if (cgb->cgbMode && addr == BCPS) {
     uint8 cramAddr = val & SIX_BITS_MASK;
     bcpd = &cramBg[cramAddr];
   }
 
   // udpate register OCPD when writing
   // to OCPS (cgb only)
-  if (!cgb->dmgMode && addr == OCPS) {
+  if (cgb->cgbMode && addr == OCPS) {
     uint8 cramAddr = val & SIX_BITS_MASK;
     ocpd = &cramObj[cramAddr];
-  }
-
-  // auto increment register BCPS if
-  // writing to register BCPD and auto
-  // increment is enabled (cgb only)
-  if (!cgb->dmgMode && addr == BCPD && (getByte(BCPS) & BIT7_MASK)) {
-    ++getByte(BCPS);
-    getByte(BCPS) &= 0xBF;
-    bcpd = &cramBg[getByte(BCPS) & SIX_BITS_MASK];
-  }
-
-  // auto increment register OCPS if
-  // writing to register OCPD and auto
-  // increment is enabled (cgb only)
-  if (!cgb->dmgMode && addr == OCPD && (getByte(OCPS) & BIT7_MASK)) {
-    ++getByte(OCPS);
-    getByte(OCPS) &= 0xBF;
-    ocpd = &cramObj[getByte(OCPS) & SIX_BITS_MASK];
   }
 }
 
@@ -340,12 +406,7 @@ uint8 &Memory::getByte(uint16 addr) const { return *getBytePtr(addr); }
 // get pointer to byte at specified address
 // directly (no read/write intercepts)
 uint8 *Memory::getBytePtr(uint16 addr) const {
-  if (cgb->bootstrap.enabled && addr < DMG_BOOTSTRAP_BYTES) {
-    return &cgb->bootstrap.at(addr);
-  } else if (!cgb->dmgMode && cgb->bootstrap.enabled &&
-             addr >= CGB_BOOTSTRAP_ADDR && addr < CGB_BOOTSTRAP_BYTES) {
-    return &cgb->bootstrap.at(addr);
-  } else if (addr < ROM_BANK_1_ADDR) {
+  if (addr < ROM_BANK_1_ADDR) {
     return &romBank0[addr];
   } else if (addr < VRAM_ADDR) {
     return &romBank1[addr - ROM_BANK_1_ADDR];
@@ -357,10 +418,6 @@ uint8 *Memory::getBytePtr(uint16 addr) const {
     return &wram[addr - WRAM_ADDR];
   } else if (addr < ECHO_RAM_ADDR) {
     return &wramBank[addr - WRAM_BANK_ADDR];
-  } else if (!cgb->dmgMode && addr == BCPD) {
-    return bcpd;
-  } else if (!cgb->dmgMode && addr == OCPD) {
-    return ocpd;
   }
   return &mem[addr - ECHO_RAM_ADDR];
 }

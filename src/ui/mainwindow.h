@@ -30,18 +30,11 @@ class MainWindow : public QMainWindow {
 
  public slots:
   void loadROM();
-  void pause(bool shouldPause);
-  void reset();
   void setScreen(const QImage *image);
-  void setPalette(QObject *palette);
-  void setScale(int scale);
+  void setPalette(Palette *palette);
+  void setScale(float scale);
   void openKeyBindingsWindow();
-  void toggleBootScreen(bool showBootScreen);
-  void toggleBackground(bool showBackground);
-  void toggleWindow(bool showWindow);
-  void toggleSprites(bool showSprites);
   void toggleLogging(bool enableLog);
-  void toggleDmgMode(bool dmgMode);
 
  protected:
   void keyPressEvent(QKeyEvent *event) override;

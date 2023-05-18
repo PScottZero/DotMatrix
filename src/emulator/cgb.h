@@ -20,6 +20,7 @@
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
+#include "rtc.h"
 #include "timers.h"
 
 #define FRAME_RATE 59.7275
@@ -41,10 +42,11 @@ class CGB : public QThread {
   Memory mem;
   PPU ppu;
   Timers timers;
+  RTC rtc;
 
   QString romPath;
   QAction *actionPause;
-  bool stop, dmgMode, doubleSpeedMode, shouldStepPpu;
+  bool stop, cgbMode, dmgMode, doubleSpeedMode, shouldStepPpu;
   bool running, pause;
   Palette *tempPalette;
 
@@ -52,7 +54,6 @@ class CGB : public QThread {
   ~CGB();
 
   void run() override;
-  void init();
   void reset(bool newGame = true);
   bool loadRom(const QString romPath);
   void renderInPauseMode();
@@ -61,6 +62,12 @@ class CGB : public QThread {
   void sendScreen(const QImage *screen);
 
  public slots:
+  void setDevice(bool cgb);
+  void toggleDmgBootstrap(bool skip);
   void previewPalette(Palette *palette);
   void resetPreviewPalette();
+  void togglePause(bool shouldPause);
+  void restart();
+  void save();
+  void load();
 };

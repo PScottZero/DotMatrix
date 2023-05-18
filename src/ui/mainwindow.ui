@@ -119,11 +119,24 @@
     <property name="title">
      <string>Emulation</string>
     </property>
+    <widget class="QMenu" name="menuDevice">
+     <property name="font">
+      <font>
+       <family>Silkscreen</family>
+       <pointsize>11</pointsize>
+      </font>
+     </property>
+     <property name="title">
+      <string>Device</string>
+     </property>
+     <addaction name="actionGameBoy"/>
+     <addaction name="actionGameBoyColor"/>
+    </widget>
     <addaction name="actionPause"/>
     <addaction name="actionReset"/>
     <addaction name="separator"/>
-    <addaction name="actionDmgMode"/>
-    <addaction name="actionShowBootScreen"/>
+    <addaction name="menuDevice"/>
+    <addaction name="actionSkipDmgBootstrap"/>
    </widget>
    <widget class="QMenu" name="menuDisplay">
     <property name="font">
@@ -244,15 +257,15 @@
     </font>
    </property>
   </action>
-  <action name="actionShowBootScreen">
+  <action name="actionSkipDmgBootstrap">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
-    <string>Show Boot Screen</string>
+    <string>Skip DMG Bootstrap</string>
    </property>
    <property name="font">
     <font>
@@ -406,6 +419,37 @@
   <action name="actionWho_did_this">
    <property name="text">
     <string>Who did this?</string>
+   </property>
+  </action>
+  <action name="actionGameBoy">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Game Boy</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionGameBoyColor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Game Boy Color</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
    </property>
   </action>
  </widget>

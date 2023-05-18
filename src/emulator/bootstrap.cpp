@@ -231,20 +231,18 @@ uint8 Bootstrap::cgbBootstrap[CGB_BOOTSTRAP_BYTES]{
     0x21, 0x22, 0x80, 0x81, 0x82, 0x10, 0x11, 0x12, 0x12, 0xB0, 0x79, 0xB8,
     0xAD, 0x16, 0x17, 0x07, 0xBA, 0x05, 0x7C, 0x13, 0x00, 0x00, 0x00, 0x00};
 
-Bootstrap::Bootstrap() : enabled(true), skip(false), dmgMode(nullptr) {}
+Bootstrap::Bootstrap() : enabled(true), skip(false), cgbMode(nullptr) {}
 
 // get byte of bootstrap at given address
-uint8 &Bootstrap::at(uint16 addr) const {
-  if (*dmgMode) {
-    return dmgBootstrap[addr];
-  } else {
-    return cgbBootstrap[addr];
-  }
+uint8 *Bootstrap::at(uint16 addr) const {
+  return *cgbMode ? &cgbBootstrap[addr] : &dmgBootstrap[addr];
 }
 
-// check if bootstrap is enabled and should be
-// fast-forwarded through
-bool Bootstrap::enabledAndShouldSkip() const { return enabled && skip; }
+// check if dgm bootstrap is enabled and
+// should be fast-forwarded through
+bool Bootstrap::skipDmgBootstrap() const {
+  return !*cgbMode && enabled && skip;
+}
 
 // reset bootstrap
 void Bootstrap::reset() { enabled = true; }
