@@ -18,10 +18,16 @@ class VramViewer : public QWidget {
   ~VramViewer();
 
   void render();
+  void renderTiles();
+  void renderBackground();
+  void renderWindow();
+  void renderTileMap(QImage &display, uint16 tileMapAddr);
+  void renderBgViewport();
+  void renderWinViewport();
 
  private:
   Ui::VramViewer *ui;
-  QImage vramDisplay;
+  QImage vramDisplay, bgDisplay, winDisplay;
   CGB *cgb;
   bool running;
 };

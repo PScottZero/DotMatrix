@@ -119,10 +119,8 @@ class PPU : public QObject {
   void resetScanline(scanline_t &scanline);
 
   // read display memory functions
-  TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row) const;
   TileRow getSpriteRow(sprite_t oamEntry, uint8 row) const;
   sprite_t getSpriteOAM(uint8 spriteIdx) const;
-  tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) const;
   void flipTileRow(TileRow &row) const;
 
   // lcdc register functions
@@ -131,9 +129,6 @@ class PPU : public QObject {
   bool windowEnable() const;
   bool spriteEnable() const;
   uint8 spriteHeight() const;
-  uint16 windowMapAddr() const;
-  uint16 bgWindowDataAddr() const;
-  uint16 bgMapAddr() const;
 
   // stat register functions
   bool coincidenceIntEnabled() const;
@@ -145,9 +140,6 @@ class PPU : public QObject {
   uint8 getMode() const;
   void setLcdStatInterrupt();
 
-  // lcd color palette functions
-  uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const;
-
  public:
   uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy, *wx;
 
@@ -157,6 +149,8 @@ class PPU : public QObject {
   Palette *palette;
   bool showBackground, showWindow, showSprites;
   uint16 cycles;
+  uint8 renderedScx, renderedScy;
+  uint8 scxs[SCREEN_PX_HEIGHT], scys[SCREEN_PX_HEIGHT];
 
   PPU();
 
@@ -164,6 +158,18 @@ class PPU : public QObject {
 
   TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
                      bool vramBank = false) const;
+  TileRow getTileRow(tile_map_attr_t attr, uint8 tileNo, uint8 row) const;
+  tile_map_attr_t getTileMapAttr(uint16 baseAddr, uint16 bgWinTileNo) const;
+
+  uint16 bgMapAddr() const;
+  uint16 windowMapAddr() const;
+  uint16 bgWindowDataAddr() const;
+
+  uint getPaletteColor(uint8 palette, uint8 colorIdx) const;
+  uint getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const;
+
+  uint8 getMostFreqScx();
+  uint8 getMostFreqScy();
 
  public slots:
   void toggleBackground(bool show);

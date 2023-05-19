@@ -8,6 +8,8 @@
 
 #include "ppu.h"
 
+#include <map>
+
 #include "cgb.h"
 #include "interrupts.h"
 #include "memory.h"
@@ -35,7 +37,11 @@ PPU::PPU()
       showWindow(true),
       showSprites(true),
       statInt(false),
-      cycles(0) {}
+      cycles(0),
+      renderedScx(),
+      renderedScy(),
+      scxs(),
+      scys() {}
 
 void PPU::step() {
   cycles += 1;
@@ -159,6 +165,10 @@ void PPU::renderBg(scanline_t &scanline) {
   uint16 tileMapAddr = bgMapAddr();
   uint16 tileDataAddr = bgWindowDataAddr();
 
+  // record scx and scy
+  scxs[*ly] = *scx;
+  scys[*ly] = *scy;
+
   // render background row
   uint8 pxCount = 0;
   uint8 pxY = *scy + *ly;
@@ -204,6 +214,9 @@ void PPU::renderBg(scanline_t &scanline) {
       ++pxCount;
     }
   }
+
+  if (*ly == 143) renderedScx = getMostFreqScx();
+  if (*ly == 143) renderedScy = getMostFreqScy();
 }
 
 // render window tile rows that
@@ -351,8 +364,7 @@ void PPU::transferScanlineToScreen(scanline_t &scanline) {
             pal = *obp1;
             break;
         }
-        uint8 pxPalVal = (pal >> (2 * scanline.pixels[px])) & TWO_BITS_MASK;
-        pxColor = palette->data[pxPalVal];
+        pxColor = getPaletteColor(pal, scanline.pixels[px]);
       }
     }
 
@@ -409,12 +421,11 @@ TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
 
 // get specified row of the given background
 // or window tile (cgb only)
-TileRow PPU::getTileRow(tile_map_attr_t tileMapAttr, uint8 tileNo,
-                        uint8 row) const {
-  row = tileMapAttr.flipY ? TILE_PX_DIM - row - 1 : row;
+TileRow PPU::getTileRow(tile_map_attr_t attr, uint8 tileNo, uint8 row) const {
+  row = attr.flipY ? TILE_PX_DIM - row - 1 : row;
   TileRow tileRow =
-      getTileRow(bgWindowDataAddr(), tileNo, row, tileMapAttr.vramBankNum);
-  if (tileMapAttr.flipX) flipTileRow(tileRow);
+      getTileRow(bgWindowDataAddr(), tileNo, row, attr.vramBankNum);
+  if (attr.flipX) flipTileRow(tileRow);
   return tileRow;
 }
 
@@ -570,6 +581,11 @@ void PPU::setLcdStatInterrupt() {
 // **************************************************
 // **************************************************
 
+uint PPU::getPaletteColor(uint8 palette, uint8 colorIdx) const {
+  uint8 pxPalVal = (palette >> (2 * colorIdx)) & TWO_BITS_MASK;
+  return cgb->ppu.palette->data[pxPalVal];
+}
+
 uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const {
   // get color of palette
   uint8 cramAddr = palIdx * PAL_SIZE + colorIdx * 2;
@@ -582,6 +598,50 @@ uint PPU::getPaletteColor(uint8 *cram, uint8 palIdx, uint8 colorIdx) const {
 
   // convert to 32-bit argb color
   return qRgb(red * 8, green * 8, blue * 8);
+}
+
+uint8 PPU::getMostFreqScx() {
+  map<uint8, uint8> freqs{};
+  for (uint8 x : scxs) {
+    if (freqs.find(x) == freqs.end()) {
+      freqs[x] = 1;
+    } else {
+      ++freqs[x];
+    }
+  }
+
+  uint mostFreqScx = 0;
+  uint8 maxFreq = 0;
+  for (auto pair : freqs) {
+    if (pair.second > maxFreq) {
+      maxFreq = pair.second;
+      mostFreqScx = pair.first;
+    }
+  }
+
+  return mostFreqScx;
+}
+
+uint8 PPU::getMostFreqScy() {
+  map<uint8, uint8> freqs{};
+  for (uint8 y : scys) {
+    if (freqs.find(y) == freqs.end()) {
+      freqs[y] = 1;
+    } else {
+      ++freqs[y];
+    }
+  }
+
+  uint mostFreqScy = 0;
+  uint8 maxFreq = 0;
+  for (auto pair : freqs) {
+    if (pair.second > maxFreq) {
+      maxFreq = pair.second;
+      mostFreqScy = pair.first;
+    }
+  }
+
+  return mostFreqScy;
 }
 
 // **************************************************
