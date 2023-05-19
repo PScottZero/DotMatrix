@@ -34,6 +34,7 @@ class MainWindow : public QMainWindow {
   void setPalette(Palette *palette);
   void setScale(float scale);
   void openKeyBindingsWindow();
+  void openVramViewer();
   void toggleLogging(bool enableLog);
 
  protected:

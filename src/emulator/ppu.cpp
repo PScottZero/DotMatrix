@@ -241,8 +241,8 @@ void PPU::renderWindow(scanline_t &scanline) {
           scanline.pixels[winX + pxCount] = row[i];
           scanline.paletteTypes[winX + pxCount] = PaletteType::BG;
           if (cgb->cgbMode) {
-            scanline.paletteIndices[pxCount] = attr.paletteNum;
-            scanline.priorities[pxCount] = attr.priority;
+            scanline.paletteIndices[winX + pxCount] = attr.paletteNum;
+            scanline.priorities[winX + pxCount] = attr.priority;
           }
         }
         if (++pxCount + winX >= SCREEN_PX_WIDTH) break;

@@ -203,6 +203,7 @@
     <property name="title">
      <string>Debug</string>
     </property>
+    <addaction name="actionVramViewer"/>
     <addaction name="actionEnableLogging"/>
    </widget>
    <addaction name="menuFile"/>
@@ -444,6 +445,17 @@
    </property>
    <property name="text">
     <string>Game Boy Color</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Silkscreen</family>
+     <pointsize>11</pointsize>
+    </font>
+   </property>
+  </action>
+  <action name="actionVramViewer">
+   <property name="text">
+    <string>VRAM Viewer</string>
    </property>
    <property name="font">
     <font>

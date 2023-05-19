@@ -49,9 +49,7 @@ Memory::Memory()
       exramBank(&exram[0]),
       wramBank(&wram[WRAM_BANK_BYTES]),
       bcpd(&cramBg[0]),
-      ocpd(&cramObj[0]),
-      vramDmaSrc(),
-      vramDmaDest() {}
+      ocpd(&cramObj[0]) {}
 
 // **************************************************
 // **************************************************
@@ -285,44 +283,18 @@ void Memory::write(uint16 addr, uint8 val) {
     oamDmaTransfer();
   }
 
-  // vram dma source high
-  if (addr == HDMA1) {
-    vramDmaSrc &= BYTE_MASK;
-    vramDmaSrc |= val << 8;
-  }
+  if (cgb->cgbMode &&)
 
-  // vram dma source low
-  if (addr == HDMA2) {
-    vramDmaSrc &= ~BYTE_MASK;
-    vramDmaSrc |= val & ~NIBBLE_MASK;
-  }
-
-  // vram dma destination high
-  if (addr == HDMA3) {
-    vramDmaDest &= BYTE_MASK;
-    vramDmaDest |= (val & FIVE_BITS_MASK) << 8;
-    vramDmaDest |= VRAM_ADDR;
-  }
-
-  // vram dma destination low
-  if (addr == HDMA4) {
-    vramDmaDest &= ~BYTE_MASK;
-    vramDmaDest |= val & ~NIBBLE_MASK;
-    vramDmaDest |= VRAM_ADDR;
-  }
-
-  // start vram dma transfer if HDMA5
-  // register was written to (cgb only)
-  if (addr == HDMA5 && cgb->cgbMode) {
-    if (vramTransferMode()) {
-      // printf("hblank vram dma not supported yet\n");
+    // start vram dma transfer if HDMA5
+    // register was written to (cgb only)
+    if (cgb->cgbMode && addr == HDMA5) {
       vramDmaTransfer();
-      getByte(addr) |= 0x80;
-    } else {
-      vramDmaTransfer();
-      getByte(addr) |= 0x80;
+      getByte(HDMA1) = 0xFF;
+      getByte(HDMA2) = 0xFF;
+      getByte(HDMA3) = 0xFF;
+      getByte(HDMA4) = 0xFF;
+      getByte(HDMA5) = 0xFF;
     }
-  }
 
   // turn off bootstrap if writing
   // nonzero value to address FF50
@@ -330,15 +302,19 @@ void Memory::write(uint16 addr, uint8 val) {
     cgb->bootstrap.enabled = false;
     Log::bootstrap = false;
 
-    // set dmg mode
+    // set dmg compatibility mode if
+    // running an original game boy
+    // game on the game boy color
     //
     // cgbMode | dmgMode | device
     // ----------------------------------
     // false   | true    | DMG
     // true    | true    | CGB (DMG mode)
     // true    | false   | CGB
-    cgb->dmgMode |= !(cgb->mem.getByte(CGB_MODE) == 0x80 ||
-                      cgb->mem.getByte(CGB_MODE) == 0xC0);
+    if (cgb->cgbMode) {
+      cgb->dmgMode = !(cgb->mem.getByte(CGB_MODE) == 0x80 ||
+                       cgb->mem.getByte(CGB_MODE) == 0xC0);
+    }
   }
 
   // start serial transfer if writing
@@ -488,6 +464,18 @@ void Memory::oamDmaTransfer() {
 
 // perform vram dma transfer
 void Memory::vramDmaTransfer() {
+  uint16 vramDmaSrc = (getByte(HDMA1) << 8) | (getByte(HDMA2) & ~NIBBLE_MASK);
+  uint16 vramDmaDest = VRAM_ADDR | ((getByte(HDMA3) & FIVE_BITS_MASK) << 8) |
+                       (getByte(HDMA4) & ~NIBBLE_MASK);
+
+  printf("\n===== %s =====\n", vramTransferMode() ? "HDMA" : "GDMA");
+  printf("SRC:        %04X\n", vramDmaSrc);
+  printf("DEST:       %04X\n", vramDmaDest);
+  printf("LENGTH:      %03X\n", vramTransferLength());
+  printf("VRAM BANK:     %d\n", getByte(VBK) & BIT0_MASK);
+  printf("WRAM BANK:     %d\n", getByte(SVBK) & THREE_BITS_MASK);
+  printf("ROM BANK 1:  %03X\n", cgb->mbc.mbc5RomBankNum());
+
   for (int i = 0; i < vramTransferLength(); ++i) {
     getByte(vramDmaDest) = (uint8)getByte(vramDmaSrc);
     vramDmaSrc++;

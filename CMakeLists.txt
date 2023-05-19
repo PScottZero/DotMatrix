@@ -48,6 +48,9 @@ set(PROJECT_SOURCES
         src/ui/keybindingswindow.cpp
         src/ui/keybindingswindow.h
         src/ui/keybindingswindow.ui
+        src/ui/vramviewer.cpp
+        src/ui/vramviewer.h
+        src/ui/vramviewer.ui
         src/ui/palettes.cpp
         src/ui/palettes.h
 )

@@ -121,8 +121,6 @@ class PPU : public QObject {
   void resetScanline(scanline_t &scanline);
 
   // read display memory functions
-  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
-                     bool vramBank = false) const;
   TileRow getTileRow(tile_map_attr_t bgMapAttr, uint8 tileNo, uint8 row) const;
   TileRow getSpriteRow(sprite_t oamEntry, uint8 row) const;
   sprite_t getSpriteOAM(uint8 spriteIdx) const;
@@ -165,6 +163,9 @@ class PPU : public QObject {
   PPU();
 
   void step();
+
+  TileRow getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
+                     bool vramBank = false) const;
 
  public slots:
   void toggleBackground(bool show);

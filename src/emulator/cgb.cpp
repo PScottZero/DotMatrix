@@ -141,8 +141,6 @@ bool CGB::loadRom(const QString romPath) {
 
   // print rom config
   printf("\n>>> Loaded ROM: %s <<<\n", romPath.toStdString().c_str());
-  printf("Device: %s\n", cgbMode ? "CGB" : "DMG");
-  printf("Mode: %s\n", dmgMode ? "DMG" : "CGB");
   printf("Bank Type: %s (%02X)\n", mbc.bankTypeStr().c_str(), mbc.bankType);
   printf("Has RAM: %s\n", mbc.hasRam() ? "True" : "False");
   printf("Has Battery: %s\n", mbc.hasRamAndBattery() ? "True" : "False");

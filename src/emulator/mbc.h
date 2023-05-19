@@ -110,7 +110,7 @@ class MBC {
   bool usingMbc5() const;
 
   // mbc config functions
-  uint8 romSizeMask() const;
+  uint16 romSizeMask() const;
   uint8 ramSizeMask() const;
   bool bankTypeImplemented() const;
   string bankTypeStr() const;

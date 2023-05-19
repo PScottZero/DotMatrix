@@ -238,7 +238,7 @@ uint8 MBC::mbc1ExramBankNum() const {
 }
 
 uint16 MBC::mbc5RomBankNum() const {
-  return ((romBankBit9 << 9) | romBankNum) & romSizeMask();
+  return ((romBankBit9 << 8) | romBankNum) & romSizeMask();
 }
 
 uint8 MBC::mbc5RamBankNum() const { return ramBankNum & ramSizeMask(); }
@@ -297,7 +297,7 @@ bool MBC::usingMbc5() const {
 // **************************************************
 // **************************************************
 
-uint8 MBC::romSizeMask() const { return pow(2, romSize + 1) - 1; }
+uint16 MBC::romSizeMask() const { return pow(2, romSize + 1) - 1; }
 
 uint8 MBC::ramSizeMask() const { return ramSize == RAM_SIZE_8KB ? 0b00 : 0b11; }
 

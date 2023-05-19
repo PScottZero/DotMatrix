@@ -3,6 +3,7 @@
 #include "../emulator/log.h"
 #include "../emulator/ppu.h"
 #include "keybindingswindow.h"
+#include "vramviewer.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
@@ -98,6 +99,8 @@ MainWindow::MainWindow(QWidget *parent)
   // **************************************************
   // Debug Menu
   // **************************************************
+  connect(ui->actionVramViewer, &QAction::triggered, this,
+          &MainWindow::openVramViewer);
   connect(ui->actionEnableLogging, &QAction::toggled, this,
           &MainWindow::toggleLogging);
 
@@ -174,6 +177,12 @@ void MainWindow::setPalette(Palette *palette) {
 void MainWindow::openKeyBindingsWindow() {
   KeyBindingsWindow kbWin(&cgb.controls);
   kbWin.exec();
+}
+
+// open vram viewer
+void MainWindow::openVramViewer() {
+  VramViewer vramViewer(&cgb);
+  vramViewer.exec();
 }
 
 // toggle logging
