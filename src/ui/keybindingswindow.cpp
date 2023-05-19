@@ -47,6 +47,6 @@ void KeyBindingsWindow::keyPressEvent(QKeyEvent *event) {
     acceptKeyPress = false;
     QKeySequence seq(event->key());
     buttonKeyLabels[selectedButton]->setText(seq.toString());
-    ui->bindStatusLabel->setText("[select a button to bind]");
+    ui->bindStatusLabel->setText("[select a button]");
   }
 }
