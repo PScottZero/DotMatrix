@@ -10,7 +10,9 @@
 
 #include "../emulator/cgb.h"
 #include "./ui_mainwindow.h"
+#include "keybindingswindow.h"
 #include "palettes.h"
+#include "vramviewer.h"
 
 #define WINDOW_BASE_WIDTH 640
 #define WINDOW_BASE_HEIGHT 576
@@ -40,14 +42,13 @@ class MainWindow : public QMainWindow {
  protected:
   void keyPressEvent(QKeyEvent *event) override;
   void keyReleaseEvent(QKeyEvent *event) override;
+  void closeEvent(QCloseEvent *event) override;
 
  private:
   Ui::MainWindow *ui;
   CGB cgb;
+  KeyBindingsWindow kbWin;
+  VramViewer vramViewer;
 
-  void addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                        QSignalMapper *sigMap, int mapValue);
-  void addToActionGroup(QActionGroup *actionGroup, QAction *action,
-                        QSignalMapper *sigMap, Palette *mapValue);
   QString getPaletteLabel(Palette *palette);
 };

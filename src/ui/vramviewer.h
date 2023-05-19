@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QDialog>
-#include <thread>
+#include <QWidget>
 
 #include "../emulator/cgb.h"
 
@@ -11,7 +10,7 @@ namespace Ui {
 class VramViewer;
 }
 
-class VramViewer : public QDialog {
+class VramViewer : public QWidget {
   Q_OBJECT
 
  public:
@@ -24,9 +23,5 @@ class VramViewer : public QDialog {
   Ui::VramViewer *ui;
   QImage vramDisplay;
   CGB *cgb;
-  bool vramBank, running;
-  std::thread renderThread;
-
- public slots:
-  void setVramBank(bool bank);
+  bool running;
 };

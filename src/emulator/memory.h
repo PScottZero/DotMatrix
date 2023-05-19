@@ -170,7 +170,7 @@ class Memory {
   uint8 &getVramByte(uint16 addr, bool bank) const;
 
   // rom + ram bank functions
-  void setRomBank(uint8 **romBank, uint8 bankNum);
+  void setRomBank(uint8 **romBank, uint16 bankNum);
   void setVramBank(uint8 bankNum);
   void setExramBank(uint8 bankNum);
   void setWramBank(uint8 bankNum);

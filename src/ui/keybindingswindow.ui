@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>KeyBindingsWindow</class>
- <widget class="QDialog" name="KeyBindingsWindow">
+ <widget class="QWidget" name="KeyBindingsWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -38,8 +38,8 @@
    <string>Key Bindings</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>../img/dm_icon.ico</normaloff>../img/dm_icon.ico</iconset>
+   <iconset resource="../../resource.qrc">
+    <normaloff>:/assets/icons/icon.ico</normaloff>:/assets/icons/icon.ico</iconset>
   </property>
   <widget class="QPushButton" name="setUpButton">
    <property name="geometry">
@@ -283,13 +283,15 @@
     </rect>
    </property>
    <property name="text">
-    <string>[select a button to bind]</string>
+    <string>[select a button]</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

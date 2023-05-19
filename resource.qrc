@@ -1,7 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>assets/bin/cgb_boot.bin</file>
-        <file>assets/bin/dmg_boot.bin</file>
         <file>assets/icons/icon.ico</file>
         <file>assets/icons/icon.png</file>
         <file>assets/icons/icon.icns</file>

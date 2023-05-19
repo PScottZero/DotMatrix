@@ -6,7 +6,11 @@
 #include "vramviewer.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow), cgb() {
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      cgb(),
+      kbWin(&cgb.controls),
+      vramViewer(&cgb) {
   ui->setupUi(this);
 
   // **************************************************
@@ -174,16 +178,10 @@ void MainWindow::setPalette(Palette *palette) {
 }
 
 // open the key bindings window
-void MainWindow::openKeyBindingsWindow() {
-  KeyBindingsWindow kbWin(&cgb.controls);
-  kbWin.exec();
-}
+void MainWindow::openKeyBindingsWindow() { kbWin.show(); }
 
 // open vram viewer
-void MainWindow::openVramViewer() {
-  VramViewer vramViewer(&cgb);
-  vramViewer.exec();
-}
+void MainWindow::openVramViewer() { vramViewer.show(); }
 
 // toggle logging
 void MainWindow::toggleLogging(bool enableLog) { Log::enable = enableLog; }
@@ -198,4 +196,9 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
   if (!event->isAutoRepeat()) {
     cgb.controls.release(event->key());
   }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  kbWin.close();
+  vramViewer.close();
 }

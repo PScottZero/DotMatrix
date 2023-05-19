@@ -283,18 +283,12 @@ void Memory::write(uint16 addr, uint8 val) {
     oamDmaTransfer();
   }
 
-  if (cgb->cgbMode &&)
-
-    // start vram dma transfer if HDMA5
-    // register was written to (cgb only)
-    if (cgb->cgbMode && addr == HDMA5) {
-      vramDmaTransfer();
-      getByte(HDMA1) = 0xFF;
-      getByte(HDMA2) = 0xFF;
-      getByte(HDMA3) = 0xFF;
-      getByte(HDMA4) = 0xFF;
-      getByte(HDMA5) = 0xFF;
-    }
+  // start vram dma transfer if HDMA5
+  // register was written to (cgb only)
+  if (cgb->cgbMode && addr == HDMA5) {
+    vramDmaTransfer();
+    getByte(HDMA5) = 0xFF;
+  }
 
   // turn off bootstrap if writing
   // nonzero value to address FF50
@@ -426,7 +420,7 @@ void Memory::loadRom(QString dir) {
 }
 
 // map memory rom bank to cartridge rom bank
-void Memory::setRomBank(uint8 **romBank, uint8 bankNum) {
+void Memory::setRomBank(uint8 **romBank, uint16 bankNum) {
   *romBank = &cart[ROM_BANK_BYTES * bankNum];
 }
 
@@ -467,15 +461,6 @@ void Memory::vramDmaTransfer() {
   uint16 vramDmaSrc = (getByte(HDMA1) << 8) | (getByte(HDMA2) & ~NIBBLE_MASK);
   uint16 vramDmaDest = VRAM_ADDR | ((getByte(HDMA3) & FIVE_BITS_MASK) << 8) |
                        (getByte(HDMA4) & ~NIBBLE_MASK);
-
-  printf("\n===== %s =====\n", vramTransferMode() ? "HDMA" : "GDMA");
-  printf("SRC:        %04X\n", vramDmaSrc);
-  printf("DEST:       %04X\n", vramDmaDest);
-  printf("LENGTH:      %03X\n", vramTransferLength());
-  printf("VRAM BANK:     %d\n", getByte(VBK) & BIT0_MASK);
-  printf("WRAM BANK:     %d\n", getByte(SVBK) & THREE_BITS_MASK);
-  printf("ROM BANK 1:  %03X\n", cgb->mbc.mbc5RomBankNum());
-
   for (int i = 0; i < vramTransferLength(); ++i) {
     getByte(vramDmaDest) = (uint8)getByte(vramDmaSrc);
     vramDmaSrc++;
@@ -529,12 +514,20 @@ void Memory::reset() {
   // clear memory
   for (int i = 0; i < MEM_BYTES; ++i) mem[i] = 0;
 
-  // save external ram if current game
-  // has ram and battery
-  if (cgb->mbc.hasRamAndBattery()) saveExram();
+  // clear vram
+  for (int i = 0; i < RAM_BANK_BYTES * VRAM_BANKS; ++i) vram[i] = 0;
+
+  // clear wram
+  for (int i = 0; i < WRAM_BANK_BYTES * WRAM_BANKS; ++i) wram[i] = 0;
 
   // clear external ram
   for (int i = 0; i < RAM_BANK_BYTES * EXRAM_BANKS; ++i) exram[i] = 0;
+
+  // clear cram
+  for (int i = 0; i < PAL_BYTES * PAL_COUNT; ++i) {
+    cramBg[i] = 0;
+    cramObj[i] = 0;
+  }
 
   // set upper three bits of interrupt
   // flag register

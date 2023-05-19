@@ -1,10 +1,10 @@
 #ifndef KEYBINDINGSWINDOW_H
 #define KEYBINDINGSWINDOW_H
 
-#include <QDialog>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QPushButton>
+#include <QWidget>
 
 #include "../emulator/controls.h"
 
@@ -12,7 +12,7 @@ namespace Ui {
 class KeyBindingsWindow;
 }
 
-class KeyBindingsWindow : public QDialog {
+class KeyBindingsWindow : public QWidget {
   Q_OBJECT
 
  public:

@@ -78,7 +78,7 @@ void PPU::step() {
 
           scanline_t scanline;
           resetScanline(scanline);
-          if ((bgEnable() || cgb->cgbMode) && showBackground)
+          if ((bgEnable() || !cgb->dmgMode) && showBackground)
             renderBg(scanline);
           if (windowEnable() && showWindow) renderWindow(scanline);
           if (spriteEnable() && showSprites) renderSprites(scanline);
@@ -113,7 +113,9 @@ void PPU::step() {
     *stat &= ~THREE_BITS_MASK;
     statInt = false;
     if (cycles > SCANLINE_CYCLES * SCREEN_LINES) {
-      if (!cgb->cgbMode) screen->fill(palette->data[0]);
+      if (cgb->dmgMode)
+        screen->fill(cgb->cgbMode ? getPaletteColor(cgb->mem.cramBg, 0, 0)
+                                  : palette->data[0]);
       cycles %= SCANLINE_CYCLES * SCREEN_LINES;
       frameRendered = true;
     }
@@ -386,7 +388,7 @@ void PPU::resetScanline(scanline_t &scanline) {
 TileRow PPU::getTileRow(uint16 baseAddr, uint8 tileNo, uint8 row,
                         bool vramBank) const {
   // get tile row data
-  int16 tileNoSigned = baseAddr == BG_DATA_ADDR_0 ? (int8)tileNo : tileNo;
+  int16 tileNoSigned = baseAddr == TILE_DATA_ADDR_0 ? (int8)tileNo : tileNo;
   uint16 tileAddr = baseAddr + tileNoSigned * TILE_BYTES;
   uint16 tileRowAddr = tileAddr + 2 * row;
   uint8 rowDataLo = cgb->mem.getVramByte(tileRowAddr, vramBank);
@@ -424,7 +426,7 @@ TileRow PPU::getSpriteRow(sprite_t oamEntry, uint8 row) const {
                       ? oamEntry.pattern & ~BIT0_MASK
                       : oamEntry.pattern;
   TileRow tileRow =
-      getTileRow(BG_DATA_ADDR_1, pattern, row, oamEntry.vramBankNum);
+      getTileRow(TILE_DATA_ADDR_1, pattern, row, oamEntry.vramBankNum);
   if (oamEntry.flipX) flipTileRow(tileRow);
   return tileRow;
 }
@@ -499,15 +501,15 @@ uint8 PPU::spriteHeight() const {
 }
 
 uint16 PPU::windowMapAddr() const {
-  return *lcdc & BIT6_MASK ? WINDOW_MAP_ADDR_1 : WINDOW_MAP_ADDR_0;
+  return *lcdc & BIT6_MASK ? TILE_MAP_ADDR_1 : TILE_MAP_ADDR_0;
 }
 
 uint16 PPU::bgWindowDataAddr() const {
-  return *lcdc & BIT4_MASK ? BG_DATA_ADDR_1 : BG_DATA_ADDR_0;
+  return *lcdc & BIT4_MASK ? TILE_DATA_ADDR_1 : TILE_DATA_ADDR_0;
 }
 
 uint16 PPU::bgMapAddr() const {
-  return *lcdc & BIT3_MASK ? BG_MAP_ADDR_1 : BG_MAP_ADDR_0;
+  return *lcdc & BIT3_MASK ? TILE_MAP_ADDR_1 : TILE_MAP_ADDR_0;
 }
 
 // **************************************************

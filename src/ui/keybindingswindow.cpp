@@ -6,7 +6,7 @@
 
 KeyBindingsWindow::KeyBindingsWindow(Controls *controls, QWidget *parent)
     : controls(controls),
-      QDialog(parent),
+      QWidget(parent),
       ui(new Ui::KeyBindingsWindow),
       selectedButton(UP),
       acceptKeyPress(false),

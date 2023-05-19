@@ -94,7 +94,7 @@ CGB::~CGB() {
   running = false;
   wait();
 
-  if (mbc.hasRamAndBattery()) mem.saveExram();
+  save();
 
   std::free(mem.mem);
   std::free(mem.cart);
@@ -158,9 +158,9 @@ bool CGB::loadRom(const QString romPath) {
     return false;
   }
 
-  // set rom path and load exram
+  // set rom path and load exram and timer
   this->romPath = romPath;
-  if (mbc.hasRamAndBattery()) mem.loadExram();
+  load();
 
   return true;
 }
@@ -171,6 +171,8 @@ void CGB::reset(bool newGame) {
   // the thread to exit
   running = false;
   wait();
+
+  save();
 
   // reset flags
   stop = false;
@@ -190,7 +192,7 @@ void CGB::reset(bool newGame) {
   // load external ram if not loading a new game
   // and current game has external ram and
   // a battery
-  if (!newGame && mbc.hasRamAndBattery()) mem.loadExram();
+  if (!newGame) load();
 }
 
 // set device to either game boy color (cgb)
@@ -207,23 +209,19 @@ void CGB::toggleDmgBootstrap(bool skip) { bootstrap.skip = skip; }
 // save current palette and preview
 // the specified palette
 void CGB::previewPalette(Palette *palette) {
-  if (!cgbMode) {
-    if (tempPalette == nullptr) tempPalette = ppu.palette;
-    ppu.palette = palette;
-    renderInPauseMode();
-  }
+  if (tempPalette == nullptr) tempPalette = ppu.palette;
+  ppu.palette = palette;
+  renderInPauseMode();
 }
 
 // reset palette to original palette
 // before palette preview
 void CGB::resetPreviewPalette() {
-  if (!cgbMode) {
-    if (tempPalette != nullptr) {
-      ppu.palette = tempPalette;
-      tempPalette = nullptr;
-    }
-    renderInPauseMode();
+  if (tempPalette != nullptr) {
+    ppu.palette = tempPalette;
+    tempPalette = nullptr;
   }
+  renderInPauseMode();
 }
 
 // render screen while in pause mode
