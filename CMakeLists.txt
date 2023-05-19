@@ -58,33 +58,33 @@ set(PROJECT_SOURCES
 qt_add_resources(PROJECT_SOURCES resource.qrc)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(cgb
+    qt_add_executable(DotMatrix
         MANUAL_FINALIZATION
         MACOSX_BUNDLE
         ${PROJECT_SOURCES}
         ${app_icon_macos}
     )
 # Define target properties for Android with Qt 6 as:
-#    set_property(TARGET cgb APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#    set_property(TARGET DotMatrix APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 else()
     if(ANDROID)
-        add_library(cgb SHARED
+        add_library(DotMatrix SHARED
             ${PROJECT_SOURCES}
         )
 # Define properties for Android with Qt 5 after find_package() calls as:
 #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
     else()
-        add_executable(cgb
+        add_executable(DotMatrix
             ${PROJECT_SOURCES}
         )
     endif()
 endif()
 
-target_link_libraries(cgb PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(DotMatrix PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
-set_target_properties(cgb PROPERTIES
+set_target_properties(DotMatrix PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -92,10 +92,10 @@ set_target_properties(cgb PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-install(TARGETS cgb
+install(TARGETS DotMatrix
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(cgb)
+    qt_finalize_executable(DotMatrix)
 endif()
