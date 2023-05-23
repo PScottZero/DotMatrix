@@ -460,6 +460,15 @@ void Memory::vramDmaTransfer() {
   uint16 vramDmaSrc = (getByte(HDMA1) << 8) | (getByte(HDMA2) & ~NIBBLE_MASK);
   uint16 vramDmaDest = VRAM_ADDR | ((getByte(HDMA3) & FIVE_BITS_MASK) << 8) |
                        (getByte(HDMA4) & ~NIBBLE_MASK);
+
+  // printf("\n===== %s =====\n", vramTransferMode() ? "HDMA" : "GDMA");
+  // printf("SRC:        %04X\n", vramDmaSrc);
+  // printf("DEST:       %04X\n", vramDmaDest);
+  // printf("LENGTH:      %03X\n", vramTransferLength());
+  // printf("VRAM BANK:     %d\n", getByte(VBK) & BIT0_MASK);
+  // printf("WRAM BANK:     %d\n", getByte(SVBK) & THREE_BITS_MASK);
+  // printf("ROM BANK:    %03X\n", cgb->mbc.mbc5RomBankNum());
+  // printf("RAM BANK:     %02X\n", cgb->mbc.mbc5RamBankNum());
   for (int i = 0; i < vramTransferLength(); ++i) {
     getByte(vramDmaDest) = (uint8)getByte(vramDmaSrc);
     vramDmaSrc++;

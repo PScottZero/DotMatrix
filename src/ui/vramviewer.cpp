@@ -12,9 +12,10 @@ VramViewer::VramViewer(CGB *cgb, QWidget *parent)
       ui(new Ui::VramViewer),
       cgb(cgb),
       running(true),
-      vramDisplay(256, 192, QImage::Format_RGB32),
-      bgDisplay(256, 256, QImage::Format_RGB32),
-      winDisplay(256, 256, QImage::Format_RGB32) {
+      vramDisplay(TILE_PX_DIM * VIEWER_TILES_PER_ROW,
+                  TILE_PX_DIM * VIEWER_TILE_ROWS, QImage::Format_RGB32),
+      bgDisplay(BG_PX_DIM, BG_PX_DIM, QImage::Format_RGB32),
+      winDisplay(BG_PX_DIM, BG_PX_DIM, QImage::Format_RGB32) {
   ui->setupUi(this);
   ui->tabWidget->setCurrentIndex(0);
   std::thread renderThread(&VramViewer::render, this);
@@ -32,17 +33,17 @@ void VramViewer::render() {
     QImage *image = nullptr;
     QLabel *display = nullptr;
     switch (ui->tabWidget->currentIndex()) {
-      case 0:
+      case TILES_TAB:
         renderTiles();
         image = &vramDisplay;
         display = ui->vramDisplay;
         break;
-      case 1:
+      case BG_TAB:
         renderBackground();
         image = &bgDisplay;
         display = ui->bgDisplay;
         break;
-      case 2:
+      case WIN_TAB:
         renderWindow();
         image = &winDisplay;
         display = ui->winDisplay;

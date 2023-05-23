@@ -16,6 +16,7 @@ set_source_files_properties(${app_icon_macos} PROPERTIES
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(SDL2 REQUIRED COMPONENTS SDL2)
 
 set(PROJECT_SOURCES
         src/main.cpp
@@ -40,6 +41,8 @@ set(PROJECT_SOURCES
         src/emulator/mbc.h
         src/emulator/rtc.cpp
         src/emulator/rtc.h
+        src/emulator/apu.cpp
+        src/emulator/apu.h
         src/ui/mainwindow.cpp
         src/ui/mainwindow.h
         src/ui/mainwindow.ui
@@ -80,7 +83,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(DotMatrix PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(DotMatrix PRIVATE Qt${QT_VERSION_MAJOR}::Widgets SDL2::SDL2)
 
 set_target_properties(DotMatrix PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

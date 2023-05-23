@@ -49,7 +49,6 @@ void PPU::step() {
       } else {
         stat &= ~BIT2_MASK;
       }
-      setLcdStatInterrupt();
 
       cycles %= SCANLINE_CYCLES;
     }
@@ -61,7 +60,6 @@ void PPU::step() {
       if (cycles < OAM_SEARCH_CYCLES) {
         if (getMode() != OAM_SEARCH_MODE) {
           setMode(OAM_SEARCH_MODE);
-          setLcdStatInterrupt();
           findVisibleSprites();
         }
       }
@@ -72,8 +70,6 @@ void PPU::step() {
       else if (cycles < PIXEL_TRANSFER_CYCLES) {
         if (getMode() != PIXEL_TRANSFER_MODE) {
           setMode(PIXEL_TRANSFER_MODE);
-          setLcdStatInterrupt();
-
           scanline_t scanline;
           resetScanline(scanline);
           if ((bgEnable() || !cgb->dmgMode) && showBackground)
@@ -90,7 +86,6 @@ void PPU::step() {
       else if (cycles < HBLANK_CYCLES) {
         if (getMode() != HBLANK_MODE) {
           setMode(HBLANK_MODE);
-          setLcdStatInterrupt();
         }
       }
     } else {
@@ -99,12 +94,13 @@ void PPU::step() {
       // **************************************************
       if (getMode() != VBLANK_MODE) {
         setMode(VBLANK_MODE);
-        setLcdStatInterrupt();
         cgb->cpu.requestInterrupt(VBLANK_INT);
         frameRendered = true;
         windowLineNum = 0;
       }
     }
+
+    setLcdStatInterrupt();
   } else {
     ly = 0;
     stat &= ~THREE_BITS_MASK;

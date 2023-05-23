@@ -5,6 +5,12 @@
 #include "../emulator/cgb.h"
 
 #define VRAM_TILE_COUNT 384
+#define VIEWER_TILE_ROWS 24
+#define VIEWER_TILES_PER_ROW 32
+
+#define TILES_TAB 0
+#define BG_TAB 1
+#define WIN_TAB 2
 
 namespace Ui {
 class VramViewer;
