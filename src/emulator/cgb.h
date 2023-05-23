@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// GAME BOY COLOR (CURRENTLY ONLY SUPPORTS DMG)
+// Game Boy / Game Boy Color
 // **************************************************
 // **************************************************
 // **************************************************
@@ -16,7 +16,6 @@
 #include "bootstrap.h"
 #include "controls.h"
 #include "cpu.h"
-#include "interrupts.h"
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
@@ -37,7 +36,6 @@ class CGB : public QThread {
   Bootstrap bootstrap;
   Controls controls;
   CPU cpu;
-  Interrupts interrupts;
   MBC mbc;
   Memory mem;
   PPU ppu;

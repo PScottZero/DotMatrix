@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// BOOTSTRAP (RUNS WHEN GAME BOY BOOTS)
+// Bootstrap (Runs When Game Boy Boots)
 // **************************************************
 // **************************************************
 // **************************************************
@@ -12,7 +12,7 @@
 
 #define DMG_BOOTSTRAP_BYTES 0x100
 #define CGB_BOOTSTRAP_BYTES 0x900
-#define CGB_BOOTSTRAP_ADDR 0x200
+#define CGB_BOOTSTRAP_PART2_ADDR 0x200
 
 class Bootstrap {
  private:
@@ -20,7 +20,7 @@ class Bootstrap {
   static uint8 cgbBootstrap[CGB_BOOTSTRAP_BYTES];
 
  public:
-  bool enabled, skip, *cgbMode;
+  bool enabled, skipDmg, *cgbMode;
 
   Bootstrap();
 

@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// BOOTSTRAP (RUNS WHEN GAME BOY BOOTS)
+// Bootstrap (Runs When Game Boy Boots)
 // **************************************************
 // **************************************************
 // **************************************************
@@ -231,7 +231,7 @@ uint8 Bootstrap::cgbBootstrap[CGB_BOOTSTRAP_BYTES]{
     0x21, 0x22, 0x80, 0x81, 0x82, 0x10, 0x11, 0x12, 0x12, 0xB0, 0x79, 0xB8,
     0xAD, 0x16, 0x17, 0x07, 0xBA, 0x05, 0x7C, 0x13, 0x00, 0x00, 0x00, 0x00};
 
-Bootstrap::Bootstrap() : enabled(true), skip(false), cgbMode(nullptr) {}
+Bootstrap::Bootstrap() : enabled(true), skipDmg(false), cgbMode(nullptr) {}
 
 // get byte of bootstrap at given address
 uint8 *Bootstrap::at(uint16 addr) const {
@@ -241,7 +241,7 @@ uint8 *Bootstrap::at(uint16 addr) const {
 // check if dgm bootstrap is enabled and
 // should be fast-forwarded through
 bool Bootstrap::skipDmgBootstrap() const {
-  return !*cgbMode && enabled && skip;
+  return !*cgbMode && enabled && skipDmg;
 }
 
 // reset bootstrap

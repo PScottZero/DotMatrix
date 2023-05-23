@@ -15,14 +15,11 @@
 #include "../ui/palettes.h"
 #include "types.h"
 
-// clock speed constants
-#define PPU_CLOCK_SPEED 0x100000
+// cycles constants
 #define OAM_SEARCH_CYCLES 20
 #define PIXEL_TRANSFER_CYCLES OAM_SEARCH_CYCLES + 43
-#define H_BLANK_CYCLES PIXEL_TRANSFER_CYCLES + 51
-#define V_BLANK_CYCLES 114
+#define HBLANK_CYCLES PIXEL_TRANSFER_CYCLES + 51
 #define SCANLINE_CYCLES 114
-#define _NS_PER_SEC 1000000000
 
 // px constants
 #define BG_PX_DIM 256
@@ -35,7 +32,6 @@
 #define SPRITE_PX_HEIGHT_TALL 16
 
 // byte constants
-#define VIEW_BUF_BYTES 160 * 144
 #define TILE_BYTES 16
 #define OAM_ENTRY_BYTES 4
 
@@ -45,8 +41,8 @@
 #define MAX_SPRITES_PER_LINE 10
 
 // screen modes
-#define H_BLANK_MODE 0b00
-#define V_BLANK_MODE 0b01
+#define HBLANK_MODE 0b00
+#define VBLANK_MODE 0b01
 #define OAM_SEARCH_MODE 0b10
 #define PIXEL_TRANSFER_MODE 0b11
 
@@ -141,8 +137,6 @@ class PPU : public QObject {
   void setLcdStatInterrupt();
 
  public:
-  uint8 *lcdc, *stat, *scy, *scx, *ly, *lyc, *bgp, *obp0, *obp1, *wy, *wx;
-
   CGB *cgb;
   QImage *screen;
   bool frameRendered;

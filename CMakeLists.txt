@@ -31,8 +31,6 @@ set(PROJECT_SOURCES
         src/emulator/timers.h
         src/emulator/controls.cpp
         src/emulator/controls.h
-        src/emulator/interrupts.cpp
-        src/emulator/interrupts.h
         src/emulator/bootstrap.cpp
         src/emulator/bootstrap.h
         src/emulator/log.cpp

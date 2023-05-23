@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// GAME BOY COLOR (CURRENTLY ONLY SUPPORTS DMG)
+// Game Boy / Game Boy Color
 // **************************************************
 // **************************************************
 // **************************************************
@@ -16,7 +16,6 @@
 #include "bootstrap.h"
 #include "controls.h"
 #include "cpu.h"
-#include "interrupts.h"
 #include "mbc.h"
 #include "memory.h"
 #include "ppu.h"
@@ -29,7 +28,6 @@ CGB::CGB()
     : bootstrap(),
       controls(),
       cpu(),
-      interrupts(),
       mbc(),
       mem(),
       ppu(),
@@ -50,19 +48,12 @@ CGB::CGB()
   cpu.cgb = this;
   mem.cgb = this;
   ppu.cgb = this;
+  controls.cgb = this;
   timers.cgb = this;
   rtc.cgb = this;
 
-  // boostrap
+  // bootstrap
   bootstrap.cgbMode = &cgbMode;
-
-  // controls
-  controls.interrupts = &interrupts;
-  controls.p1 = mem.getBytePtr(P1);
-
-  // interrupts
-  interrupts.intEnable = mem.getBytePtr(IE);
-  interrupts.intFlags = mem.getBytePtr(IF);
 
   // mbc
   mbc.mem = &mem;
@@ -71,23 +62,6 @@ CGB::CGB()
   // ppu
   ppu.screen = &screen;
   ppu.palette = Palettes::allPalettes[DEFAULT_PALETTE_IDX];
-  ppu.lcdc = mem.getBytePtr(LCDC);
-  ppu.stat = mem.getBytePtr(STAT);
-  ppu.scy = mem.getBytePtr(SCY);
-  ppu.scx = mem.getBytePtr(SCX);
-  ppu.ly = mem.getBytePtr(LY);
-  ppu.lyc = mem.getBytePtr(LYC);
-  ppu.bgp = mem.getBytePtr(BGP);
-  ppu.obp0 = mem.getBytePtr(OBP0);
-  ppu.obp1 = mem.getBytePtr(OBP1);
-  ppu.wx = mem.getBytePtr(WX);
-  ppu.wy = mem.getBytePtr(WY);
-
-  // timers
-  timers.div = mem.getBytePtr(DIV);
-  timers.tima = mem.getBytePtr(TIMA);
-  timers.tma = mem.getBytePtr(TMA);
-  timers.tac = mem.getBytePtr(TAC);
 }
 
 CGB::~CGB() {
@@ -113,6 +87,10 @@ void CGB::run() {
 
       // send rendered screen frame to ui
       if (!bootstrap.skipDmgBootstrap()) {
+        // if full frame has been rendered by
+        // the ppu, draw the frame and wait
+        // the remaining amount of time it takes
+        // for one frame to draw on the game boy
         if (ppu.frameRendered) {
           emit sendScreen(&screen);
           int duration = FRAME_DURATION;
@@ -204,7 +182,7 @@ void CGB::setDevice(bool cgb) {
 
 // toggle whether boot screen should appear
 // before a game is started
-void CGB::toggleDmgBootstrap(bool skip) { bootstrap.skip = skip; }
+void CGB::toggleDmgBootstrap(bool skip) { bootstrap.skipDmg = skip; }
 
 // save current palette and preview
 // the specified palette
@@ -247,11 +225,13 @@ void CGB::restart() {
   }
 }
 
+// save external ram and real-time clock
 void CGB::save() {
   if (mbc.hasRamAndBattery()) mem.saveExram();
   if (mbc.hasTimerAndBattery()) rtc.save();
 }
 
+// load external ram and real-time clock
 void CGB::load() {
   if (mbc.hasRamAndBattery()) mem.loadExram();
   if (mbc.hasTimerAndBattery()) rtc.load();

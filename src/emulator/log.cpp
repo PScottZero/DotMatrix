@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// LOGGER
+// Logging
 // **************************************************
 // **************************************************
 // **************************************************
@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-#include "interrupts.h"
+#include "cpu.h"
 
 // fstream Log::log("/home/paul/git/DotMatrix/debug/log.txt", ios::out);
 // fstream Log::log("/Users/paulscott/git/DotMatrix/debug/log.txt", ios::out);
@@ -20,8 +20,8 @@ bool Log::enable = false;
 bool Log::bootstrap = true;
 
 const map<uint8, string> Log::intName = {
-    {V_BLANK_INT, "VBLANK"}, {LCDC_INT, "LCDC"},     {TIMER_INT, "TIMER"},
-    {SERIAL_INT, "SERIAL"},  {JOYPAD_INT, "JOYPAD"},
+    {VBLANK_INT, "VBLANK"}, {LCDC_INT, "LCDC"},     {TIMER_INT, "TIMER"},
+    {SERIAL_INT, "SERIAL"}, {JOYPAD_INT, "JOYPAD"},
 };
 
 void Log::logCPUState(uint16 PC, uint16 SP, uint8 A, uint16 BC, uint16 DE,

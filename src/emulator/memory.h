@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// MEMORY
+// Memory (Cartridge, VRAM, WRAM, etc.)
 // **************************************************
 // **************************************************
 // **************************************************
@@ -110,16 +110,6 @@
 #define ZERO_PAGE_ADDR 0xFF00
 #define HRAM_ADDR 0xFF80
 
-// vram + oam constants
-#define _OAM_ENTRY_COUNT 40
-#define _OAM_ENTRY_BYTES 4
-#define _OAM_SEARCH_MODE 0b10
-#define _PIXEL_TRANSFER_MODE 0b11
-
-// color ram (cram) constants
-#define PAL_SIZE 8
-#define PAL_COUNT 8
-
 using namespace std;
 
 class CGB;
@@ -143,8 +133,8 @@ class Memory {
   uint8 *vram;
   uint8 *exram;
   uint8 *wram;
-  uint8 cramBg[PAL_COUNT * PAL_SIZE];
-  uint8 cramObj[PAL_COUNT * PAL_SIZE];
+  uint8 cramBg[PAL_COUNT * PAL_BYTES];
+  uint8 cramObj[PAL_COUNT * PAL_BYTES];
 
   // memory banks
   uint8 *romBank0;

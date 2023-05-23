@@ -1,7 +1,7 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// GAME BOY CONTROLS (JOYPAD)
+// Controls (Joypad)
 // **************************************************
 // **************************************************
 // **************************************************
@@ -20,16 +20,12 @@ using namespace std;
 enum Button { RIGHT, LEFT, UP, DOWN, A, B, SELECT, START };
 
 // joypad + button constants
-#define RIGHT_MASK 0x1
-#define LEFT_MASK 0x2
-#define UP_MASK 0x4
-#define DOWN_MASK 0x8
-#define A_MASK 0x1
-#define B_MASK 0x2
-#define SELECT_MASK 0x4
-#define START_MASK 0x8
+#define RIGHT_A_MASK 0x1
+#define LEFT_B_MASK 0x2
+#define UP_SELECT_MASK 0x4
+#define DOWN_START_MASK 0x8
 
-class Interrupts;
+class CGB;
 
 class Controls {
  private:
@@ -37,11 +33,10 @@ class Controls {
   map<int, Button> getKeyBindings();
 
  public:
-  Interrupts *interrupts;
+  CGB *cgb;
   map<Button, int> joypadBindings;
   map<int, Button> keyBindings;
   const map<Button, uint8> buttonToMask;
-  uint8 *p1;
 
   Controls();
 

@@ -32,12 +32,17 @@
 #define JUMP_NC 0b10
 #define JUMP_C 0b11
 
-// interrupt handler addresses
+// interrupt constants
 #define VBLANK_INT_ADDR 0x40
 #define LCDC_INT_ADDR 0x48
 #define TIMER_INT_ADDR 0x50
 #define SERIAL_INT_ADDR 0x58
 #define JOYPAD_INT_ADDR 0x60
+#define VBLANK_INT 0x01
+#define LCDC_INT 0x02
+#define TIMER_INT 0x04
+#define SERIAL_INT 0x08
+#define JOYPAD_INT 0x10
 
 class CGB;
 
@@ -95,8 +100,11 @@ class CPU {
   uint16 getAF() const;
   void setAF(uint16 val);
 
-  // interrupt functions
+  // private interrupt functions
   void handleInterrupts();
+  void resetInterrupt(uint16 PC, uint8 interrupt);
+  bool interruptRequestedAndEnabled(uint8 interrupt) const;
+  bool interruptsPending() const;
 
  public:
   bool serialTransferMode;
@@ -107,4 +115,7 @@ class CPU {
   void step();
   void ppuTimerSerialStep(int cycles);
   void reset();
+
+  // public interrupt function
+  void requestInterrupt(uint8 interrupt);
 };

@@ -96,11 +96,11 @@ void VramViewer::renderWindow() {
 
 void VramViewer::renderTileMap(QImage &display, uint16 tileMapAddr) {
   if (cgb->running) {
-    for (int tile = 0; tile < 1024; ++tile) {
+    for (int tile = 0; tile < BG_TILE_DIM * BG_TILE_DIM; ++tile) {
       uint8 tileNo = cgb->mem.getVramByte(tileMapAddr + tile, false);
       auto attr = cgb->ppu.getTileMapAttr(tileMapAddr, tile);
-      uint8 tileX = (tile % 32) * TILE_PX_DIM;
-      uint8 tileY = (tile / 32) * TILE_PX_DIM;
+      uint8 tileX = (tile % BG_TILE_DIM) * TILE_PX_DIM;
+      uint8 tileY = (tile / BG_TILE_DIM) * TILE_PX_DIM;
       for (int row = 0; row < TILE_PX_DIM; ++row) {
         auto pixelRow =
             cgb->cgbMode
@@ -113,7 +113,8 @@ void VramViewer::renderTileMap(QImage &display, uint16 tileMapAddr) {
             pixelColor = cgb->ppu.getPaletteColor(cgb->mem.cramBg, paletteNum,
                                                   pixelRow[px]);
           } else {
-            pixelColor = cgb->ppu.getPaletteColor(*cgb->ppu.bgp, pixelRow[px]);
+            pixelColor =
+                cgb->ppu.getPaletteColor(cgb->mem.getByte(BGP), pixelRow[px]);
           }
           display.setPixel(tileX + px, tileY + row, pixelColor);
         }

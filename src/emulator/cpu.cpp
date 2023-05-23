@@ -10,7 +10,6 @@
 
 #include "cgb.h"
 #include "controls.h"
-#include "interrupts.h"
 #include "log.h"
 #include "memory.h"
 #include "ppu.h"
@@ -52,7 +51,7 @@ void CPU::step() {
   // check if serial transfer has completed
   if (serialTransferComplete()) {
     cgb->mem.getByte(SC) &= ~BIT7_MASK;
-    cgb->interrupts.request(SERIAL_INT);
+    requestInterrupt(SERIAL_INT);
   }
 
   // check for interrupts
@@ -61,7 +60,7 @@ void CPU::step() {
   // run instruction at current PC
   if (!halt && !cgb->stop) {
     Log::logCPUState(PC, SP, A, BC, DE, HL, carry, halfCarry, subtract, zero,
-                     IME, *cgb->interrupts.intEnable, *cgb->interrupts.intFlags,
+                     IME, cgb->mem.getByte(IE), cgb->mem.getByte(IF),
                      cgb->mem.getByte(LCDC), cgb->mem.getByte(STAT),
                      cgb->mem.getByte(LY), cgb->mem.getByte(DIV),
                      cgb->mem.getByte(TIMA));
@@ -553,7 +552,7 @@ void CPU::runInstr(uint8 opcode) {
     // halts the cpu and system clock
     case 0x76:
       halt = true;
-      if (!IME && cgb->interrupts.pending()) {
+      if (!IME && interruptsPending()) {
         halt = false;
         triggerHaltBug = true;
       }
@@ -568,7 +567,7 @@ void CPU::runInstr(uint8 opcode) {
     case 0x10:
       // if any buttons are pressed, do
       // not enter stop mode
-      if ((*cgb->controls.p1 & NIBBLE_MASK) != 0x0F) {
+      if ((cgb->mem.getByte(P1) & NIBBLE_MASK) != 0x0F) {
         // if interrupts are pending,
         // stop is a 1-byte opcode, and
         // div does not reset
@@ -576,7 +575,7 @@ void CPU::runInstr(uint8 opcode) {
         // if no interrupts are pending,
         // stop is a 2-byte opcode, and
         // halt mode is entered
-        if (!cgb->interrupts.pending()) {
+        if (!interruptsPending()) {
           ++PC;
           halt = true;
         }
@@ -593,7 +592,7 @@ void CPU::runInstr(uint8 opcode) {
         //
         // if no interrupts are pending,
         // stop is a 2-byte opcode
-        if (!cgb->interrupts.pending()) ++PC;
+        if (!interruptsPending()) ++PC;
       }
 
       // if a speed switch was requested,
@@ -608,7 +607,7 @@ void CPU::runInstr(uint8 opcode) {
         // stop is a 2-byte opcode and
         // halt mode is entered (and cpu
         // changes speed on cgb)
-        if (!cgb->interrupts.pending()) {
+        if (!interruptsPending()) {
           ++PC;
 
           // just reset bit 0 of KEY1, do not
@@ -1411,14 +1410,14 @@ void CPU::handleInterrupts() {
   // resume running cpu from halt mode if there is an
   // interrupt that needs to be serviced, halt mode
   // exits after 1 machine cycle
-  if (halt && cgb->interrupts.pending()) {
+  if (halt && interruptsPending()) {
     halt = false;
     ppuTimerSerialStep(1);
   }
 
   // if a button is pressed while in stop mode, exit
   // stop mode
-  if (cgb->stop && ((*cgb->controls.p1 & NIBBLE_MASK) != 0x0F)) {
+  if (cgb->stop && ((cgb->mem.getByte(P1) & NIBBLE_MASK) != 0x0F)) {
     cgb->stop = false;
   }
 
@@ -1427,22 +1426,22 @@ void CPU::handleInterrupts() {
   // in the IE register
   if (IME) {
     uint16 intAddr = 0;
-    if (cgb->interrupts.requestedAndEnabled(V_BLANK_INT)) {
+    if (interruptRequestedAndEnabled(VBLANK_INT)) {
       intAddr = VBLANK_INT_ADDR;
-      cgb->interrupts.reset(PC, V_BLANK_INT);
-    } else if (cgb->interrupts.requestedAndEnabled(LCDC_INT)) {
+      resetInterrupt(PC, VBLANK_INT);
+    } else if (interruptRequestedAndEnabled(LCDC_INT)) {
       intAddr = LCDC_INT_ADDR;
-      cgb->interrupts.reset(PC, LCDC_INT);
-    } else if (cgb->interrupts.requestedAndEnabled(TIMER_INT)) {
+      resetInterrupt(PC, LCDC_INT);
+    } else if (interruptRequestedAndEnabled(TIMER_INT)) {
       intAddr = TIMER_INT_ADDR;
-      cgb->interrupts.reset(PC, TIMER_INT);
-    } else if (cgb->interrupts.requestedAndEnabled(SERIAL_INT)) {
+      resetInterrupt(PC, TIMER_INT);
+    } else if (interruptRequestedAndEnabled(SERIAL_INT)) {
       intAddr = SERIAL_INT_ADDR;
       cgb->mem.getByte(SB) = 0xFF;
-      cgb->interrupts.reset(PC, SERIAL_INT);
-    } else if (cgb->interrupts.requestedAndEnabled(JOYPAD_INT)) {
+      resetInterrupt(PC, SERIAL_INT);
+    } else if (interruptRequestedAndEnabled(JOYPAD_INT)) {
       intAddr = JOYPAD_INT_ADDR;
-      cgb->interrupts.reset(PC, JOYPAD_INT);
+      resetInterrupt(PC, JOYPAD_INT);
     }
 
     // service interrupt by pushing current
@@ -1456,4 +1455,22 @@ void CPU::handleInterrupts() {
       ppuTimerSerialStep(2);
     }
   }
+}
+
+void CPU::requestInterrupt(uint8 interrupt) {
+  Log::logInterruptRequest(interrupt);
+  cgb->mem.getByte(IF) |= interrupt;
+}
+
+void CPU::resetInterrupt(uint16 PC, uint8 interrupt) {
+  Log::logInterruptService(PC, interrupt);
+  cgb->mem.getByte(IF) &= ~interrupt;
+}
+
+bool CPU::interruptRequestedAndEnabled(uint8 interrupt) const {
+  return (cgb->mem.getByte(IE) & cgb->mem.getByte(IF) & interrupt);
+}
+
+bool CPU::interruptsPending() const {
+  return cgb->mem.getByte(IE) & cgb->mem.getByte(IF) & FIVE_BITS_MASK;
 }

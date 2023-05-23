@@ -1,5 +1,4 @@
-#ifndef KEYBINDINGSWINDOW_H
-#define KEYBINDINGSWINDOW_H
+#pragma once
 
 #include <QKeyEvent>
 #include <QLabel>
@@ -32,5 +31,3 @@ class KeyBindingsWindow : public QWidget {
 
   void startBind(Button button);
 };
-
-#endif  // KEYBINDINGSWINDOW_H

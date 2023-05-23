@@ -1,27 +1,27 @@
 // **************************************************
 // **************************************************
 // **************************************************
-// GAME BOY CONTROLS (JOYPAD)
+// Controls (Joypad)
 // **************************************************
 // **************************************************
 // **************************************************
 
 #include "controls.h"
 
-#include "interrupts.h"
+#include "cgb.h"
 
 Controls::Controls()
-    : state{{RIGHT, false}, {LEFT, false}, {UP, false},     {DOWN, false},
+    : cgb(nullptr),
+      state{{RIGHT, false}, {LEFT, false}, {UP, false},     {DOWN, false},
             {A, false},     {B, false},    {SELECT, false}, {START, false}},
       joypadBindings{{RIGHT, Qt::Key_D},  {LEFT, Qt::Key_A}, {UP, Qt::Key_W},
                      {DOWN, Qt::Key_S},   {A, Qt::Key_P},    {B, Qt::Key_O},
                      {SELECT, Qt::Key_N}, {START, Qt::Key_M}},
       keyBindings(getKeyBindings()),
-      buttonToMask{{RIGHT, RIGHT_MASK},   {LEFT, LEFT_MASK},  {UP, UP_MASK},
-                   {DOWN, DOWN_MASK},     {A, A_MASK},        {B, B_MASK},
-                   {SELECT, SELECT_MASK}, {START, START_MASK}},
-      interrupts(nullptr),
-      p1(nullptr) {}
+      buttonToMask{{RIGHT, RIGHT_A_MASK},    {LEFT, LEFT_B_MASK},
+                   {UP, UP_SELECT_MASK},     {DOWN, DOWN_START_MASK},
+                   {A, RIGHT_A_MASK},        {B, LEFT_B_MASK},
+                   {SELECT, UP_SELECT_MASK}, {START, DOWN_START_MASK}} {}
 
 // update joypad register P1 based on
 // the keys currently being pressed on
@@ -41,17 +41,18 @@ Controls::Controls()
 // 0: right / a
 void Controls::update() {
   // save previous value of P1
-  uint8 oldP1 = *p1;
+  uint8 &p1 = cgb->mem.getByte(P1);
+  uint8 oldP1 = p1;
 
   // set all bits to 1 except for
   // bits 4 and 5
-  *p1 |= ~(BIT4_MASK | BIT5_MASK);
+  p1 |= ~(BIT4_MASK | BIT5_MASK);
 
   // select either action buttons or diretion buttons
   vector<Button> buttons = {};
-  if (!(*p1 & BIT4_MASK)) {
+  if (!(p1 & BIT4_MASK)) {
     buttons = {RIGHT, LEFT, UP, DOWN};
-  } else if (!(*p1 & BIT5_MASK)) {
+  } else if (!(p1 & BIT5_MASK)) {
     buttons = {A, B, SELECT, START};
   }
 
@@ -63,12 +64,12 @@ void Controls::update() {
     // button is pressed, set its corresponding
     // bit in P1 to 0
     if (state[button]) {
-      *p1 &= ~mask;
+      p1 &= ~mask;
 
       // request joypad interrupt if button
       // goes from high to low
-      if ((*p1 & mask) != (oldP1 & mask)) {
-        interrupts->request(JOYPAD_INT);
+      if ((p1 & mask) != (oldP1 & mask)) {
+        cgb->cpu.requestInterrupt(JOYPAD_INT);
       }
     }
 
@@ -76,7 +77,7 @@ void Controls::update() {
     // button is not pressed, set its
     // corresponding bit in P1 to 1
     else {
-      *p1 |= mask;
+      p1 |= mask;
     }
   }
 }

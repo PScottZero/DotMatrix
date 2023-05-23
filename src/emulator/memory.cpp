@@ -11,7 +11,6 @@
 #include "bootstrap.h"
 #include "cgb.h"
 #include "cpu.h"
-#include "interrupts.h"
 #include "log.h"
 #include "mbc.h"
 
@@ -68,7 +67,7 @@ uint8 Memory::read(uint16 addr) const {
   // bootstrap
   if (cgb->bootstrap.enabled) {
     bool dmgBoot = addr < DMG_BOOTSTRAP_BYTES;
-    bool cgbBoot = cgb->cgbMode && addr >= CGB_BOOTSTRAP_ADDR &&
+    bool cgbBoot = cgb->cgbMode && addr >= CGB_BOOTSTRAP_PART2_ADDR &&
                    addr < CGB_BOOTSTRAP_BYTES;
     if (dmgBoot || cgbBoot) return *cgb->bootstrap.at(addr);
   }
@@ -451,7 +450,7 @@ uint16 Memory::vramTransferLength() const {
 // perform oam dma transfer
 void Memory::oamDmaTransfer() {
   uint16 dmaAddr = getByte(DMA) << 8;
-  for (int i = 0; i < _OAM_ENTRY_COUNT * _OAM_ENTRY_BYTES; ++i) {
+  for (int i = 0; i < OAM_ENTRY_COUNT * OAM_ENTRY_BYTES; ++i) {
     getByte(OAM_ADDR + i) = (uint8)getByte(dmaAddr + i);
   }
 }
@@ -528,10 +527,6 @@ void Memory::reset() {
     cramBg[i] = 0;
     cramObj[i] = 0;
   }
-
-  // set upper three bits of interrupt
-  // flag register
-  *cgb->interrupts.intFlags = 0xE0;
 
   // reset rom and ram banks
   setRomBank(&romBank0, 0);
