@@ -39,7 +39,7 @@ void PPU::step() {
 
   if (lcdEnable() && !cgb->stop) {
     // if scanline completed, increment ly
-    if (cycles >= SCANLINE_CYCLES) {
+    if (cycles > SCANLINE_CYCLES) {
       if (++ly >= SCREEN_LINES) ly = 0;
 
       // check if current line number

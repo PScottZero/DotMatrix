@@ -2,6 +2,7 @@
 
 #include <QKeySequence>
 
+#include "settings.h"
 #include "ui_keybindingswindow.h"
 
 KeyBindingsWindow::KeyBindingsWindow(Controls *controls, QWidget *parent)
@@ -25,9 +26,6 @@ KeyBindingsWindow::KeyBindingsWindow(Controls *controls, QWidget *parent)
                    {START, ui->setStartButton}, {SELECT, ui->setSelectButton}};
 
   for (const auto &pair : setKeyButtons) {
-    auto label = buttonKeyLabels[pair.first];
-    QKeySequence seq(controls->joypadBindings[pair.first]);
-    label->setText(seq.toString());
     connect(pair.second, &QPushButton::clicked, this,
             [this, pair] { startBind(pair.first); });
   }
@@ -35,10 +33,19 @@ KeyBindingsWindow::KeyBindingsWindow(Controls *controls, QWidget *parent)
 
 KeyBindingsWindow::~KeyBindingsWindow() { delete ui; }
 
+void KeyBindingsWindow::refreshKeyLabels() {
+  for (const auto &pair : setKeyButtons) {
+    auto label = buttonKeyLabels[pair.first];
+    QKeySequence seq(controls->joypadBindings[pair.first]);
+    label->setText(seq.toString());
+  }
+}
+
 void KeyBindingsWindow::startBind(Button button) {
   selectedButton = button;
   acceptKeyPress = true;
   ui->bindStatusLabel->setText("[press any key]");
+  setFocus();
 }
 
 void KeyBindingsWindow::keyPressEvent(QKeyEvent *event) {
@@ -48,5 +55,6 @@ void KeyBindingsWindow::keyPressEvent(QKeyEvent *event) {
     QKeySequence seq(event->key());
     buttonKeyLabels[selectedButton]->setText(seq.toString());
     ui->bindStatusLabel->setText("[select a button]");
+    Settings::saveKeyBinding(event->key(), selectedButton);
   }
 }

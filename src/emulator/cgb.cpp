@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QMessageBox>
 
+#include "../ui/settings.h"
 #include "bootstrap.h"
 #include "controls.h"
 #include "cpu.h"
@@ -153,7 +154,6 @@ void CGB::reset(bool newGame) {
   stop = false;
   pause = false;
   doubleSpeedMode = false;
-  shouldStepPpuApu = false;
   dmgMode = !cgbMode;
   actionPause->setChecked(false);
 
@@ -175,11 +175,15 @@ void CGB::reset(bool newGame) {
 void CGB::setDevice(bool cgb) {
   cgbMode = cgb;
   restart();
+  Settings::saveDevice(cgb);
 }
 
 // toggle whether boot screen should appear
 // before a game is started
-void CGB::toggleDmgBootstrap(bool skip) { bootstrap.skipDmg = skip; }
+void CGB::toggleDmgBootstrap(bool skip) {
+  bootstrap.skipDmg = skip;
+  Settings::saveSkipDmgBootstrap(skip);
+}
 
 // save current palette and preview
 // the specified palette

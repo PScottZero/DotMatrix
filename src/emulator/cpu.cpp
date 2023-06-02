@@ -107,6 +107,7 @@ void CPU::ppuTimerSerialStep(int cycles) {
     cgb->ppu.step();
     cgb->timers.step();
   }
+  if (serialTransferMode) serialTransferCycles += cycles;
 }
 
 bool CPU::serialTransferComplete() {

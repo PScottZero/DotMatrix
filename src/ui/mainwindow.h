@@ -27,6 +27,9 @@ class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
+  Ui::MainWindow *ui;
+  CGB cgb;
+
   MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
@@ -45,8 +48,6 @@ class MainWindow : public QMainWindow {
   void closeEvent(QCloseEvent *event) override;
 
  private:
-  Ui::MainWindow *ui;
-  CGB cgb;
   KeyBindingsWindow kbWin;
   VramViewer vramViewer;
 

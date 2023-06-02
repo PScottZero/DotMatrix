@@ -1,8 +1,11 @@
 #include "mainwindow.h"
 
+#include <map>
+
 #include "../emulator/log.h"
 #include "../emulator/ppu.h"
 #include "keybindingswindow.h"
+#include "settings.h"
 #include "vramviewer.h"
 
 MainWindow::MainWindow(QWidget *parent)
@@ -58,6 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
   paletteGroup->setExclusive(true);
 
   // add non-sgb palettes to palettes menu
+  map<QString, QAction *> palNameToAction{};
   for (auto palette : Palettes::allPalettes) {
     QAction *action = new QAction();
     action->setCheckable(true);
@@ -65,6 +69,7 @@ MainWindow::MainWindow(QWidget *parent)
     action->setText(getPaletteLabel(palette));
     action->setActionGroup(paletteGroup);
     ui->menuPalette->addAction(action);
+    palNameToAction[palette->name] = action;
     connect(action, &QAction::triggered, this,
             [this, palette] { setPalette(palette); });
     connect(action, &QAction::hovered, this,
@@ -78,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent)
     action->setText(sgbPalette->name);
     action->setActionGroup(paletteGroup);
     ui->menuSGB->addAction(action);
+    palNameToAction[sgbPalette->name] = action;
     connect(action, &QAction::triggered, this,
             [this, sgbPalette] { setPalette(sgbPalette); });
     connect(action, &QAction::hovered, this,
@@ -113,7 +119,11 @@ MainWindow::MainWindow(QWidget *parent)
 
   // finalize setup
   cgb.actionPause = ui->actionPause;
-  setScale(1);
+
+  // **************************************************
+  // Load Settings
+  // **************************************************
+  Settings::load(this, palNameToAction);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -135,6 +145,7 @@ void MainWindow::loadROM() {
       this, tr("Open File"), cgb.romPath, tr("Game Boy ROMs (*.gb *.gbc)"));
   cgb.pause = false;
   if (romPath != "") {
+    Settings::saveRomPath(romPath);
     setWindowTitle(romPath.split("/").last());
     cgb.romPath = romPath;
     cgb.reset();
@@ -168,17 +179,22 @@ void MainWindow::setScale(float scale) {
   this->setFixedSize(width, height + ui->menubar->height());
 #endif
   ui->screen->setFixedSize(width, height);
+  Settings::saveScale(scale);
 }
 
 // set dmg palette
 void MainWindow::setPalette(Palette *palette) {
-  cgb.ppu.palette = (Palette *)palette;
+  cgb.ppu.palette = palette;
   cgb.tempPalette = nullptr;
   cgb.renderInPauseMode();
+  Settings::savePalette(palette);
 }
 
 // open the key bindings window
-void MainWindow::openKeyBindingsWindow() { kbWin.show(); }
+void MainWindow::openKeyBindingsWindow() {
+  kbWin.refreshKeyLabels();
+  kbWin.show();
+}
 
 // open vram viewer
 void MainWindow::openVramViewer() { vramViewer.show(); }

@@ -18,6 +18,8 @@ class KeyBindingsWindow : public QWidget {
   explicit KeyBindingsWindow(Controls *controls, QWidget *parent = nullptr);
   ~KeyBindingsWindow();
 
+  void refreshKeyLabels();
+
  protected:
   void keyPressEvent(QKeyEvent *event) override;
 

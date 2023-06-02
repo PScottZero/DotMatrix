@@ -16,7 +16,6 @@ set_source_files_properties(${app_icon_macos} PROPERTIES
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(SDL2 REQUIRED COMPONENTS SDL2)
 
 set(PROJECT_SOURCES
         src/main.cpp
@@ -54,6 +53,8 @@ set(PROJECT_SOURCES
         src/ui/vramviewer.ui
         src/ui/palettes.cpp
         src/ui/palettes.h
+        src/ui/settings.cpp
+        src/ui/settings.h
 )
 
 qt_add_resources(PROJECT_SOURCES resource.qrc)
@@ -83,7 +84,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(DotMatrix PRIVATE Qt${QT_VERSION_MAJOR}::Widgets SDL2::SDL2)
+target_link_libraries(DotMatrix PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 
 set_target_properties(DotMatrix PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com

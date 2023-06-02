@@ -8,8 +8,6 @@
 
 #include "apu.h"
 
-#include <SDL2/SDL_audio.h>
-
 #include "cgb.h"
 #include "types.h"
 
@@ -21,13 +19,11 @@ void APU::step() {
   lengthCycles = {0.0, 0.0, 0.0, 0.0};
 
   if (soundOn()) {
-    //    SDL_PauseAudio(0);
     channel1Step();
     channel2Step();
     channel3Step();
     channel4Step();
   } else {
-    //    SDL_PauseAudio(1);
     sweepCycles = {0.0, 0.0, 0.0, 0.0};
     lengthCycles = {0.0, 0.0, 0.0, 0.0};
   }

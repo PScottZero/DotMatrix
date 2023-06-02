@@ -58,6 +58,6 @@ uint8 Timers::timerFreq() const {
 // reset timers by setting internal counter,
 // div, and tima to 0
 void Timers::reset() {
-  internalCounter = 0;
+  internalCounter = 4;
   cgb->mem.getByte(DIV) = 0;
 }
