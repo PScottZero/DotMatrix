@@ -142,7 +142,7 @@ class PPU : public QObject {
   bool frameRendered;
   Palette *palette;
   bool showBackground, showWindow, showSprites;
-  uint16 cycles;
+  float cycles;
   uint8 renderedScx, renderedScy;
   uint8 scxs[SCREEN_PX_HEIGHT], scys[SCREEN_PX_HEIGHT];
 

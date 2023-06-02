@@ -109,6 +109,7 @@ class CPU {
  public:
   bool serialTransferMode;
   CGB *cgb;
+  uint8 cpuCycles;
 
   CPU();
 

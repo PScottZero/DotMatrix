@@ -8,12 +8,35 @@
 
 #pragma once
 
-#include "cgb.h"
+#include <array>
+
+#include "types.h"
+
+#define SWEEP_BASE_TICKS 128
+#define CHANNEL_COUNT 4
+#define CYCLES_PER_TICK 8192
+
+using namespace std;
+
+class CGB;
 
 class APU {
+ private:
+  array<float, CHANNEL_COUNT> sweepCycles;
+  array<float, CHANNEL_COUNT> lengthCycles;
+
+  uint16 channel1CurrSweepPace;
+
  public:
   APU();
   CGB *cgb;
+
+  void step();
+
+  void channel1Step();
+  void channel2Step();
+  void channel3Step();
+  void channel4Step();
 
   // NR52 sound on/off functions
   bool soundOn();
@@ -21,6 +44,10 @@ class APU {
   bool channel3On();
   bool channel2On();
   bool channel1On();
+  void disableChannel4();
+  void disableChannel3();
+  void disableChannel2();
+  void disableChannel1();
 
   // NR51 sound panning functions
   bool mixChannel4Left();
@@ -54,6 +81,7 @@ class APU {
 
   // NR13 + NR14 channel 1 wavelength & control
   uint16 channel1Wavelength();
+  void updateChannel1Wavelength();
   bool triggerChannel1();
   bool channel1SoundLengthEnabled();
 
@@ -68,6 +96,7 @@ class APU {
 
   // NR23 + NR14 channel 2 wavelength & control
   uint16 channel2Wavelength();
+  void setChannel2Wavelength(uint16 wavelength);
   bool triggerChannel2();
   bool channel2SoundLengthEnabled();
 
@@ -82,6 +111,7 @@ class APU {
 
   // NR33 + NR34 channel 3 wavelength & control
   uint16 channel3Wavelength();
+  void setChannel3Wavelength(uint16 wavelength);
   bool triggerChannel3();
   bool channel3SoundLengthEnabled();
 

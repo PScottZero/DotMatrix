@@ -8,9 +8,79 @@
 
 #include "apu.h"
 
+#include <SDL2/SDL_audio.h>
+
+#include "cgb.h"
 #include "types.h"
 
-APU::APU() : cgb(nullptr) {}
+APU::APU()
+    : cgb(nullptr), sweepCycles(), lengthCycles(), channel1CurrSweepPace() {}
+
+void APU::step() {
+  sweepCycles = {0.0, 0.0, 0.0, 0.0};
+  lengthCycles = {0.0, 0.0, 0.0, 0.0};
+
+  if (soundOn()) {
+    //    SDL_PauseAudio(0);
+    channel1Step();
+    channel2Step();
+    channel3Step();
+    channel4Step();
+  } else {
+    //    SDL_PauseAudio(1);
+    sweepCycles = {0.0, 0.0, 0.0, 0.0};
+    lengthCycles = {0.0, 0.0, 0.0, 0.0};
+  }
+}
+
+void APU::channel1Step() {
+  if (channel1On()) {
+    // update sweep and length cycles
+    sweepCycles[0] += cgb->doubleSpeedMode ? 0.5 : 1.0;
+    lengthCycles[0] += cgb->doubleSpeedMode ? 0.5 : 1.0;
+
+    // sweep iteration
+    uint16 sweepIterCycles = channel1CurrSweepPace * CYCLES_PER_TICK;
+    if (sweepCycles[0] >= sweepIterCycles) {
+      sweepCycles[0] = fmod(sweepCycles[0], sweepIterCycles);
+      channel1CurrSweepPace = channel1SweepPace();
+
+      // update wavelength if sweep slope
+      // is non-zero
+      if (channel1SweepSlope() != 0) updateChannel1Wavelength();
+    }
+  } else {
+    sweepCycles[0] = 0;
+    lengthCycles[0] = 0;
+  }
+}
+
+void APU::channel2Step() {
+  if (channel2On()) {
+    sweepCycles[1] += cgb->doubleSpeedMode ? 0.5 : 1.0;
+  } else {
+    sweepCycles[1] = 0;
+    lengthCycles[1] = 0;
+  }
+}
+
+void APU::channel3Step() {
+  if (channel3On()) {
+    sweepCycles[2] += cgb->doubleSpeedMode ? 0.5 : 1.0;
+  } else {
+    sweepCycles[2] = 0;
+    lengthCycles[2] = 0;
+  }
+}
+
+void APU::channel4Step() {
+  if (channel4On()) {
+    sweepCycles[3] += cgb->doubleSpeedMode ? 0.5 : 1.0;
+  } else {
+    sweepCycles[3] = 0;
+    lengthCycles[3] = 0;
+  }
+}
 
 // **************************************************
 // **************************************************
@@ -27,6 +97,14 @@ bool APU::channel3On() { return cgb->mem.getByte(NR52) & BIT2_MASK; }
 bool APU::channel2On() { return cgb->mem.getByte(NR52) & BIT1_MASK; }
 
 bool APU::channel1On() { return cgb->mem.getByte(NR52) & BIT0_MASK; }
+
+void APU::disableChannel4() { cgb->mem.getByte(NR52) &= ~BIT3_MASK; }
+
+void APU::disableChannel3() { cgb->mem.getByte(NR52) &= ~BIT2_MASK; }
+
+void APU::disableChannel2() { cgb->mem.getByte(NR52) &= ~BIT1_MASK; }
+
+void APU::disableChannel1() { cgb->mem.getByte(NR52) &= ~BIT0_MASK; }
 
 // **************************************************
 // **************************************************
@@ -68,7 +146,7 @@ uint8 APU::rightVolume() { return cgb->mem.getByte(NR50) & THREE_BITS_MASK; }
 
 // **************************************************
 // **************************************************
-// Sound Channel 1 Functions
+// Sound Channel 1 (Pulse w/ Sweep) Functions
 // **************************************************
 // **************************************************
 
@@ -119,6 +197,21 @@ uint16 APU::channel1Wavelength() {
          cgb->mem.getByte(NR13);
 }
 
+void APU::updateChannel1Wavelength() {
+  // for wavelength L at time t and
+  // sweep slope n:
+  // L{t+1} = L{t} ± (L{t} / (2 ^ n))
+  uint16 wavelength = channel1Wavelength();
+  uint16 wavelengthDiv2n = wavelength / pow(2, channel1SweepSlope());
+  wavelength += channel1IncreaseSweep() ? wavelengthDiv2n : -wavelengthDiv2n;
+  if (wavelength > 0x7FF) disableChannel1();
+
+  // set updated wavelength
+  cgb->mem.getByte(NR13) = wavelength & BYTE_MASK;
+  cgb->mem.getByte(NR14) &= ~THREE_BITS_MASK;
+  cgb->mem.getByte(NR14) |= (wavelength >> 8) & THREE_BITS_MASK;
+}
+
 bool APU::triggerChannel1() { return cgb->mem.getByte(NR14) & BIT7_MASK; }
 
 bool APU::channel1SoundLengthEnabled() {
@@ -127,7 +220,7 @@ bool APU::channel1SoundLengthEnabled() {
 
 // **************************************************
 // **************************************************
-// Sound Channel 2 Functions
+// Sound Channel 2 (Pulse) Functions
 // **************************************************
 // **************************************************
 
@@ -165,6 +258,12 @@ uint16 APU::channel2Wavelength() {
          cgb->mem.getByte(NR23);
 }
 
+void APU::setChannel2Wavelength(uint16 wavelength) {
+  cgb->mem.getByte(NR23) = wavelength & BYTE_MASK;
+  cgb->mem.getByte(NR24) &= ~THREE_BITS_MASK;
+  cgb->mem.getByte(NR24) |= wavelength & THREE_BITS_MASK;
+}
+
 bool APU::triggerChannel2() { return cgb->mem.getByte(NR24) & BIT7_MASK; }
 
 bool APU::channel2SoundLengthEnabled() {
@@ -173,7 +272,7 @@ bool APU::channel2SoundLengthEnabled() {
 
 // **************************************************
 // **************************************************
-// Sound Channel 3 Functions
+// Sound Channel 3 (Wave Output) Functions
 // **************************************************
 // **************************************************
 
@@ -200,6 +299,12 @@ uint8 APU::channel3OutputLevel() {
 uint16 APU::channel3Wavelength() {
   return ((cgb->mem.getByte(NR34) & THREE_BITS_MASK) << 8) |
          cgb->mem.getByte(NR33);
+}
+
+void APU::setChannel3Wavelength(uint16 wavelength) {
+  cgb->mem.getByte(NR33) = wavelength & BYTE_MASK;
+  cgb->mem.getByte(NR34) &= ~THREE_BITS_MASK;
+  cgb->mem.getByte(NR34) |= wavelength & THREE_BITS_MASK;
 }
 
 bool APU::triggerChannel3() { return cgb->mem.getByte(NR34) & BIT7_MASK; }

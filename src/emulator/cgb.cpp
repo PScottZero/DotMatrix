@@ -31,6 +31,7 @@ CGB::CGB()
       mbc(),
       mem(),
       ppu(),
+      apu(),
       timers(),
       rtc(),
       romPath(QDir::currentPath()),
@@ -38,7 +39,6 @@ CGB::CGB()
       cgbMode(true),
       dmgMode(false),
       doubleSpeedMode(false),
-      shouldStepPpu(false),
       screen(SCREEN_PX_WIDTH, SCREEN_PX_HEIGHT, QImage::Format_RGB32),
       actionPause(nullptr),
       running(false),
@@ -48,6 +48,7 @@ CGB::CGB()
   cpu.cgb = this;
   mem.cgb = this;
   ppu.cgb = this;
+  apu.cgb = this;
   controls.cgb = this;
   timers.cgb = this;
   rtc.cgb = this;
@@ -79,30 +80,26 @@ CGB::~CGB() {
 
 void CGB::run() {
   running = true;
-  auto clock = system_clock::now();
+  auto clock = high_resolution_clock::now();
   while (running) {
     if (!pause) {
       cpu.step();
-      if (stop) ppu.step();
 
-      // send rendered screen frame to ui
+      uint8 cycles = cpu.cpuCycles;
+      if (stop) {
+        ppu.step();
+        cycles = doubleSpeedMode ? 2 : 1;
+      }
+
       if (!bootstrap.skipDmgBootstrap()) {
-        // if full frame has been rendered by
-        // the ppu, draw the frame and wait
-        // the remaining amount of time it takes
-        // for one frame to draw on the game boy
-        if (ppu.frameRendered) {
-          emit sendScreen(&screen);
-          int duration = FRAME_DURATION;
-          clock += microseconds(duration);
-          this_thread::sleep_until(clock);
-          ppu.frameRendered = false;
-        }
+        int duration = (NS_PER_CYCLE * cycles) / (doubleSpeedMode ? 2 : 1);
+        clock += nanoseconds(duration);
+        this_thread::sleep_until(clock);
       } else {
-        clock = system_clock::now();
+        clock = high_resolution_clock::now();
       }
     } else {
-      clock = system_clock::now();
+      clock = high_resolution_clock::now();
     }
   }
 }
@@ -156,7 +153,7 @@ void CGB::reset(bool newGame) {
   stop = false;
   pause = false;
   doubleSpeedMode = false;
-  shouldStepPpu = false;
+  shouldStepPpuApu = false;
   dmgMode = !cgbMode;
   actionPause->setChecked(false);
 

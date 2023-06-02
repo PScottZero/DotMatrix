@@ -15,6 +15,8 @@
 #include "ppu.h"
 #include "timers.h"
 
+uint8 cyc = 0;
+
 CPU::CPU()
     : PC(),
       SP(),
@@ -40,12 +42,15 @@ CPU::CPU()
       regmap8{&B, &C, &D, &E, &H, &L, nullptr, &A},
       regmap16{&BC, &DE, &HL, &SP},
       serialTransferCycles(),
+      cpuCycles(),
       serialTransferMode(false),
       cgb(nullptr) {}
 
 // perform CPU step by performing
 // a single instruction
 void CPU::step() {
+  cpuCycles = 0;
+
   cgb->controls.update();
 
   // check if serial transfer has completed
@@ -94,18 +99,14 @@ void CPU::step() {
 }
 
 // step through the specified number
-// of ppu and timers cycles
+// of machine cycles for the other
+// components of the game boy
 void CPU::ppuTimerSerialStep(int cycles) {
+  cpuCycles += cycles;
   for (int i = 0; i < cycles; ++i) {
-    if (!cgb->doubleSpeedMode || cgb->shouldStepPpu) cgb->ppu.step();
+    cgb->ppu.step();
     cgb->timers.step();
-    if (cgb->doubleSpeedMode) {
-      cgb->shouldStepPpu = !cgb->shouldStepPpu;
-    } else {
-      cgb->shouldStepPpu = false;
-    }
   }
-  if (serialTransferMode) serialTransferCycles += cycles;
 }
 
 bool CPU::serialTransferComplete() {

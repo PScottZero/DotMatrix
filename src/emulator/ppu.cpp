@@ -32,14 +32,14 @@ PPU::PPU()
       scys() {}
 
 void PPU::step() {
-  cycles += 1;
+  cycles += cgb->doubleSpeedMode ? 0.5 : 1.0;
 
   uint8 &ly = cgb->mem.getByte(LY);
   uint8 &stat = cgb->mem.getByte(STAT);
 
   if (lcdEnable() && !cgb->stop) {
     // if scanline completed, increment ly
-    if (cycles > SCANLINE_CYCLES) {
+    if (cycles >= SCANLINE_CYCLES) {
       if (++ly >= SCREEN_LINES) ly = 0;
 
       // check if current line number
@@ -50,7 +50,7 @@ void PPU::step() {
         stat &= ~BIT2_MASK;
       }
 
-      cycles %= SCANLINE_CYCLES;
+      cycles = fmod(cycles, SCANLINE_CYCLES);
     }
 
     if (ly < SCREEN_PX_HEIGHT) {
@@ -95,7 +95,7 @@ void PPU::step() {
       if (getMode() != VBLANK_MODE) {
         setMode(VBLANK_MODE);
         cgb->cpu.requestInterrupt(VBLANK_INT);
-        frameRendered = true;
+        emit cgb->sendScreen(screen);
         windowLineNum = 0;
       }
     }
@@ -109,8 +109,8 @@ void PPU::step() {
     if (cycles > SCANLINE_CYCLES * SCREEN_LINES) {
       screen->fill(cgb->cgbMode ? getPaletteColor(cgb->mem.cramBg, 0, 0)
                                 : palette->data[0]);
-      cycles %= SCANLINE_CYCLES * SCREEN_LINES;
-      frameRendered = true;
+      cycles = fmod(cycles, SCANLINE_CYCLES * SCREEN_LINES);
+      emit cgb->sendScreen(screen);
     }
   }
 }
